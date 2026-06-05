@@ -799,6 +799,11 @@ class ShoppingAgent:
                 await asyncio.sleep(0)
 
             if cards and decision.flow != DialogueFlow.PRODUCT_QA:
+                if self._should_stream_recommendation_sections(decision, cards):
+                    for section_event in self._recommendation_section_events(cards, query_id):
+                        yield section_event
+                        trace.legacy_sse_events.append(section_event.event)
+                        await asyncio.sleep(0)
                 product_payload = {"products": [card.model_dump() for card in cards]}
                 yield SSEEvent(event="product_cards", data=product_payload)
                 yield SSEEvent(event="products", data=product_payload)
@@ -1386,6 +1391,86 @@ class ShoppingAgent:
             payload = model_route.model_dump()
         payload["llm_provider"] = self.response_generator.llm_client.__class__.__name__
         return model_route, payload
+
+    @staticmethod
+    def _should_stream_recommendation_sections(decision: FlowDecision, cards: list[ProductCard]) -> bool:
+        return bool(cards) and decision.flow in {
+            DialogueFlow.RECOMMENDATION,
+            DialogueFlow.FILTERING,
+            DialogueFlow.REFINEMENT,
+            DialogueFlow.EXCLUSION,
+            DialogueFlow.NO_RESULT,
+        }
+
+    def _recommendation_section_events(self, cards: list[ProductCard], query_id: str) -> list[SSEEvent]:
+        events: list[SSEEvent] = []
+        turn_id = f"turn_{query_id}"
+        for index, card in enumerate(cards, start=1):
+            presentation = card.presentation
+            option_label = (
+                _clean_optional_text(presentation.option_label if presentation else None)
+                or self._option_label(index)
+            )
+            reason = ((presentation.reason if presentation else None) or card.reason or "").strip()
+            trade_off = _clean_optional_text(presentation.trade_off if presentation else None)
+            content_source = presentation.content_source if presentation else "fallback"
+            common = {
+                "turn_id": turn_id,
+                "section_index": index,
+                "sku_id": card.sku_id,
+                "option_label": option_label,
+            }
+            events.append(
+                SSEEvent(
+                    event="recommendation_section_start",
+                    data={
+                        **common,
+                        "event_id": f"{turn_id}:{index}:start",
+                        "product_name": card.name,
+                        "brand": card.brand,
+                    },
+                )
+            )
+            if reason:
+                for chunk_index, chunk in enumerate(self._chunk_text(reason, chunk_size=36), start=1):
+                    events.append(
+                        SSEEvent(
+                            event="recommendation_text_delta",
+                            data={
+                                **common,
+                                "event_id": f"{turn_id}:{index}:delta:{chunk_index}",
+                                "delta": chunk,
+                            },
+                        )
+                    )
+            events.append(
+                SSEEvent(
+                    event="recommendation_text_done",
+                    data={
+                        **common,
+                        "event_id": f"{turn_id}:{index}:text_done",
+                        "reason": reason,
+                        "trade_off": trade_off,
+                        "content_source": content_source,
+                    },
+                )
+            )
+            events.append(
+                SSEEvent(
+                    event="product_card",
+                    data={
+                        **common,
+                        "event_id": f"{turn_id}:{index}:product_card",
+                        "product": card.model_dump(),
+                    },
+                )
+            )
+        return events
+
+    @staticmethod
+    def _option_label(index: int) -> str:
+        labels = ["方案一", "方案二", "方案三", "方案四", "方案五"]
+        return labels[index - 1] if index <= len(labels) else f"方案{index}"
 
     def _llm_call_debug(self) -> dict:
         return dict(getattr(self.response_generator.llm_client, "last_call_debug", {}) or {})
@@ -2090,6 +2175,15 @@ class ShoppingAgent:
 
 def _merge_lists(old: list, new: list) -> list:
     return list(dict.fromkeys([*old, *new]))
+
+
+def _clean_optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text or text.lower() == "null":
+        return None
+    return text
 
 
 def _minimal_error_turn_output(session_id: str, user_id: str, exc: Exception) -> dict:

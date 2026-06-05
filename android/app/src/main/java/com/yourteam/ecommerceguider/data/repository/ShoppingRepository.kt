@@ -1,0 +1,676 @@
+package com.yourteam.ecommerceguider.data.repository
+
+import android.content.ContentResolver
+import android.net.Uri
+import android.provider.OpenableColumns
+import com.yourteam.ecommerceguider.BuildConfig
+import com.yourteam.ecommerceguider.data.model.BackendNavigationUiModel
+import com.yourteam.ecommerceguider.data.model.CartItemUiModel
+import com.yourteam.ecommerceguider.data.model.CartSnapshotUiModel
+import com.yourteam.ecommerceguider.data.model.ChatStreamEvent
+import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
+import com.yourteam.ecommerceguider.data.model.ProductUiModel
+import com.yourteam.ecommerceguider.data.model.SpotlightUiModel
+import java.io.BufferedOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URLEncoder
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
+
+object ShoppingSession {
+    val sessionId: String by lazy {
+        "${BuildConfig.DEFAULT_SESSION_ID}-${UUID.randomUUID().toString().take(8)}"
+    }
+}
+
+class ShoppingRepository(
+    private val baseUrl: String = BuildConfig.API_BASE_URL.removeSuffix("/"),
+    private val sessionId: String = ShoppingSession.sessionId,
+) {
+    fun streamChat(message: String): Flow<ChatStreamEvent> = flow {
+        val payload = JSONObject()
+            .put("session_id", sessionId)
+            .put("message", message)
+            .put("input_type", "text")
+
+        val connection = openJsonConnection(path = "/api/chat/stream", method = "POST")
+
+        try {
+            writeJson(connection, payload)
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                emit(
+                    ChatStreamEvent(
+                        event = "error",
+                        errorMessage = extractErrorMessage(connection),
+                    )
+                )
+                emit(ChatStreamEvent(event = "done"))
+                return@flow
+            }
+
+            readSseStream(connection.inputStream) { emit(it) }
+        } finally {
+            connection.disconnect()
+        }
+    }.flowOn(Dispatchers.IO)
+
+    fun streamImageChat(
+        contentResolver: ContentResolver,
+        imageUri: Uri,
+        message: String,
+    ): Flow<ChatStreamEvent> = flow {
+        val boundary = "----EcommerceGuider${UUID.randomUUID()}"
+        val connection = openMultipartConnection(
+            path = "/api/chat/stream/upload",
+            boundary = boundary,
+        )
+
+        try {
+            BufferedOutputStream(connection.outputStream).use { output ->
+                writeMultipartField(output, boundary, "session_id", sessionId)
+                writeMultipartField(output, boundary, "input_type", "image_text")
+                message.trim().takeIf { it.isNotBlank() }?.let {
+                    writeMultipartField(output, boundary, "message", it)
+                }
+
+                val mimeType = contentResolver.getType(imageUri) ?: "image/jpeg"
+                val fileName = contentResolver.displayName(imageUri) ?: "image_search.jpg"
+                writeMultipartFile(
+                    output = output,
+                    boundary = boundary,
+                    fieldName = "image",
+                    fileName = fileName.sanitizeMultipartFileName(),
+                    mimeType = mimeType,
+                ) {
+                    contentResolver.openInputStream(imageUri)
+                        ?: throw IOException("Unable to read selected image.")
+                }
+                output.writeUtf8("--$boundary--\r\n")
+                output.flush()
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode !in 200..299) {
+                emit(
+                    ChatStreamEvent(
+                        event = "error",
+                        errorMessage = extractErrorMessage(connection),
+                    )
+                )
+                emit(ChatStreamEvent(event = "done"))
+                return@flow
+            }
+
+            readSseStream(connection.inputStream) { emit(it) }
+        } finally {
+            connection.disconnect()
+        }
+    }.flowOn(Dispatchers.IO)
+
+    suspend fun fetchProduct(skuId: String): ProductUiModel? = withContext(Dispatchers.IO) {
+        val connection = openJsonConnection(path = "/api/products/$skuId", method = "GET")
+        try {
+            when (connection.responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    val body = connection.inputStream.readUtf8Text()
+                    JSONObject(body).optJSONObject("product")?.toProduct()
+                }
+
+                HttpURLConnection.HTTP_NOT_FOUND -> null
+                else -> throw IOException(extractErrorMessage(connection))
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun getCart(): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+        val encodedSessionId = URLEncoder.encode(sessionId, StandardCharsets.UTF_8.name())
+        val connection = openJsonConnection(path = "/api/cart?session_id=$encodedSessionId", method = "GET")
+        try {
+            if (connection.responseCode !in 200..299) {
+                throw IOException(extractErrorMessage(connection))
+            }
+            JSONObject(connection.inputStream.readUtf8Text()).toCartSnapshot()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun addToCart(skuId: String, quantity: Int = 1): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("session_id", sessionId)
+            .put("sku_id", skuId)
+            .put("quantity", quantity)
+            .put("source", "button")
+        val connection = openJsonConnection(path = "/api/cart/add", method = "POST")
+        try {
+            writeJson(connection, payload)
+            if (connection.responseCode !in 200..299) {
+                throw IOException(extractErrorMessage(connection))
+            }
+            JSONObject(connection.inputStream.readUtf8Text()).toCartSnapshot()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun updateCartQuantity(skuId: String, quantity: Int): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("session_id", sessionId)
+            .put("sku_id", skuId)
+            .put("quantity", quantity.coerceAtLeast(1))
+        val connection = openJsonConnection(path = "/api/cart/update", method = "POST")
+        try {
+            writeJson(connection, payload)
+            if (connection.responseCode !in 200..299) {
+                throw IOException(extractErrorMessage(connection))
+            }
+            JSONObject(connection.inputStream.readUtf8Text()).toCartSnapshot()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun removeFromCart(skuId: String): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+        val payload = JSONObject()
+            .put("session_id", sessionId)
+            .put("sku_id", skuId)
+        val connection = openJsonConnection(path = "/api/cart/remove", method = "POST")
+        try {
+            writeJson(connection, payload)
+            if (connection.responseCode !in 200..299) {
+                throw IOException(extractErrorMessage(connection))
+            }
+            JSONObject(connection.inputStream.readUtf8Text()).toCartSnapshot()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun clearCart(): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+        val payload = JSONObject().put("session_id", sessionId)
+        val connection = openJsonConnection(path = "/api/cart/clear", method = "POST")
+        try {
+            writeJson(connection, payload)
+            if (connection.responseCode !in 200..299) {
+                throw IOException(extractErrorMessage(connection))
+            }
+            JSONObject(connection.inputStream.readUtf8Text()).toCartSnapshot()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun openJsonConnection(path: String, method: String): HttpURLConnection {
+        val connection = URL("$baseUrl$path").openConnection() as HttpURLConnection
+        connection.requestMethod = method
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 60_000
+        connection.setRequestProperty("Accept", "application/json, text/event-stream")
+        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        connection.doInput = true
+        if (method != "GET") {
+            connection.doOutput = true
+        }
+        return connection
+    }
+
+    private fun openMultipartConnection(path: String, boundary: String): HttpURLConnection {
+        val connection = URL("$baseUrl$path").openConnection() as HttpURLConnection
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 10_000
+        connection.readTimeout = 60_000
+        connection.setRequestProperty("Accept", "text/event-stream, application/json")
+        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+        connection.doInput = true
+        connection.doOutput = true
+        connection.useCaches = false
+        connection.setChunkedStreamingMode(0)
+        return connection
+    }
+
+    private fun writeJson(connection: HttpURLConnection, payload: JSONObject) {
+        OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { writer ->
+            writer.write(payload.toString())
+            writer.flush()
+        }
+    }
+
+    private suspend fun readSseStream(
+        inputStream: InputStream,
+        emitEvent: suspend (ChatStreamEvent) -> Unit,
+    ) {
+        inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
+            var currentEvent = "message"
+            val dataLines = mutableListOf<String>()
+
+            suspend fun flushEvent() {
+                if (dataLines.isEmpty()) {
+                    currentEvent = "message"
+                    return
+                }
+                val json = try {
+                    JSONObject(dataLines.joinToString(separator = "\n"))
+                } catch (_: JSONException) {
+                    JSONObject()
+                }
+                json.toChatStreamEvent(currentEvent)?.let { emitEvent(it) }
+                currentEvent = "message"
+                dataLines.clear()
+            }
+
+            while (true) {
+                val line = reader.readLine() ?: break
+                if (line.isBlank()) {
+                    flushEvent()
+                    continue
+                }
+                when {
+                    line.startsWith("event: ") -> currentEvent = line.removePrefix("event: ").trim()
+                    line.startsWith("data: ") -> dataLines += line.removePrefix("data: ").trim()
+                }
+            }
+
+            flushEvent()
+        }
+    }
+
+    private fun JSONObject.toChatStreamEvent(eventName: String): ChatStreamEvent? {
+        return when (eventName) {
+            "token" -> {
+                val text = optString("text").ifBlank { optString("content") }
+                ChatStreamEvent(event = "token", text = text)
+            }
+
+            "product_cards" -> {
+                ChatStreamEvent(
+                    event = "product_cards",
+                    products = optJSONArray("products").toProducts(),
+                )
+            }
+
+            "products", "alternatives" -> {
+                ChatStreamEvent(
+                    event = eventName,
+                    products = optJSONArray("products").toProducts(),
+                )
+            }
+
+            "product_detail" -> {
+                ChatStreamEvent(
+                    event = "product_detail",
+                    product = optJSONObject("product")?.toProduct(),
+                )
+            }
+
+            "cart_update" -> {
+                ChatStreamEvent(event = "cart_update", cart = toCartSnapshot())
+            }
+
+            "cart" -> {
+                ChatStreamEvent(event = "cart", cart = optJSONObject("cart")?.toCartSnapshot())
+            }
+
+            "progress", "process" -> {
+                val text = optString("text")
+                    .ifBlank { optString("stage") }
+                    .ifBlank { optString("stage_key") }
+                ChatStreamEvent(
+                    event = eventName,
+                    progressText = text.takeIf { it.isNotBlank() },
+                )
+            }
+
+            "frontend_action" -> {
+                ChatStreamEvent(
+                    event = "frontend_action",
+                    navigation = toNavigation(product = null),
+                )
+            }
+
+            "turn_result" -> toTurnResultEvent()
+
+            "error" -> {
+                ChatStreamEvent(
+                    event = "error",
+                    errorMessage = optString("message").ifBlank {
+                        "Request failed. Please try again."
+                    },
+                )
+            }
+
+            "done" -> ChatStreamEvent(event = "done")
+            else -> null
+        }
+    }
+
+    private fun writeMultipartField(
+        output: OutputStream,
+        boundary: String,
+        name: String,
+        value: String,
+    ) {
+        output.writeUtf8("--$boundary\r\n")
+        output.writeUtf8("Content-Disposition: form-data; name=\"$name\"\r\n")
+        output.writeUtf8("\r\n")
+        output.writeUtf8(value)
+        output.writeUtf8("\r\n")
+    }
+
+    private fun writeMultipartFile(
+        output: OutputStream,
+        boundary: String,
+        fieldName: String,
+        fileName: String,
+        mimeType: String,
+        inputStreamProvider: () -> InputStream,
+    ) {
+        output.writeUtf8("--$boundary\r\n")
+        output.writeUtf8("Content-Disposition: form-data; name=\"$fieldName\"; filename=\"$fileName\"\r\n")
+        output.writeUtf8("Content-Type: $mimeType\r\n")
+        output.writeUtf8("\r\n")
+        inputStreamProvider().use { input ->
+            input.copyTo(output)
+        }
+        output.writeUtf8("\r\n")
+    }
+
+    private fun OutputStream.writeUtf8(value: String) {
+        write(value.toByteArray(StandardCharsets.UTF_8))
+    }
+
+    private fun JSONObject.toTurnResultEvent(): ChatStreamEvent {
+        val frontendData = optJSONObject("frontend_data") ?: JSONObject()
+        val productDetail = frontendData
+            .optJSONObject("product_detail")
+            ?.optJSONObject("product")
+            ?.toProduct()
+        val recommendedProducts = frontendData
+            .optJSONObject("recommended_products")
+            ?.optJSONArray("products")
+            .toProducts()
+        val alternativeProducts = frontendData
+            .optJSONObject("alternative_products")
+            ?.optJSONArray("products")
+            .toProducts()
+        val navigation = frontendData.optJSONObject("navigation").toNavigation(productDetail)
+        val cart = frontendData
+            .optJSONObject("cart_state")
+            ?.optJSONObject("cart")
+            ?.toCartSnapshot()
+
+        return ChatStreamEvent(
+            event = "turn_result",
+            text = frontendData
+                .optJSONObject("reply_message")
+                ?.optString("text")
+                ?.takeIf { it.isNotBlank() },
+            products = when {
+                recommendedProducts.isNotEmpty() -> recommendedProducts
+                alternativeProducts.isNotEmpty() -> alternativeProducts
+                else -> emptyList()
+            },
+            cart = cart,
+            navigation = navigation,
+            product = productDetail,
+            errorMessage = frontendData.optJSONObject("error_message")?.optString("message"),
+        )
+    }
+
+    private fun JSONObject?.toNavigation(product: ProductUiModel?): BackendNavigationUiModel? {
+        if (this == null) {
+            return null
+        }
+        val targetPage = optString("target_page").ifBlank { optString("targetPage") }
+            .ifBlank { optString("target_page", "") }
+        val normalizedTargetPage = when (targetPage) {
+            "product_detail" -> "product_detail_page"
+            "cart" -> "cart_page"
+            "checkout" -> "checkout_page"
+            else -> targetPage
+        }
+        if (targetPage.isBlank()) {
+            return null
+        }
+        val params = optJSONObject("params")
+            ?: optJSONObject("payload")
+        val skuId = params?.optString("sku_id").takeUnless { it.isNullOrBlank() }
+            ?: params?.optJSONArray("product_ids")?.optStringOrNull(0)
+            ?: optString("sku_id").takeIf { it.isNotBlank() }
+            ?: product?.skuId
+
+        return BackendNavigationUiModel(
+            targetPage = normalizedTargetPage,
+            skuId = skuId,
+        )
+    }
+
+    private fun JSONArray?.toProducts(): List<ProductUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                optJSONObject(index)?.toProduct()?.let(::add)
+            }
+        }
+    }
+
+    private fun JSONObject.toProduct(): ProductUiModel {
+        return ProductUiModel(
+            skuId = optString("sku_id"),
+            productId = optNullableString("product_id"),
+            name = optString("name").ifBlank { optString("title") },
+            title = optNullableString("title"),
+            category = optString("category"),
+            brand = optString("brand"),
+            price = optNumber("price"),
+            basePrice = optNullableNumber("base_price"),
+            stock = optInt("stock"),
+            imageUrl = absolutizeUrl(optString("image_url")),
+            imagePath = optNullableString("image_path"),
+            subCategory = optNullableString("sub_category"),
+            reason = optNullableString("reason") ?: optNullableString("highlight_short"),
+            highlightShort = optString("highlight_short"),
+            highlightDetail = optString("highlight_detail"),
+            productHighlight = optString("product_highlight"),
+            reviewsSummary = optString("reviews_summary"),
+            suitableScenarios = optJSONArray("suitable_scenarios").toStringList(),
+            targetUserTags = optJSONArray("target_user_tags").toStringList(),
+            nonStandardQueryTags = optJSONArray("non_standard_query_tags").toStringList(),
+            tags = optJSONArray("tags").toStringList(),
+            matchedReasons = optJSONArray("matched_reasons").toStringList(),
+            skus = optJSONArray("skus").toSkus(),
+            ragKnowledge = optJSONObject("rag_knowledge").toStringMap(),
+            score = optNullableNumber("score"),
+            spotlight = optJSONObject("spotlight").toSpotlight(),
+        )
+    }
+
+    private fun JSONArray?.toSkus(): List<ProductSkuUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val sku = optJSONObject(index) ?: continue
+                add(
+                    ProductSkuUiModel(
+                        skuId = sku.optString("sku_id"),
+                        properties = sku.optJSONObject("properties").toStringMap(),
+                        price = sku.optNumber("price"),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun JSONObject?.toSpotlight(): SpotlightUiModel {
+        if (this == null) {
+            return SpotlightUiModel()
+        }
+        return SpotlightUiModel(
+            skinType = optJSONArray("skin_type").toStringList(),
+            features = optJSONArray("features").toStringList(),
+            exclude = optJSONArray("exclude").toStringList(),
+            description = optString("description"),
+        )
+    }
+
+    private fun JSONObject.toCartSnapshot(): CartSnapshotUiModel {
+        val items = optJSONArray("items").toCartItems()
+        val totalItems = optInt("total_items", items.sumOf { it.quantity })
+        return CartSnapshotUiModel(
+            items = items,
+            totalPrice = optNumber("total_price"),
+            totalItems = totalItems,
+        )
+    }
+
+    private fun JSONArray?.toCartItems(): List<CartItemUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                add(
+                    CartItemUiModel(
+                        skuId = item.optString("sku_id"),
+                        name = item.optString("name"),
+                        price = item.optNumber("price"),
+                        quantity = item.optInt("quantity"),
+                        imageUrl = absolutizeUrl(item.optString("image_url")),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun JSONArray?.toStringList(): List<String> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val value = optString(index)
+                if (value.isNotBlank()) {
+                    add(value)
+                }
+            }
+        }
+    }
+
+    private fun JSONObject.optNullableString(key: String): String? {
+        val value = optString(key)
+        return value.takeIf { it.isNotBlank() }
+    }
+
+    private fun JSONObject.optNumber(key: String): Double {
+        return when (val value = opt(key)) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull() ?: 0.0
+            else -> 0.0
+        }
+    }
+
+    private fun JSONObject.optNullableNumber(key: String): Double? {
+        if (!has(key) || isNull(key)) {
+            return null
+        }
+        return when (val value = opt(key)) {
+            is Number -> value.toDouble()
+            is String -> value.toDoubleOrNull()
+            else -> null
+        }
+    }
+
+    private fun JSONObject?.toStringMap(): Map<String, String> {
+        if (this == null) {
+            return emptyMap()
+        }
+        return buildMap {
+            val iterator = keys()
+            while (iterator.hasNext()) {
+                val key = iterator.next()
+                val value = opt(key)
+                if (value != null && value != JSONObject.NULL) {
+                    put(key, value.toString())
+                }
+            }
+        }
+    }
+
+    private fun JSONArray.optStringOrNull(index: Int): String? {
+        if (index < 0 || index >= length()) {
+            return null
+        }
+        return optString(index).takeIf { it.isNotBlank() }
+    }
+
+    private fun InputStream.readUtf8Text(): String {
+        return bufferedReader(StandardCharsets.UTF_8).use { reader ->
+            reader.readText()
+        }
+    }
+
+    private fun ContentResolver.displayName(uri: Uri): String? {
+        return query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex >= 0) {
+                    cursor.getString(nameIndex)
+                } else {
+                    null
+                }
+            }
+    }
+
+    private fun String.sanitizeMultipartFileName(): String {
+        return replace("\"", "")
+            .replace("\r", "")
+            .replace("\n", "")
+            .ifBlank { "image_search.jpg" }
+    }
+
+    private fun extractErrorMessage(connection: HttpURLConnection): String {
+        val stream = connection.errorStream ?: runCatching { connection.inputStream }.getOrNull()
+        val body = runCatching { stream?.readUtf8Text().orEmpty() }.getOrDefault("")
+        if (body.isBlank()) {
+            return "Request failed. Please try again."
+        }
+        return runCatching {
+            JSONObject(body).optString("detail").ifBlank {
+                JSONObject(body).optString("message")
+            }.ifBlank {
+                body
+            }
+        }.getOrDefault(body)
+    }
+
+    private fun absolutizeUrl(raw: String): String {
+        if (raw.isBlank()) {
+            return raw
+        }
+        return when {
+            raw.startsWith("http://") || raw.startsWith("https://") -> raw
+            raw.startsWith("/") -> "$baseUrl$raw"
+            else -> "$baseUrl/$raw"
+        }
+    }
+}

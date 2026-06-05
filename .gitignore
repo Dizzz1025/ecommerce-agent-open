@@ -1,0 +1,123 @@
+# OS / archive noise
+.DS_Store
+Thumbs.db
+desktop.ini
+__MACOSX/
+._*
+
+# Local editor / agent state
+.idea/
+.vscode/
+*.iml
+.claude/
+
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+*.local
+local.properties
+
+# Logs, dumps, temp files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.pid
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# Android / Gradle
+android/.gradle/
+android/.kotlin/
+android/**/build/
+android/build/
+android/app/build/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+android/java_pid*.hprof
+
+# Android packaged artifacts
+*.apk
+*.ap_
+*.aab
+*.aar
+*.dex
+*.class
+
+# Signing material
+*.jks
+*.keystore
+*.p12
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+ENV/
+backend/.venv/
+
+# Python test / type / coverage caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Python packaging
+build/
+dist/
+site/
+*.egg-info/
+*.egg
+pip-wheel-metadata/
+
+# Backend runtime state
+storage/uploads/
+storage/user_history/
+storage/**/*.log
+storage/**/*.tmp
+
+# Local model downloads / heavy ML artifacts
+backend/models/
+*.safetensors
+*.onnx
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.faiss
+
+# Generated data / notebooks
+.ipynb_checkpoints/
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# Databases created during local runs
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / frontend tooling, if added later
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

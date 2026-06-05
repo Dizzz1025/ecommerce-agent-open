@@ -13,7 +13,7 @@ from app.models.agent import (
     ToolExecutionResult,
     UnifiedTurnOutput,
 )
-from app.models.domain import Product, ProductCard, SessionState
+from app.models.domain import ComparisonData, Product, ProductCard, SessionState
 
 
 class FrontendEventBuilder:
@@ -59,12 +59,16 @@ class FrontendEventBuilder:
         scene_plan: ScenePlan | None,
         frontend_action: FrontendActionDecision,
         trace_payload: dict[str, Any],
+        comparison_data: ComparisonData | None = None,
         history_restored: bool = False,
         restored_from_session_id: str | None = None,
         legacy_sse_events: list[str] | None = None,
     ) -> UnifiedTurnOutput:
         events: list[dict[str, Any]] = []
         data: dict[str, Any] = {}
+        scene_type = self._scene_type(decision)
+        if scene_type:
+            data["scene_type"] = scene_type
 
         data["reply_message"] = {
             "中文说明": "系统要展示给用户的回复文本。",
@@ -82,10 +86,15 @@ class FrontendEventBuilder:
                 "products": [card.model_dump() for card in cards],
             }
             self._add_event(events, "show_products", "recommended_products")
+            if comparison_data is not None:
+                data["comparison_data"] = comparison_data.model_dump()
         elif alternatives:
             data["alternative_products"] = {
                 "中文说明": "没有完全命中时提供的相近备选商品，前端可作为弱提示展示。",
-                "products": [self._candidate_to_card_like(item) for item in alternatives[:3]],
+                "products": [
+                    self._candidate_to_card_like(item, index=index)
+                    for index, item in enumerate(alternatives[:3], start=1)
+                ],
             }
             self._add_event(events, "show_products", "alternative_products")
 
@@ -206,6 +215,24 @@ class FrontendEventBuilder:
             }
         )
 
+    @staticmethod
+    def _scene_type(decision: FlowDecision) -> str | None:
+        if decision.flow == DialogueFlow.COMPARISON:
+            return "comparison"
+        if decision.flow in {
+            DialogueFlow.RECOMMENDATION,
+            DialogueFlow.FILTERING,
+            DialogueFlow.REFINEMENT,
+            DialogueFlow.EXCLUSION,
+            DialogueFlow.NO_RESULT,
+        }:
+            return "recommendation"
+        if decision.flow == DialogueFlow.PRODUCT_QA:
+            return "detail"
+        if decision.flow == DialogueFlow.SCENE_BUNDLE:
+            return "bundle"
+        return None
+
     def _build_clarification_options(self, response_text: str, decision: FlowDecision) -> dict[str, Any]:
         options_by_slot = {
             "category": ["护肤美妆", "手机耳机", "跑鞋穿搭"],
@@ -300,12 +327,14 @@ class FrontendEventBuilder:
         model_call_summary = runtime_timings.get("模型调用", {}) or {}
         model_call_details = model_call_summary.get("明细", []) or []
         has_model_call = bool(trace_payload.get("llm_called")) or bool(model_call_summary.get("调用次数"))
-        has_doubao_call = (
-            model_route.get("llm_provider") == "DoubaoClient"
-            and (
-                bool(trace_payload.get("llm_called"))
-                or any(item.get("provider") == "DoubaoClient" for item in model_call_details)
-            )
+        has_doubao_call = any(
+            item.get("provider") == "DoubaoClient"
+            and not item.get("llm_is_mock")
+            and item.get("http_request_sent")
+            and item.get("http_request_succeeded")
+            and item.get("raw_output_received")
+            and not item.get("fallback_triggered")
+            for item in model_call_details
         )
         model_call_purposes = list(
             dict.fromkeys(
@@ -360,6 +389,8 @@ class FrontendEventBuilder:
             "运行耗时统计": runtime_timings,
             "Progress事件": self._progress_debug(trace_payload),
             "进度事件": self._progress_debug(trace_payload),
+            "本地模型状态": model_route.get("local_model_status", {}),
+            "场景展示生成": trace_payload.get("presentation", {}),
             "购物车商品侧个性化": self._cart_personalization_debug(trace_payload),
             "商品增强字段使用": self._product_enhancement_debug(trace_payload),
             "回复策略": self._response_strategy_debug(trace_payload),
@@ -384,6 +415,14 @@ class FrontendEventBuilder:
                 "调用目的": model_call_purposes,
                 "模型调用次数": model_call_summary.get("调用次数", 0),
                 "模型调用总耗时_ms": model_call_summary.get("总耗时_ms", 0),
+                "planned_call_count": model_call_summary.get("planned_call_count", 0),
+                "attempted_call_count": model_call_summary.get("attempted_call_count", 0),
+                "real_http_call_count": model_call_summary.get("real_http_call_count", 0),
+                "successful_call_count": model_call_summary.get("successful_call_count", 0),
+                "failed_call_count": model_call_summary.get("failed_call_count", 0),
+                "mock_call_count": model_call_summary.get("mock_call_count", 0),
+                "fallback_count": model_call_summary.get("fallback_count", 0),
+                "调用明细": model_call_details,
                 "本地小模型任务": model_route.get("small_model_tasks", []),
                 "前端动作决策来源": frontend_action.source,
             },
@@ -589,11 +628,15 @@ class FrontendEventBuilder:
         methods = ["结构化过滤", "关键词匹配", "属性/约束匹配"]
         small_tasks = model_route.get("small_model_tasks", [])
         local_enabled = bool(model_route.get("local_model_status", {}).get("enabled", True))
-        if local_enabled and "bge_embedding_recall" in small_tasks:
+        local_status = model_route.get("local_model_status", {}) or {}
+        bge_status = local_status.get("bge_embedding", {}) or {}
+        text2vec_status = local_status.get("text2vec", {}) or {}
+        reranker_status = local_status.get("bge_reranker", {}) or {}
+        if local_enabled and "bge_embedding_recall" in small_tasks and _local_model_available(bge_status):
             methods.append("BGE向量召回")
-        if local_enabled and "text2vec_semantic_recall" in small_tasks:
+        if local_enabled and "text2vec_semantic_recall" in small_tasks and _local_model_available(text2vec_status):
             methods.append("text2vec语义召回")
-        if local_enabled and "bge_reranker" in small_tasks:
+        if local_enabled and "bge_reranker" in small_tasks and _local_model_available(reranker_status):
             methods.append("BGE重排序")
         return methods
 
@@ -612,7 +655,7 @@ class FrontendEventBuilder:
         }
 
     @staticmethod
-    def _candidate_to_card_like(candidate: CandidateProduct) -> dict[str, Any]:
+    def _candidate_to_card_like(candidate: CandidateProduct, index: int = 1) -> dict[str, Any]:
         meaningful = [
             item.removeprefix("匹配") for item in candidate.matched_reasons
             if item and item not in {"类目一致", "已排除否定条件", "已避开指定品牌", "匹配度一般，作为备选"}
@@ -639,4 +682,20 @@ class FrontendEventBuilder:
             "image_url": candidate.image_url,
             "reason": reason,
             "score": candidate.score,
+            "presentation": {
+                "type": "recommendation",
+                "option_label": _option_label(index),
+                "reason": reason,
+                "trade_off": None,
+                "content_source": "fallback",
+            },
         }
+
+
+def _option_label(index: int) -> str:
+    labels = ["方案一", "方案二", "方案三", "方案四", "方案五"]
+    return labels[index - 1] if index <= len(labels) else f"方案{index}"
+
+
+def _local_model_available(status: dict[str, Any]) -> bool:
+    return bool(status.get("loaded"))

@@ -133,11 +133,18 @@ def test_chat_stream_returns_token_cards_and_done() -> None:
 
     product_cards = next(data for name, data in events if name == "product_cards")
     assert product_cards["products"][0]["sku_id"] == "p_beauty_011"
+    assert product_cards["products"][0]["presentation"]["type"] == "recommendation"
+    assert product_cards["products"][0]["presentation"]["option_label"] == "方案一"
+    assert product_cards["products"][0]["presentation"]["reason"]
     turn_result = next(data for name, data in events if name == "turn_result")
     assert turn_result["frontend_events"][0]["动作类型"] == "show_reply"
     assert turn_result["frontend_events"][1]["数据参考"] == "recommended_products"
+    assert turn_result["frontend_data"]["scene_type"] == "recommendation"
     assert "reply_message" in turn_result["frontend_data"]
     assert "system_debug" in turn_result
+    presentation_debug = turn_result["system_debug"]["场景展示生成"]
+    assert presentation_debug["scene_type"] == "recommendation"
+    assert presentation_debug["content_source_by_sku"][product_cards["products"][0]["sku_id"]] in {"llm", "fallback"}
 
 
 def test_recommendation_and_cart_add_do_not_auto_navigate() -> None:
@@ -329,6 +336,11 @@ def test_comparison_event_uses_recommendation_rank_memory() -> None:
     compare_turn = _event(_parse_sse_events(compare_response.text), "turn_result")
     compare_products = compare_turn["frontend_data"]["recommended_products"]["products"]
     assert [item["sku_id"] for item in compare_products] == [first_sku, second_sku]
+    assert compare_turn["frontend_data"]["scene_type"] == "comparison"
+    assert "comparison_data" in compare_turn["frontend_data"]
+    assert all(item["presentation"]["type"] == "comparison" for item in compare_products)
+    conclusion = compare_turn["frontend_data"]["comparison_data"]["conclusion"]
+    assert conclusion["recommended_sku_id"] in {first_sku, second_sku}
     event_memory = compare_turn["system_debug"]["事件级记忆"]
     assert event_memory["写入事件类型"] == "comparison"
     assert event_memory["本轮指代解析来源"] == "memory_events"
@@ -803,6 +815,9 @@ def test_no_exact_match_returns_relaxed_alternatives() -> None:
     assert products
     assert all(product["category"] == "服饰运动" for product in products)
     assert all(product["price"] <= 500 for product in products)
+    assert [product["presentation"]["option_label"] for product in products[:3]] == ["方案一", "方案二", "方案三"][: len(products[:3])]
+    alternative_event_products = _event(events, "alternatives")["products"]
+    assert all(product["presentation"]["type"] == "recommendation" for product in alternative_event_products)
     assert "show_error" not in [item["动作类型"] for item in turn_result["frontend_events"]]
 
     trace = client.get(f"/api/session/{session_id}/trace").json()["traces"][-1]
@@ -997,8 +1012,11 @@ def test_recommendation_reply_length_is_mobile_friendly_and_grounded() -> None:
     reply = turn_result["frontend_data"]["reply_message"]["text"]
     sentence_count = sum(reply.count(mark) for mark in ["。", "！", "？", "\n"])
     assert sentence_count <= 4
-    product_names = [item["name"] for item in turn_result["frontend_data"]["recommended_products"]["products"]]
-    assert any(name in reply for name in product_names)
+    products = turn_result["frontend_data"]["recommended_products"]["products"]
+    assert not any(item["name"] in reply for item in products)
+    expected_labels = ["方案一", "方案二", "方案三"][:len(products[:3])]
+    assert [item["presentation"]["option_label"] for item in products[:3]] == expected_labels
+    assert all(item["presentation"]["reason"] for item in products)
     assert "优惠券" not in reply and "限时库存" not in reply
 
 
@@ -1196,8 +1214,19 @@ def test_turn_result_contains_runtime_timing_summary() -> None:
     assert timings["模块明细"]
     assert timings["Top耗时模块"]
     assert "模型调用" in timings
+    model_calls = timings["模型调用"]
+    assert model_calls["planned_call_count"] >= 1
+    assert model_calls["mock_call_count"] >= 1
+    assert model_calls["real_http_call_count"] == 0
+    assert model_calls["明细"]
+    assert all(item["llm_is_mock"] for item in model_calls["明细"] if item["provider"] == "MockLLMClient")
     module_names = {item["module"] for item in timings["模块明细"]}
     assert {"memory_read", "query_understanding", "rag_retrieval", "response_generation"} <= module_names
+    model_debug = turn_result["system_debug"]["模型调用"]
+    assert model_debug["Doubao是否真实调用"] is False
+    assert model_debug["mock_call_count"] >= 1
+    assert model_debug["real_http_call_count"] == 0
+    assert turn_result["system_debug"]["场景展示生成"]["content_source_by_sku"]
 
 
 def test_progress_events_are_emitted_and_debugged() -> None:

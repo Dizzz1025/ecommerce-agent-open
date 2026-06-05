@@ -92,6 +92,47 @@ class ProductCard(BaseModel):
     matched_reasons: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     score: float | None = None
+    presentation: "ProductPresentation | None" = None
+
+
+class ProductPresentation(BaseModel):
+    type: str
+    option_label: str | None = None
+    reason: str | None = None
+    trade_off: str | None = None
+    summary: str | None = None
+    advantages: list[str] = Field(default_factory=list)
+    suitable_for: str | None = None
+    key_features: list[str] = Field(default_factory=list)
+    matched_need: str | None = None
+    usage_advice: str | None = None
+    bundle_role: str | None = None
+    bundle_reason: str | None = None
+    usage_scenario: str | None = None
+    content_source: str = "fallback"
+
+
+class ComparisonDimensionItem(BaseModel):
+    sku_id: str
+    value: str
+
+
+class ComparisonDimension(BaseModel):
+    name: str
+    items: list[ComparisonDimensionItem] = Field(default_factory=list)
+    better_sku_id: str | None = None
+
+
+class ComparisonConclusion(BaseModel):
+    recommended_sku_id: str | None = None
+    reason: str = ""
+    alternative_sku_id: str | None = None
+    alternative_reason: str | None = None
+
+
+class ComparisonData(BaseModel):
+    dimensions: list[ComparisonDimension] = Field(default_factory=list)
+    conclusion: ComparisonConclusion = Field(default_factory=ComparisonConclusion)
 
 
 class RecommendationRecord(BaseModel):

@@ -15,6 +15,7 @@ from app.agents.model_router import ModelRouter
 from app.agents.product_qa import ProductQAModule
 from app.agents.query_understanding import QueryUnderstandingModule
 from app.agents.response_generator import ResponseGenerationModule
+from app.agents.scene_presentation_builder import ScenePresentationBuilder
 from app.agents.response_validator import ResponseValidator
 from app.agents.scenario_planner import ScenarioPlanner
 from app.agents.task_planner import TaskPlanner
@@ -71,6 +72,7 @@ class ShoppingAgent:
         scenario_planner: ScenarioPlanner,
         response_generator: ResponseGenerationModule,
         response_validator: ResponseValidator,
+        scene_presentation_builder: ScenePresentationBuilder,
         frontend_action_planner: FrontendActionPlanner,
         frontend_event_builder: FrontendEventBuilder,
         user_history_store: UserHistoryStore,
@@ -95,6 +97,7 @@ class ShoppingAgent:
         self.scenario_planner = scenario_planner
         self.response_generator = response_generator
         self.response_validator = response_validator
+        self.scene_presentation_builder = scene_presentation_builder
         self.frontend_action_planner = frontend_action_planner
         self.frontend_event_builder = frontend_event_builder
         self.user_history_store = user_history_store
@@ -316,6 +319,7 @@ class ShoppingAgent:
                 provider=self.response_generator.llm_client.__class__.__name__,
                 purpose="intent_plan_resolution",
                 duration_ms=timer.last_duration("query_understanding"),
+                call_debug=self._llm_call_debug(),
             )
         with timer.measure("multimodal_processing", "多模态输入处理"):
             multimodal_context = self.multimodal_service.process(
@@ -428,6 +432,7 @@ class ShoppingAgent:
         personalization_context: dict = {}
         cart_personalization_context: dict = {}
         fallback_result: FallbackResult | None = None
+        comparison_data = None
 
         try:
             with timer.measure("product_repository_load", "读取本地商品库"):
@@ -443,6 +448,7 @@ class ShoppingAgent:
                     provider=self.response_generator.llm_client.__class__.__name__,
                     purpose="cart_profile_analysis",
                     duration_ms=timer.last_duration("cart_personalization_analyze"),
+                    call_debug=self._llm_call_debug(),
                 )
             if privacy_update.get("updated"):
                 preference_result = PreferenceUpdateResult(
@@ -555,6 +561,8 @@ class ShoppingAgent:
                     scene_plan = self.scenario_planner.plan(parsed_query.raw_message)
                 with timer.measure("rag_retrieval", "场景化多子查询商品检索"):
                     candidates = self._retrieve_scene_candidates(scene_plan, state)
+                model_route, model_route_payload = self._refresh_local_model_status(model_route)
+                trace.model_route = model_route_payload
                 with timer.measure("cart_personalization_rerank", "购物车商品侧个性化重排"):
                     candidates = self.cart_aware_personalization.rerank(
                         candidates=candidates,
@@ -607,6 +615,8 @@ class ShoppingAgent:
                         trace.legacy_sse_events.extend(["cart_update", "cart"])
                 with timer.measure("rag_retrieval", "RAG/Hybrid 商品召回"):
                     raw_candidates = self._retrieve_for_flow(parsed_query, decision, state)
+                model_route, model_route_payload = self._refresh_local_model_status(model_route)
+                trace.model_route = model_route_payload
                 with timer.measure("multimodal_candidate_boost", "多模态候选增强"):
                     raw_candidates = self.multimodal_service.boost_candidates(raw_candidates, multimodal_context)
                 with timer.measure("cart_personalization_rerank", "购物车商品侧个性化重排"):
@@ -730,6 +740,34 @@ class ShoppingAgent:
                     response_text, validation_result = self.response_validator.validate_with_result(response_text, validation_candidates)
             if tool_prefix_messages and not response_text.startswith(tool_prefix_messages[0]):
                 response_text = "\n".join(tool_prefix_messages) + "\n\n" + response_text
+            if cards and decision.flow != DialogueFlow.PRODUCT_QA:
+                with timer.measure("scene_presentation_build", "构造结构化商品展示字段"):
+                    cards, comparison_data = self.scene_presentation_builder.build(
+                        parsed_query=parsed_query,
+                        flow=decision.flow,
+                        cards=cards,
+                        products=products,
+                        candidates=candidates,
+                        use_llm=model_route.need_llm,
+                    )
+                timer.mark_model_call(
+                    module="scene_presentation_build",
+                    provider=self.response_generator.llm_client.__class__.__name__,
+                    purpose="build_scene_presentation",
+                    duration_ms=timer.last_duration("scene_presentation_build"),
+                    called=self.scene_presentation_builder.last_llm_called,
+                    call_debug=self.scene_presentation_builder.last_call_debug,
+                )
+                trace.presentation = {
+                    **self.scene_presentation_builder.last_debug,
+                    "llm_called": self.scene_presentation_builder.last_llm_called,
+                    "comparison_data": comparison_data.model_dump() if comparison_data else None,
+                }
+                if decision.flow == DialogueFlow.COMPARISON:
+                    response_text = self.scene_presentation_builder.comparison_intro(parsed_query, cards)
+                elif self.scene_presentation_builder.scene_type(decision.flow) == "recommendation":
+                    response_text = self.scene_presentation_builder.recommendation_intro(parsed_query, cards)
+                trace.llm_called = trace.llm_called or self.scene_presentation_builder.last_llm_called
             trace.validation_result = validation_result.model_dump()
             trace.cart_personalization = cart_personalization_context
             trace.personalization_context = personalization_context
@@ -802,6 +840,14 @@ class ShoppingAgent:
             if alternatives:
                 with timer.measure("alternative_card_build", "生成备选商品卡片"):
                     alt_cards = self.post_processor.build_product_cards(alternatives[:3], products_by_id)
+                    alt_cards, _ = self.scene_presentation_builder.build(
+                        parsed_query=parsed_query,
+                        flow=DialogueFlow.NO_RESULT,
+                        cards=alt_cards,
+                        products=products,
+                        candidates=alternatives[:3],
+                        use_llm=False,
+                    )
                 yield SSEEvent(event="alternatives", data={"products": [card.model_dump() for card in alt_cards]})
                 trace.legacy_sse_events.append("alternatives")
                 with timer.measure("memory_write_alternative_event", "写入备选推荐事件记忆"):
@@ -838,6 +884,7 @@ class ShoppingAgent:
                 purpose="frontend_action_decision",
                 duration_ms=timer.last_duration("frontend_action_decision"),
                 called=frontend_action.source == "doubao",
+                call_debug=self._llm_call_debug(),
             )
             trace.frontend_action = frontend_action.model_dump()
             trace.llm_called = trace.llm_called or frontend_action.source == "doubao"
@@ -882,6 +929,7 @@ class ShoppingAgent:
                     scene_plan=scene_plan,
                     frontend_action=frontend_action,
                     trace_payload=trace.model_dump(),
+                    comparison_data=comparison_data,
                     history_restored=history_restored,
                     restored_from_session_id=restored_from_session_id,
                     legacy_sse_events=trace.legacy_sse_events,
@@ -1324,8 +1372,23 @@ class ShoppingAgent:
             purpose="generate_response",
             duration_ms=timer.last_duration("response_generation"),
             called=self.response_generator.last_llm_called,
+            call_debug=self._llm_call_debug(),
         )
         return response_text
+
+    def _refresh_local_model_status(self, model_route: ModelRouteDecision) -> tuple[ModelRouteDecision, dict]:
+        if not self.model_router.local_models:
+            payload = model_route.model_dump()
+        else:
+            model_route = model_route.model_copy(
+                update={"local_model_status": self.model_router.local_models.status()}
+            )
+            payload = model_route.model_dump()
+        payload["llm_provider"] = self.response_generator.llm_client.__class__.__name__
+        return model_route, payload
+
+    def _llm_call_debug(self) -> dict:
+        return dict(getattr(self.response_generator.llm_client, "last_call_debug", {}) or {})
 
     @staticmethod
     def _is_blank_resume_state(state: SessionState) -> bool:

@@ -1,9 +1,15 @@
+import json
+import re
+from time import perf_counter
+
 from app.llm.base import BaseLLMClient
 from app.models.domain import IntentType
-import re
 
 
 class MockLLMClient(BaseLLMClient):
+    def __init__(self) -> None:
+        self.last_call_debug: dict = {}
+
     def generate_response(
         self,
         intent: IntentType,
@@ -11,6 +17,38 @@ class MockLLMClient(BaseLLMClient):
         context: str,
         product_names: list[str],
     ) -> str:
+        output = self._generate_response_internal(
+            intent=intent,
+            message=message,
+            context=context,
+            product_names=product_names,
+        )
+        self.last_call_debug = {
+            "llm_provider": "mock",
+            "llm_is_mock": True,
+            "llm_call_attempted": True,
+            "http_request_sent": False,
+            "http_request_succeeded": False,
+            "http_status_code": None,
+            "raw_output_received": bool(output),
+            "raw_output_preview": output[:2000],
+            "fallback_triggered": False,
+            "fallback_reason": None,
+            "intent": intent.value,
+            "context_length": len(context),
+            "product_name_count": len(product_names),
+        }
+        return output
+
+    def _generate_response_internal(
+        self,
+        intent: IntentType,
+        message: str,
+        context: str,
+        product_names: list[str],
+    ) -> str:
+        if "STRUCTURED_PRESENTATION_JSON" in context:
+            return _structured_presentation_response(intent=intent, context=context)
         if intent == IntentType.DETAIL and product_names:
             products = _extract_product_facts(context)
             item = products[0] if products else {"name": product_names[0], "price": None, "reason": ""}
@@ -136,6 +174,28 @@ class MockLLMClient(BaseLLMClient):
         }
 
     def resolve_user_intent(self, context: dict) -> dict:
+        start = perf_counter()
+        payload = self._resolve_user_intent_internal(context)
+        self.last_call_debug = {
+            "llm_provider": "mock",
+            "llm_is_mock": True,
+            "llm_call_attempted": True,
+            "http_request_sent": False,
+            "http_request_succeeded": False,
+            "http_status_code": None,
+            "raw_output_received": bool(payload),
+            "raw_output_preview": _truncate(json.dumps(payload, ensure_ascii=False, default=str)),
+            "json_parse_succeeded": bool(payload),
+            "fallback_triggered": False,
+            "fallback_reason": None,
+            "purpose": "intent_plan_resolution",
+            "message_length": len(str(context.get("message", ""))),
+            "context_keys": list(context.keys())[:20],
+            "duration_ms": _elapsed_ms(start),
+        }
+        return payload
+
+    def _resolve_user_intent_internal(self, context: dict) -> dict:
         message = str(context.get("message", ""))
         category, sub_category = _mock_category(message)
         current_state = context.get("current_state", {}) if isinstance(context.get("current_state"), dict) else {}
@@ -437,23 +497,160 @@ class MockLLMClient(BaseLLMClient):
 def _extract_product_facts(context: str) -> list[dict]:
     products: list[dict] = []
     for line in context.splitlines():
-        if not line.strip().startswith("- product_id="):
+        stripped = line.strip()
+        if not (stripped.startswith("- product_id=") or stripped.startswith("- sku_id=")):
             continue
-        name_match = re.search(r"name=(.*?) \| brand=", line)
-        price_match = re.search(r"price=([0-9.]+)", line)
-        score_match = re.search(r"match_score=([0-9.]+)", line)
-        reason_match = re.search(r"reasons=(.*?) \| tags=", line) or re.search(r"reasons=(.*?) \| review_summary=", line)
-        if not name_match:
+        fields: dict[str, str] = {}
+        for part in stripped.removeprefix("- ").split(" | "):
+            if "=" not in part:
+                continue
+            key, value = part.split("=", 1)
+            fields[key.strip()] = value.strip()
+        if not fields.get("name"):
             continue
+        price = _mock_float(fields.get("price"))
+        score = _mock_float(fields.get("score")) or _mock_float(fields.get("match_score"))
         products.append(
             {
-                "name": name_match.group(1).strip(),
-                "price": float(price_match.group(1)) if price_match else None,
-                "score": float(score_match.group(1)) if score_match else None,
-                "reason": reason_match.group(1).strip() if reason_match else "",
+                "sku_id": fields.get("sku_id") or fields.get("product_id") or "",
+                "name": fields["name"],
+                "brand": fields.get("brand", ""),
+                "price": price,
+                "score": score,
+                "reason": fields.get("reason") or fields.get("reasons") or "",
+                "highlight_short": fields.get("highlight_short") or "",
+                "matched_reasons": _split_fact_list(fields.get("matched_reasons")),
+                "suitable_scenarios": _split_fact_list(fields.get("suitable_scenarios")),
+                "target_user_tags": _split_fact_list(fields.get("target_user_tags")),
+                "tags": _split_fact_list(fields.get("tags")),
+                "risk_notes": _split_fact_list(fields.get("risk_notes")),
             }
         )
     return products
+
+
+def _structured_presentation_response(intent: IntentType, context: str) -> str:
+    products = _extract_product_facts(context)
+    if "Task: comparison_presentation" in context or intent == IntentType.COMPARE:
+        items = []
+        for item in products[:3]:
+            reason = _humanize_reason(item.get("reason") or "")
+            items.append(
+                {
+                    "sku_id": item.get("sku_id"),
+                    "summary": f"{item['name']}在{reason}上更值得关注。",
+                    "advantages": [part for part in reason.split("、") if part][:3],
+                    "trade_off": None,
+                    "suitable_for": f"更适合关注{reason}的需求。",
+                }
+            )
+        dimensions = [
+            {
+                "name": "价格",
+                "items": [
+                    {"sku_id": item.get("sku_id"), "value": f"¥{item['price']:g}"}
+                    for item in products[:3]
+                    if item.get("price") is not None
+                ],
+                "better_sku_id": min(
+                    [item for item in products[:3] if item.get("price") is not None],
+                    key=lambda item: item["price"],
+                ).get("sku_id") if any(item.get("price") is not None for item in products[:3]) else None,
+            },
+            {
+                "name": "匹配理由",
+                "items": [
+                    {"sku_id": item.get("sku_id"), "value": _humanize_reason(item.get("reason") or "")}
+                    for item in products[:3]
+                ],
+                "better_sku_id": None,
+            },
+        ]
+        return json.dumps(
+            {
+                "items": items,
+                "comparison_data": {
+                    "dimensions": dimensions,
+                    "conclusion": {
+                        "recommended_sku_id": products[0].get("sku_id") if products else None,
+                        "reason": "结合当前需求，可以先重点看第一款，再用价格和匹配理由对照其他商品。",
+                        "alternative_sku_id": products[1].get("sku_id") if len(products) > 1 else None,
+                        "alternative_reason": "第二款也可以作为横向对照选择。",
+                    },
+                },
+            },
+            ensure_ascii=False,
+        )
+    return json.dumps(
+        {
+            "items": [
+                {
+                    "sku_id": item.get("sku_id"),
+                    "reason": _mock_presentation_reason(item),
+                    "trade_off": _mock_presentation_tradeoff(item),
+                }
+                for item in products[:3]
+            ]
+        },
+        ensure_ascii=False,
+    )
+
+
+def _mock_presentation_reason(item: dict) -> str:
+    facts = []
+    for value in [
+        item.get("highlight_short"),
+        *_humanized_facts(item.get("matched_reasons") or []),
+        *_humanized_facts(item.get("suitable_scenarios") or []),
+        *_humanized_facts(item.get("target_user_tags") or []),
+        *_humanized_facts(item.get("tags") or []),
+    ]:
+        text = _clean_mock_fact(value)
+        if text and text not in facts:
+            facts.append(text)
+    price = item.get("price")
+    price_text = f"¥{price:g}" if price is not None else "当前价"
+    if facts:
+        return f"{item['name']}当前价格{price_text}，亮点是{'、'.join(facts[:3])}，和你的需求匹配度更具体。"
+    reason = _humanize_reason(item.get("reason") or "")
+    return f"{item['name']}当前价格{price_text}，检索理由包含{reason}，可以作为一个具体方案查看。"
+
+
+def _mock_presentation_tradeoff(item: dict) -> str | None:
+    risks = _humanized_facts(item.get("risk_notes") or [])
+    keywords = ("偏", "较", "不足", "不适合", "可能", "需要", "少", "低", "重", "厚", "贵")
+    for risk in risks:
+        if any(keyword in risk for keyword in keywords):
+            return risk
+    return None
+
+
+def _mock_float(value: str | None) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
+def _split_fact_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in re.split(r"[,，、]", value) if item.strip()]
+
+
+def _humanized_facts(values: list[str]) -> list[str]:
+    return [_clean_mock_fact(item) for item in values if _clean_mock_fact(item)]
+
+
+def _clean_mock_fact(value: str | None) -> str:
+    if not value:
+        return ""
+    text = value.strip()
+    if text in {"类目一致", "已排除否定条件", "已避开指定品牌", "匹配度一般，作为备选"}:
+        return ""
+    return text.removeprefix("匹配").removeprefix("贴合问题标签:").removeprefix("购物车偏好:")
 
 
 def _extract_detail_evidence(context: str) -> list[str]:
@@ -729,3 +926,13 @@ def _after_phrase(message: str, markers: list[str]) -> str | None:
         return None
     index, marker = min(positions, key=lambda item: item[0])
     return message[index:index + len(message)].strip("，,。 ") or marker
+
+
+def _elapsed_ms(start: float) -> float:
+    return round((perf_counter() - start) * 1000, 2)
+
+
+def _truncate(text: str | None, limit: int = 2000) -> str | None:
+    if text is None:
+        return None
+    return text if len(text) <= limit else text[: limit - 1] + "…"

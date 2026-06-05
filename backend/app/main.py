@@ -4,6 +4,11 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import health
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.dependencies import get_local_model_manager
+from app.core.logging import get_logger
+
+
+logger = get_logger(__name__)
 
 
 def create_app() -> FastAPI:
@@ -20,7 +25,30 @@ def create_app() -> FastAPI:
         )
     app.include_router(health.router, tags=["health"])
     app.include_router(api_router, prefix=settings.api_prefix)
+
+    @app.on_event("startup")
+    async def log_local_model_diagnostics() -> None:
+        manager = get_local_model_manager()
+        status = manager.diagnostics()
+        logger.info(
+            "Local model diagnostics: backend_dir=%s models_dir=%s bge=%s text2vec=%s reranker=%s",
+            status.get("backend_dir"),
+            status.get("models_dir"),
+            _safe_model_status(status.get("bge_embedding", {})),
+            _safe_model_status(status.get("text2vec", {})),
+            _safe_model_status(status.get("bge_reranker", {})),
+        )
+
     return app
+
+
+def _safe_model_status(status: dict) -> dict:
+    return {
+        "resolved_path": status.get("resolved_path") or status.get("path"),
+        "path_exists": status.get("path_exists"),
+        "loaded": status.get("loaded"),
+        "load_error": status.get("load_error"),
+    }
 
 
 app = create_app()

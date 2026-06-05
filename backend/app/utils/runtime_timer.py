@@ -40,17 +40,20 @@ class RuntimeTimer:
         purpose: str,
         duration_ms: float,
         called: bool = True,
+        call_debug: dict[str, Any] | None = None,
     ) -> None:
         if not called:
             return
-        self._model_calls.append(
-            {
-                "module": module,
-                "provider": provider,
-                "purpose": purpose,
-                "duration_ms": round(duration_ms, 2),
-            }
-        )
+        item = {
+            "module": module,
+            "provider": provider,
+            "purpose": purpose,
+            "duration_ms": round(duration_ms, 2),
+        }
+        item.update(_model_call_debug_fields(call_debug or {}, provider))
+        if call_debug:
+            item["call_debug"] = call_debug
+        self._model_calls.append(item)
 
     def last_duration(self, module: str) -> float:
         for record in reversed(self._records):
@@ -74,6 +77,7 @@ class RuntimeTimer:
             "模型调用": {
                 "调用次数": len(self._model_calls),
                 "总耗时_ms": round(sum(item["duration_ms"] for item in self._model_calls), 2),
+                **_model_call_stats(self._model_calls),
                 "明细": self._model_calls,
             },
             "Top耗时模块": top,
@@ -82,3 +86,44 @@ class RuntimeTimer:
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="milliseconds")
+
+
+def _model_call_debug_fields(call_debug: dict[str, Any], provider: str | None) -> dict[str, Any]:
+    is_mock = bool(call_debug.get("llm_is_mock")) or provider == "MockLLMClient"
+    attempted = bool(call_debug.get("llm_call_attempted", True))
+    http_sent = bool(call_debug.get("http_request_sent"))
+    http_succeeded = bool(call_debug.get("http_request_succeeded"))
+    fallback = bool(call_debug.get("fallback_triggered"))
+    raw_received = bool(call_debug.get("raw_output_received"))
+    succeeded = (http_succeeded and raw_received and not fallback) or (is_mock and raw_received and not fallback)
+    return {
+        "llm_call_attempted": attempted,
+        "llm_is_mock": is_mock,
+        "http_request_sent": http_sent,
+        "http_request_succeeded": http_succeeded,
+        "http_status_code": call_debug.get("http_status_code"),
+        "raw_output_received": raw_received,
+        "fallback_triggered": fallback,
+        "fallback_reason": call_debug.get("fallback_reason"),
+        "call_succeeded": succeeded,
+    }
+
+
+def _model_call_stats(calls: list[dict[str, Any]]) -> dict[str, Any]:
+    attempted = [item for item in calls if item.get("llm_call_attempted")]
+    successful = [item for item in attempted if item.get("call_succeeded")]
+    failed = [
+        item
+        for item in attempted
+        if item.get("fallback_triggered")
+        or (item.get("http_request_sent") and not item.get("http_request_succeeded"))
+    ]
+    return {
+        "planned_call_count": len(calls),
+        "attempted_call_count": len(attempted),
+        "real_http_call_count": sum(1 for item in calls if item.get("http_request_sent") and not item.get("llm_is_mock")),
+        "successful_call_count": len(successful),
+        "failed_call_count": len(failed),
+        "mock_call_count": sum(1 for item in calls if item.get("llm_is_mock")),
+        "fallback_count": sum(1 for item in calls if item.get("fallback_triggered")),
+    }

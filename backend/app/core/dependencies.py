@@ -9,6 +9,7 @@ from app.agents.model_router import ModelRouter
 from app.agents.product_qa import ProductQAModule
 from app.agents.query_understanding import QueryUnderstandingModule
 from app.agents.response_generator import ResponseGenerationModule
+from app.agents.scene_presentation_builder import ScenePresentationBuilder
 from app.agents.response_validator import ResponseValidator
 from app.agents.scenario_planner import ScenarioPlanner
 from app.agents.shopping_agent import ShoppingAgent
@@ -285,6 +286,11 @@ def get_frontend_event_builder() -> FrontendEventBuilder:
 
 
 @lru_cache
+def get_scene_presentation_builder() -> ScenePresentationBuilder:
+    return ScenePresentationBuilder(llm_client=get_llm_client())
+
+
+@lru_cache
 def get_shopping_agent() -> ShoppingAgent:
     return ShoppingAgent(
         query_understanding=get_query_understanding(),
@@ -302,6 +308,7 @@ def get_shopping_agent() -> ShoppingAgent:
         scenario_planner=get_scenario_planner(),
         response_generator=get_response_generator(),
         response_validator=get_response_validator(),
+        scene_presentation_builder=get_scene_presentation_builder(),
         frontend_action_planner=get_frontend_action_planner(),
         frontend_event_builder=get_frontend_event_builder(),
         user_history_store=get_user_history_store(),

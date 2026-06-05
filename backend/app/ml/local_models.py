@@ -41,11 +41,18 @@ class LocalModelManager:
         return {
             "enabled": self.enable,
             "device": self.device,
+            "backend_dir": str(_backend_dir()),
+            "models_dir": str(_models_dir(self.bge_embedding_path, self.text2vec_path, self.reranker_path)),
             "bge_embedding": self._model_status("bge", self.bge_embedding_path),
             "text2vec": self._model_status("text2vec", self.text2vec_path),
             "bge_reranker": self._reranker_status(),
             "load_errors": self._load_errors,
         }
+
+    def diagnostics(self) -> dict[str, Any]:
+        """Return safe startup diagnostics without model secrets or API keys."""
+
+        return self.status()
 
     def best_text2vec_label(
         self,
@@ -188,17 +195,25 @@ class LocalModelManager:
             return None
 
     def _model_status(self, model_key: str, path: Path | None) -> dict[str, Any]:
+        load_error = self._load_errors.get(model_key) or self._load_errors.get(f"{model_key}_predict")
         return {
             "path": str(path) if path else None,
+            "resolved_path": str(path.resolve()) if path else None,
             "path_exists": self._valid_model_path(path),
+            "required_files": _model_required_files(path),
             "loaded": model_key in self._embedding_models,
+            "load_error": load_error,
         }
 
     def _reranker_status(self) -> dict[str, Any]:
+        load_error = self._load_errors.get("bge_reranker") or self._load_errors.get("bge_reranker_predict")
         return {
             "path": str(self.reranker_path) if self.reranker_path else None,
+            "resolved_path": str(self.reranker_path.resolve()) if self.reranker_path else None,
             "path_exists": self._valid_model_path(self.reranker_path),
+            "required_files": _model_required_files(self.reranker_path),
             "loaded": self._reranker is not None,
+            "load_error": load_error,
         }
 
     @staticmethod
@@ -213,3 +228,32 @@ def _sigmoid(value: float) -> float:
     z = math.exp(value)
     return z / (1 + z)
 
+
+def _backend_dir() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _models_dir(*paths: Path | None) -> str | None:
+    for path in paths:
+        if path is not None:
+            return str(path.resolve().parent)
+    return str(_backend_dir() / "models")
+
+
+def _model_required_files(path: Path | None) -> dict[str, Any]:
+    required = {
+        "config.json": False,
+        "tokenizer_config.json": False,
+        "vocab.txt_or_tokenizer.json": False,
+        "weight_file": False,
+    }
+    if not path or not path.exists() or not path.is_dir():
+        return {"ok": False, "files": required, "missing": list(required)}
+    files = {
+        "config.json": (path / "config.json").exists(),
+        "tokenizer_config.json": (path / "tokenizer_config.json").exists(),
+        "vocab.txt_or_tokenizer.json": (path / "vocab.txt").exists() or (path / "tokenizer.json").exists(),
+        "weight_file": any((path / name).exists() for name in ["model.safetensors", "pytorch_model.bin"]),
+    }
+    missing = [name for name, exists in files.items() if not exists]
+    return {"ok": not missing, "files": files, "missing": missing}

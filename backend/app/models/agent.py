@@ -280,6 +280,7 @@ class AgentTrace(BaseModel):
     multimodal_context: dict[str, Any] = Field(default_factory=dict)
     reference_resolution: dict[str, Any] = Field(default_factory=dict)
     response_strategy: dict[str, Any] = Field(default_factory=dict)
+    presentation: dict[str, Any] = Field(default_factory=dict)
     frontend_action: dict[str, Any] = Field(default_factory=dict)
     frontend_events: list[dict[str, Any]] = Field(default_factory=list)
     legacy_sse_events: list[str] = Field(default_factory=list)

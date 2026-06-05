@@ -1,6 +1,8 @@
 import base64
 import json
 from pathlib import Path
+from time import perf_counter
+from typing import Any
 
 import httpx
 
@@ -13,6 +15,7 @@ class DoubaoClient(BaseLLMClient):
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
+        self.last_call_debug: dict[str, Any] = {}
 
     def generate_response(
         self,
@@ -21,7 +24,22 @@ class DoubaoClient(BaseLLMClient):
         context: str,
         product_names: list[str],
     ) -> str:
+        start = perf_counter()
+        debug = self._new_call_debug(intent=intent, context=context, product_names=product_names)
+        self.last_call_debug = debug
         if not self.api_key or not self.base_url:
+            missing = []
+            if not self.api_key:
+                missing.append("api_key")
+            if not self.base_url:
+                missing.append("base_url")
+            debug.update(
+                {
+                    "fallback_triggered": True,
+                    "fallback_reason": f"missing_config:{','.join(missing)}",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
             return self._fallback(product_names)
 
         url = self.base_url.rstrip("/")
@@ -49,25 +67,47 @@ class DoubaoClient(BaseLLMClient):
             ],
         }
         try:
+            debug["http_request_sent"] = True
             with httpx.Client(timeout=20) as client:
                 response = client.post(
                     url,
                     headers={"Authorization": f"Bearer {self.api_key}"},
                     json=payload,
                 )
+                debug["http_status_code"] = response.status_code
                 response.raise_for_status()
                 data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
-        except Exception:
+            content = data["choices"][0]["message"]["content"].strip()
+            debug.update(
+                {
+                    "http_request_succeeded": True,
+                    "raw_output_received": bool(content),
+                    "raw_output_preview": _truncate(content),
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            if not content:
+                debug.update(
+                    {
+                        "fallback_triggered": True,
+                        "fallback_reason": "empty_model_output",
+                    }
+                )
+                return self._fallback(product_names)
+            return content
+        except Exception as exc:
+            debug.update(
+                {
+                    "exception_type": exc.__class__.__name__,
+                    "error_message": _safe_error(exc),
+                    "fallback_triggered": True,
+                    "fallback_reason": "http_or_parse_exception",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
             return self._fallback(product_names)
 
     def decide_frontend_action(self, context: dict) -> dict:
-        if not self.api_key or not self.base_url:
-            return {}
-
-        url = self.base_url.rstrip("/")
-        if not url.endswith("/chat/completions"):
-            url = f"{url}/chat/completions"
         allowed_actions = [
             "stay_chat",
             "ask_clarification",
@@ -113,30 +153,15 @@ class DoubaoClient(BaseLLMClient):
                 },
             ],
         }
-        for _ in range(2):
-            try:
-                with httpx.Client(timeout=25) as client:
-                    response = client.post(
-                        url,
-                        headers={"Authorization": f"Bearer {self.api_key}"},
-                        json=payload,
-                    )
-                    response.raise_for_status()
-                    content = response.json()["choices"][0]["message"]["content"].strip()
-                result = _extract_json(content)
-                if result:
-                    return result
-            except Exception:
-                continue
-        return {}
+        return self._chat_json(
+            purpose="frontend_action_decision",
+            context=context,
+            payload=payload,
+            timeout=25,
+            retries=2,
+        )
 
     def analyze_user_profile(self, context: dict) -> dict:
-        if not self.api_key or not self.base_url:
-            return {}
-
-        url = self.base_url.rstrip("/")
-        if not url.endswith("/chat/completions"):
-            url = f"{url}/chat/completions"
         payload = {
             "model": self.model,
             "temperature": 0.1,
@@ -155,30 +180,30 @@ class DoubaoClient(BaseLLMClient):
                 },
             ],
         }
-        try:
-            with httpx.Client(timeout=18) as client:
-                response = client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json=payload,
-                )
-                response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"].strip()
-            return _extract_json(content)
-        except Exception:
-            return {}
+        return self._chat_json(
+            purpose="user_profile_analysis",
+            context=context,
+            payload=payload,
+            timeout=18,
+            retries=1,
+        )
 
     def analyze_image(self, context: dict) -> dict:
-        if not self.api_key or not self.base_url:
-            return {}
-
+        start = perf_counter()
         image_url = _image_url_for_api(context)
         if not image_url:
+            debug = self._new_json_call_debug(purpose="image_analysis", context=context)
+            debug.update(
+                {
+                    "llm_call_attempted": False,
+                    "fallback_triggered": True,
+                    "fallback_reason": "missing_or_too_large_image_input",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            self.last_call_debug = debug
             return {}
 
-        url = self.base_url.rstrip("/")
-        if not url.endswith("/chat/completions"):
-            url = f"{url}/chat/completions"
         model = context.get("vision_model") or self.model
         payload = {
             "model": model,
@@ -221,26 +246,15 @@ class DoubaoClient(BaseLLMClient):
                 },
             ],
         }
-        try:
-            with httpx.Client(timeout=30) as client:
-                response = client.post(
-                    url,
-                    headers={"Authorization": f"Bearer {self.api_key}"},
-                    json=payload,
-                )
-                response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"].strip()
-            return _extract_json(content)
-        except Exception:
-            return {}
+        return self._chat_json(
+            purpose="image_analysis",
+            context=context,
+            payload=payload,
+            timeout=30,
+            retries=1,
+        )
 
     def resolve_user_intent(self, context: dict) -> dict:
-        if not self.api_key or not self.base_url:
-            return {}
-
-        url = self.base_url.rstrip("/")
-        if not url.endswith("/chat/completions"):
-            url = f"{url}/chat/completions"
         allowed_intents = list(context.get("available_intents") or [
             "recommend", "filter", "refine", "compare", "detail", "scene_bundle", "preference",
             "cart_add", "cart_remove", "cart_update", "cart_clear", "cart_view", "cart_keep_only",
@@ -378,22 +392,13 @@ class DoubaoClient(BaseLLMClient):
                 },
             ],
         }
-        for _ in range(2):
-            try:
-                with httpx.Client(timeout=25) as client:
-                    response = client.post(
-                        url,
-                        headers={"Authorization": f"Bearer {self.api_key}"},
-                        json=payload,
-                    )
-                    response.raise_for_status()
-                    content = response.json()["choices"][0]["message"]["content"].strip()
-                result = _extract_json(content)
-                if result:
-                    return result
-            except Exception:
-                continue
-        return {}
+        return self._chat_json(
+            purpose="intent_plan_resolution",
+            context=context,
+            payload=payload,
+            timeout=25,
+            retries=2,
+        )
 
     @staticmethod
     def _fallback(product_names: list[str]) -> str:
@@ -402,19 +407,205 @@ class DoubaoClient(BaseLLMClient):
         names = "、".join(product_names[:3])
         return f"我先为你挑了这几款：{names}。可以先看卡片细节，再决定要不要加入购物车。"
 
+    def _new_call_debug(self, *, intent: IntentType, context: str, product_names: list[str]) -> dict[str, Any]:
+        return {
+            "llm_provider": "doubao",
+            "llm_is_mock": False,
+            "llm_call_attempted": True,
+            "http_request_sent": False,
+            "http_request_succeeded": False,
+            "http_status_code": None,
+            "raw_output_received": False,
+            "fallback_triggered": False,
+            "fallback_reason": None,
+            "intent": intent.value,
+            "model": self.model,
+            "base_url_configured": bool(self.base_url),
+            "api_key_configured": bool(self.api_key),
+            "context_length": len(context),
+            "product_name_count": len(product_names),
+        }
+
+    def _chat_json(
+        self,
+        *,
+        purpose: str,
+        context: dict[str, Any],
+        payload: dict[str, Any],
+        timeout: float,
+        retries: int,
+    ) -> dict:
+        start = perf_counter()
+        debug = self._new_json_call_debug(purpose=purpose, context=context)
+        self.last_call_debug = debug
+        if not self.api_key or not self.base_url:
+            missing = []
+            if not self.api_key:
+                missing.append("api_key")
+            if not self.base_url:
+                missing.append("base_url")
+            debug.update(
+                {
+                    "fallback_triggered": True,
+                    "fallback_reason": f"missing_config:{','.join(missing)}",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            return {}
+
+        url = self.base_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        errors: list[dict[str, Any]] = []
+        for attempt in range(1, max(1, retries) + 1):
+            debug["attempt_count"] = attempt
+            try:
+                debug["http_request_sent"] = True
+                with httpx.Client(timeout=timeout) as client:
+                    response = client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {self.api_key}"},
+                        json=payload,
+                    )
+                    debug["http_status_code"] = response.status_code
+                    response.raise_for_status()
+                    data = response.json()
+                content = data["choices"][0]["message"]["content"].strip()
+                debug.update(
+                    {
+                        "http_request_succeeded": True,
+                        "raw_output_received": bool(content),
+                        "raw_output_preview": _truncate(content),
+                    }
+                )
+                result, parse_debug = _extract_json_with_debug(content)
+                debug["json_parse_succeeded"] = bool(result)
+                if result:
+                    debug.update(
+                        {
+                            "fallback_triggered": False,
+                            "fallback_reason": None,
+                            "duration_ms": _elapsed_ms(start),
+                        }
+                    )
+                    return result
+                errors.append({"attempt": attempt, **parse_debug})
+            except Exception as exc:
+                errors.append(
+                    {
+                        "attempt": attempt,
+                        "error_type": exc.__class__.__name__,
+                        "error_message": _safe_error(exc),
+                    }
+                )
+
+        debug.update(
+            {
+                "fallback_triggered": True,
+                "fallback_reason": _json_fallback_reason(errors),
+                "json_parse_errors": errors[-3:],
+                "duration_ms": _elapsed_ms(start),
+            }
+        )
+        return {}
+
+    def _new_json_call_debug(self, *, purpose: str, context: dict[str, Any]) -> dict[str, Any]:
+        context_keys = list(context.keys())[:20] if isinstance(context, dict) else []
+        try:
+            context_length = len(json.dumps(context, ensure_ascii=False, default=str))
+        except Exception:
+            context_length = len(str(context))
+        return {
+            "llm_provider": "doubao",
+            "llm_is_mock": False,
+            "llm_call_attempted": True,
+            "http_request_sent": False,
+            "http_request_succeeded": False,
+            "http_status_code": None,
+            "raw_output_received": False,
+            "raw_output_preview": None,
+            "json_parse_succeeded": False,
+            "fallback_triggered": False,
+            "fallback_reason": None,
+            "purpose": purpose,
+            "model": self.model,
+            "base_url_configured": bool(self.base_url),
+            "api_key_configured": bool(self.api_key),
+            "context_keys": context_keys,
+            "context_length": context_length,
+        }
+
 
 def _extract_json(content: str) -> dict:
+    return _extract_json_with_debug(content)[0]
+
+
+def _extract_json_with_debug(content: str) -> tuple[dict, dict[str, Any]]:
+    debug: dict[str, Any] = {
+        "error_type": None,
+        "error_message": None,
+        "error_position": None,
+        "cleaned_text": None,
+    }
     try:
-        return json.loads(content)
-    except json.JSONDecodeError:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
         start = content.find("{")
         end = content.rfind("}")
         if start >= 0 and end > start:
+            cleaned = content[start:end + 1]
+            debug["cleaned_text"] = _truncate(cleaned)
             try:
-                return json.loads(content[start:end + 1])
-            except json.JSONDecodeError:
-                return {}
-    return {}
+                data = json.loads(cleaned)
+            except json.JSONDecodeError as inner_exc:
+                debug.update(
+                    {
+                        "error_type": "json_decode_error",
+                        "error_message": inner_exc.msg,
+                        "error_position": inner_exc.pos,
+                    }
+                )
+                return {}, debug
+        else:
+            debug.update(
+                {
+                    "error_type": "json_decode_error",
+                    "error_message": exc.msg,
+                    "error_position": exc.pos,
+                }
+            )
+            return {}, debug
+    except Exception as exc:
+        debug.update({"error_type": exc.__class__.__name__, "error_message": _safe_error(exc)})
+        return {}, debug
+    if not isinstance(data, dict):
+        debug["error_type"] = "json_root_not_object"
+        return {}, debug
+    return data, debug
+
+
+def _json_fallback_reason(errors: list[dict[str, Any]]) -> str:
+    if not errors:
+        return "empty_model_output"
+    last = errors[-1]
+    error_type = str(last.get("error_type") or "")
+    if error_type.startswith("HTTP"):
+        return "http_error"
+    if error_type in {"json_decode_error", "json_root_not_object"}:
+        return "json_parse_failed"
+    return "http_or_parse_exception"
+
+
+def _elapsed_ms(start: float) -> float:
+    return round((perf_counter() - start) * 1000, 2)
+
+
+def _truncate(text: str, limit: int = 2000) -> str:
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _safe_error(exc: Exception, limit: int = 300) -> str:
+    return _truncate(str(exc), limit)
 
 
 def _image_url_for_api(context: dict) -> str | None:

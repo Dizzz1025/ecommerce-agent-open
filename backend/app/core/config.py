@@ -10,7 +10,7 @@ DATA_DIR = REPO_ROOT / "data"
 STORAGE_DIR = REPO_ROOT / "storage"
 DEFAULT_EXTERNAL_DATASET_DIR = Path("/Users/grsxsa/2026 Spring/ecommerce_agent_dataset")
 DEFAULT_REPO_DATASET_DIR = REPO_ROOT / "ecommerce_agent_dataset"
-DEFAULT_MODELS_DIR = REPO_ROOT / "models"
+DEFAULT_MODELS_DIR = BACKEND_DIR / "models"
 
 
 class Settings(BaseModel):
@@ -29,7 +29,7 @@ class Settings(BaseModel):
     enable_local_models: bool = True
     local_model_device: str = "cpu"
     bge_embedding_model_path: Path = DEFAULT_MODELS_DIR / "bge-small-zh-v1.5"
-    text2vec_model_path: Path = DEFAULT_MODELS_DIR / "text2vex-base-chinese"
+    text2vec_model_path: Path = DEFAULT_MODELS_DIR / "text2vec-base-chinese"
     bge_reranker_model_path: Path = DEFAULT_MODELS_DIR / "bge-reranker-base"
     enable_multimodal: bool = True
     vision_model: str | None = None
@@ -62,6 +62,18 @@ def _read_path(name: str, default: Path) -> Path:
     if not path.is_absolute():
         path = REPO_ROOT / path
     return path
+
+
+def _model_path(name: str, default_name: str, *, legacy_name: str | None = None) -> Path:
+    env_path = os.getenv(name)
+    if env_path:
+        path = Path(env_path)
+        return path if path.is_absolute() else BACKEND_DIR / path
+    default = DEFAULT_MODELS_DIR / default_name
+    if default.exists() or not legacy_name:
+        return default
+    legacy = DEFAULT_MODELS_DIR / legacy_name
+    return legacy if legacy.exists() else default
 
 
 @lru_cache
@@ -99,9 +111,9 @@ def get_settings() -> Settings:
         retrieval_top_k=int(os.getenv("RETRIEVAL_TOP_K", "5")),
         enable_local_models=_read_bool("ENABLE_LOCAL_MODELS", True),
         local_model_device=os.getenv("LOCAL_MODEL_DEVICE", "cpu"),
-        bge_embedding_model_path=_read_path("BGE_EMBEDDING_MODEL_PATH", DEFAULT_MODELS_DIR / "bge-small-zh-v1.5"),
-        text2vec_model_path=_read_path("TEXT2VEC_MODEL_PATH", DEFAULT_MODELS_DIR / "text2vex-base-chinese"),
-        bge_reranker_model_path=_read_path("BGE_RERANKER_MODEL_PATH", DEFAULT_MODELS_DIR / "bge-reranker-base"),
+        bge_embedding_model_path=_model_path("BGE_EMBEDDING_MODEL_PATH", "bge-small-zh-v1.5"),
+        text2vec_model_path=_model_path("TEXT2VEC_MODEL_PATH", "text2vec-base-chinese", legacy_name="text2vex-base-chinese"),
+        bge_reranker_model_path=_model_path("BGE_RERANKER_MODEL_PATH", "bge-reranker-base"),
         enable_multimodal=_read_bool("ENABLE_MULTIMODAL", True),
         vision_model=os.getenv("VISION_MODEL") or os.getenv("DOUBAO_VISION_MODEL"),
         upload_image_dir=_read_path("UPLOAD_IMAGE_DIR", STORAGE_DIR / "uploads"),

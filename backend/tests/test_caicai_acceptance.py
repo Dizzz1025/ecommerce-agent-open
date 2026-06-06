@@ -12,6 +12,14 @@ from app.multimodal.visual_query_builder import VisualQueryBuilder
 client = TestClient(app)
 
 
+PRODUCT_VARIANTS = {
+    "p_beauty_001": ("s_p_beauty_001_1", {"容量": "30ml 经典装"}),
+    "p_beauty_002": ("s_p_beauty_002_1", {"容量": "30ml 标准装"}),
+    "p_beauty_003": ("s_p_beauty_003_1", {"容量": "160ml 标准装"}),
+    "p_beauty_004": ("s_p_beauty_004_1", {"容量": "30ml 经典装"}),
+}
+
+
 def _parse_sse_events(raw: str) -> list[tuple[str, dict]]:
     events: list[tuple[str, dict]] = []
     for block in raw.strip().split("\n\n"):
@@ -32,6 +40,21 @@ def _event(events: list[tuple[str, dict]], name: str) -> dict:
     return next(data for event_name, data in events if event_name == name)
 
 
+def _add_cart_variant(session_id: str, sku_id: str, quantity: int = 1):
+    selected_sku_id, selected_specs = PRODUCT_VARIANTS[sku_id]
+    return client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": sku_id,
+            "selected_sku_id": selected_sku_id,
+            "selected_specs": selected_specs,
+            "quantity": quantity,
+            "source": "test",
+        },
+    )
+
+
 def test_intent_plan_quantity_five_is_used_for_bulk_cart_add() -> None:
     session_id = f"accept-quantity-{uuid4()}"
     rec_response = client.post(
@@ -43,7 +66,7 @@ def test_intent_plan_quantity_five_is_used_for_bulk_cart_add() -> None:
 
     add_response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款和第二款防晒乳都加入购物车，各加5瓶"},
+        json={"session_id": session_id, "message": "把第一款60ml经典金瓶和第二款50ml清盈型防晒乳都加入购物车，各加5瓶"},
     )
     add_turn = _event(_parse_sse_events(add_response.text), "turn_result")
     cart_state = add_turn["frontend_data"]["cart_state"]["cart"]
@@ -65,7 +88,7 @@ def test_cart_progress_uses_cart_specific_templates() -> None:
     )
     response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款标准版典雅黑加入购物车"},
     )
     events = _parse_sse_events(response.text)
     progress_texts = [data.get("text", "") for name, data in events if name == "progress"]
@@ -131,7 +154,7 @@ def test_checkout_closing_guidance_appears_after_add_and_cools_down_after_declin
     )
     add_response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款120g加入购物车"},
     )
     add_turn = _event(_parse_sse_events(add_response.text), "turn_result")
     add_text = add_turn["frontend_data"]["reply_message"]["text"]
@@ -156,10 +179,7 @@ def test_checkout_closing_guidance_appears_after_add_and_cools_down_after_declin
 def test_checkout_closing_guidance_summarizes_multi_item_carts(sku_ids: list[str], expected_phrase: str) -> None:
     session_id = f"accept-closing-count-{uuid4()}"
     for sku_id in sku_ids:
-        response = client.post(
-            "/api/cart/add",
-            json={"session_id": session_id, "sku_id": sku_id, "quantity": 1, "source": "test"},
-        )
+        response = _add_cart_variant(session_id, sku_id)
         assert response.status_code == 200
 
     view_response = client.post(

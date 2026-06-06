@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.dependencies import get_cart_service
 from app.models.schemas import (
@@ -34,18 +34,21 @@ async def add_cart_item(
     payload: CartAddRequest,
     cart_service: CartService = Depends(get_cart_service),
 ) -> CartSnapshot:
-    return cart_service.add(
-        session_id=payload.session_id,
-        sku_id=payload.sku_id,
-        quantity=payload.quantity,
-        selected_sku_id=payload.selected_sku_id,
-        selected_specs=payload.selected_specs,
-        unit_price=payload.unit_price,
-        product_name=payload.product_name,
-        image_url=payload.image_url,
-        spec_summary=payload.spec_summary,
-        source=payload.source,
-    )
+    try:
+        return cart_service.add(
+            session_id=payload.session_id,
+            sku_id=payload.sku_id,
+            quantity=payload.quantity,
+            selected_sku_id=payload.selected_sku_id,
+            selected_specs=payload.selected_specs,
+            unit_price=payload.unit_price,
+            product_name=payload.product_name,
+            image_url=payload.image_url,
+            spec_summary=payload.spec_summary,
+            source=payload.source,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/remove", response_model=CartSnapshot)

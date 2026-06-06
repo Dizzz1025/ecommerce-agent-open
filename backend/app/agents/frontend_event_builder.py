@@ -27,6 +27,7 @@ class FrontendEventBuilder:
         "update_cart": "更新购物车状态",
         "update_page_state": "更新页面上的非对话性信息",
         "show_clarification_options": "展示澄清问题或推荐选项",
+        "show_spec_selection": "展示商品规格选择卡片",
         "show_error": "展示错误或无结果提示",
     }
 
@@ -106,7 +107,13 @@ class FrontendEventBuilder:
             }
             self._add_event(events, "show_product_detail", "product_detail")
 
-        if tool_result and tool_result.payload:
+        if tool_result and tool_result.tool_name == "need_spec_selection" and tool_result.payload:
+            data["spec_selection"] = {
+                "中文说明": "会话加购多规格商品时，前端展示可选 SKU，用户点击后直接调用购物车接口。",
+                **tool_result.payload,
+            }
+            self._add_event(events, "show_spec_selection", "spec_selection")
+        elif tool_result and tool_result.payload:
             data["cart_state"] = {
                 "中文说明": "购物车工具执行后的真实购物车状态。",
                 "tool_ok": tool_result.ok,

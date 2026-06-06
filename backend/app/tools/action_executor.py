@@ -1,7 +1,7 @@
 import re
 
 from app.models.agent import ParsedQuery, ToolExecutionResult
-from app.models.domain import SessionState
+from app.models.domain import Product, ProductSku, SessionState
 from app.repositories.product_repository import ProductRepository
 from app.services.cart_service import CartService
 from app.services.order_service import OrderService
@@ -96,6 +96,9 @@ class ActionExecutor:
                 and self._is_bulk_add(parsed_query)
                 and len(parsed_query.mentioned_products) > 1
             ):
+                spec_result = self._bulk_spec_selection_result(parsed_query, state)
+                if spec_result is not None:
+                    return spec_result
                 snapshot = self._add_explicit_products(session_id=session_id, parsed_query=parsed_query)
                 return ToolExecutionResult(
                     ok=True,
@@ -109,6 +112,9 @@ class ActionExecutor:
                 and self._is_bulk_add(parsed_query)
                 and not (parsed_query.cart_action and parsed_query.cart_action.sku_id)
             ):
+                spec_result = self._bulk_spec_selection_result(parsed_query, state)
+                if spec_result is not None:
+                    return spec_result
                 snapshot = self._add_matching_recommendations(session_id=session_id, parsed_query=parsed_query, state=state)
                 return ToolExecutionResult(
                     ok=True,
@@ -128,17 +134,28 @@ class ActionExecutor:
 
             quantity = parsed_query.cart_action.quantity if parsed_query.cart_action and parsed_query.cart_action.quantity else 1
             if action == "cart_add":
-                snapshot = self.cart_service.add(
+                product = self._require_product_for_cart(sku_id)
+                variant = self._resolve_variant_from_query(product, parsed_query)
+                if self._needs_spec_selection(product, variant):
+                    return ToolExecutionResult(
+                        ok=True,
+                        tool_name="need_spec_selection",
+                        message="这款商品有以下规格，请选择后加入购物车：",
+                        payload=self._build_spec_selection_payload(product, quantity),
+                    )
+                snapshot = self._add_product_variant(
                     session_id=session_id,
-                    sku_id=sku_id,
+                    product=product,
+                    variant=variant,
                     quantity=quantity,
                     source="dialogue",
                 )
-                product_name = next((item.name for item in snapshot.items if item.sku_id == sku_id), "这款商品")
+                product_name = next((item.name for item in snapshot.items if item.sku_id == product.sku_id), product.name)
+                spec_text = self._format_specs(variant.properties if variant else {})
                 return ToolExecutionResult(
                     ok=True,
                     tool_name="add_to_cart",
-                    message=f"已把 {product_name} 加入购物车，数量 {quantity}。",
+                    message=f"已把 {product_name}{f'（{spec_text}）' if spec_text else ''} 加入购物车，数量 {quantity}。",
                     payload=snapshot.model_dump(),
                 )
             if action == "cart_remove":
@@ -235,6 +252,165 @@ class ActionExecutor:
             return state.goods.last_recommendations[0].sku_id
         return None
 
+    def _require_product_for_cart(self, sku_id: str) -> Product:
+        product = self.product_repository.get_product(sku_id)
+        if product is None:
+            raise ValueError(f"Product not found: {sku_id}")
+        return product
+
+    @staticmethod
+    def _needs_spec_selection(product: Product, variant: ProductSku | None) -> bool:
+        return len(product.skus) > 1 and variant is None
+
+    def _bulk_spec_selection_result(
+        self,
+        parsed_query: ParsedQuery,
+        state: SessionState,
+    ) -> ToolExecutionResult | None:
+        targets = self._bulk_add_targets(parsed_query, state)
+        for product in targets:
+            variant = self._resolve_variant_from_query(product, parsed_query)
+            if self._needs_spec_selection(product, variant):
+                quantity = parsed_query.cart_action.quantity if parsed_query.cart_action and parsed_query.cart_action.quantity else 1
+                return ToolExecutionResult(
+                    ok=True,
+                    tool_name="need_spec_selection",
+                    message=f"{product.name} 有多个规格，请先选择后加入购物车：",
+                    payload=self._build_spec_selection_payload(product, quantity),
+                )
+        return None
+
+    def _bulk_add_targets(self, parsed_query: ParsedQuery, state: SessionState) -> list[Product]:
+        products: list[Product] = []
+        if parsed_query.mentioned_products:
+            for sku_id in parsed_query.mentioned_products:
+                product = self.product_repository.get_product(sku_id)
+                if product and product.sku_id not in {item.sku_id for item in products}:
+                    products.append(product)
+            return products
+        wanted_sub_categories = self._wanted_sub_categories(parsed_query.raw_message)
+        for record in state.goods.last_recommendations:
+            product = self.product_repository.get_product(record.sku_id)
+            if not product:
+                continue
+            if wanted_sub_categories and product.sub_category not in wanted_sub_categories:
+                continue
+            products.append(product)
+        if not products:
+            sku_id = self._resolve_target_sku(parsed_query, state, cart_first=False)
+            product = self.product_repository.get_product(sku_id) if sku_id else None
+            if product:
+                products.append(product)
+        return products
+
+    def _resolve_variant_from_query(self, product: Product, parsed_query: ParsedQuery) -> ProductSku | None:
+        if not product.skus:
+            return None
+        action_sku_id = parsed_query.cart_action.sku_id if parsed_query.cart_action else None
+        if action_sku_id:
+            direct = next((sku for sku in product.skus if sku.sku_id == action_sku_id), None)
+            if direct is not None:
+                return direct
+        if len(product.skus) == 1:
+            return product.skus[0]
+        raw_message = _normalize_spec_text(parsed_query.raw_message)
+        scored_matches = [
+            (self._sku_match_score(sku, raw_message), sku)
+            for sku in product.skus
+        ]
+        scored_matches = [(score, sku) for score, sku in scored_matches if score > 0]
+        if not scored_matches:
+            return None
+        best_score = max(score for score, _ in scored_matches)
+        best_matches = [sku for score, sku in scored_matches if score == best_score]
+        return best_matches[0] if len(best_matches) == 1 else None
+
+    @staticmethod
+    def _sku_matches_message(sku: ProductSku, normalized_message: str) -> bool:
+        return ActionExecutor._sku_match_score(sku, normalized_message) > 0
+
+    @staticmethod
+    def _sku_match_score(sku: ProductSku, normalized_message: str) -> int:
+        values = [str(value).strip() for value in sku.properties.values() if str(value).strip()]
+        if not values:
+            return 0
+        return sum(_spec_value_match_score(value, normalized_message) for value in values)
+
+    def _build_spec_selection_payload(self, product: Product, quantity: int) -> dict:
+        sku_options = [self._sku_option_payload(product, sku) for sku in product.skus]
+        return {
+            "type": "need_spec_selection",
+            "product_id": product.sku_id,
+            "productId": product.sku_id,
+            "product_name": product.name,
+            "productName": product.name,
+            "image_url": product.image_url,
+            "imageUrl": product.image_url,
+            "quantity": quantity,
+            "sku_options": sku_options,
+            "skuOptions": sku_options,
+        }
+
+    def _sku_option_payload(self, product: Product, sku: ProductSku) -> dict:
+        selected_specs = self._normalized_specs(sku.properties)
+        spec_text = self._format_specs(selected_specs) or sku.sku_id
+        stock = _sku_stock(sku, product.stock)
+        return {
+            "product_id": product.sku_id,
+            "productId": product.sku_id,
+            "sku_id": sku.sku_id,
+            "skuId": sku.sku_id,
+            "selected_specs": selected_specs,
+            "selectedSpecs": selected_specs,
+            "spec_text": spec_text,
+            "specText": spec_text,
+            "price": float(sku.price),
+            "stock": stock,
+            "available": stock is None or stock > 0,
+        }
+
+    @staticmethod
+    def _normalized_specs(raw_specs: dict | None) -> dict[str, str]:
+        if not raw_specs:
+            return {}
+        cleaned: dict[str, str] = {}
+        for key, value in raw_specs.items():
+            key_text = str(key).strip()
+            value_text = str(value).strip()
+            if key_text and value_text and value_text.lower() != "null":
+                cleaned[key_text] = value_text
+        return {key: cleaned[key] for key in sorted(cleaned)}
+
+    @staticmethod
+    def _format_specs(selected_specs: dict | None) -> str | None:
+        if not selected_specs:
+            return None
+        values = [str(value).strip() for _, value in sorted(selected_specs.items()) if str(value).strip()]
+        return " · ".join(values) if values else None
+
+    def _add_product_variant(
+        self,
+        *,
+        session_id: str,
+        product: Product,
+        variant: ProductSku | None,
+        quantity: int,
+        source: str,
+    ):
+        selected_specs = self._normalized_specs(variant.properties if variant else {})
+        return self.cart_service.add(
+            session_id=session_id,
+            sku_id=product.sku_id,
+            quantity=quantity,
+            selected_sku_id=variant.sku_id if variant else None,
+            selected_specs=selected_specs,
+            unit_price=variant.price if variant else product.price,
+            product_name=product.name,
+            image_url=product.image_url,
+            spec_summary=self._format_specs(selected_specs),
+            source=source,
+        )
+
     @staticmethod
     def _resolve_from_memory_events(parsed_query: ParsedQuery, state: SessionState) -> str | None:
         references: list[str] = []
@@ -312,12 +488,30 @@ class ActionExecutor:
                 continue
             if wanted_sub_categories and product.sub_category not in wanted_sub_categories:
                 continue
-            self.cart_service.add(session_id=session_id, sku_id=product.sku_id, quantity=quantity, source="dialogue")
+            variant = self._resolve_variant_from_query(product, parsed_query)
+            if self._needs_spec_selection(product, variant):
+                continue
+            self._add_product_variant(
+                session_id=session_id,
+                product=product,
+                variant=variant,
+                quantity=quantity,
+                source="dialogue",
+            )
             added = True
         if not added:
             sku_id = self._resolve_target_sku(parsed_query, state, cart_first=False)
             if sku_id:
-                self.cart_service.add(session_id=session_id, sku_id=sku_id, quantity=quantity, source="dialogue")
+                product = self.product_repository.get_product(sku_id)
+                variant = self._resolve_variant_from_query(product, parsed_query) if product else None
+                if product and not self._needs_spec_selection(product, variant):
+                    self._add_product_variant(
+                        session_id=session_id,
+                        product=product,
+                        variant=variant,
+                        quantity=quantity,
+                        source="dialogue",
+                    )
         return self.cart_service.get_snapshot(session_id)
 
     def _add_explicit_products(self, session_id: str, parsed_query: ParsedQuery):
@@ -326,9 +520,19 @@ class ActionExecutor:
         for sku_id in parsed_query.mentioned_products:
             if sku_id in seen:
                 continue
-            if not self.product_repository.get_product(sku_id):
+            product = self.product_repository.get_product(sku_id)
+            if not product:
                 continue
-            self.cart_service.add(session_id=session_id, sku_id=sku_id, quantity=quantity, source="dialogue")
+            variant = self._resolve_variant_from_query(product, parsed_query)
+            if self._needs_spec_selection(product, variant):
+                continue
+            self._add_product_variant(
+                session_id=session_id,
+                product=product,
+                variant=variant,
+                quantity=quantity,
+                source="dialogue",
+            )
             seen.add(sku_id)
         return self.cart_service.get_snapshot(session_id)
 
@@ -382,6 +586,56 @@ class ActionExecutor:
 
 def _has_checkout_after_remove(raw_message: str) -> bool:
     return any(term in raw_message for term in ["再付款", "并付款", "付款", "支付", "结算", "下单"])
+
+
+def _normalize_spec_text(value: object) -> str:
+    normalized = re.sub(r"\s+", "", str(value).strip().lower())
+    return re.sub(r"[+＋]", "", normalized)
+
+
+def _spec_value_matches(value: str, normalized_message: str) -> bool:
+    return _spec_value_match_score(value, normalized_message) > 0
+
+
+def _spec_value_match_score(value: str, normalized_message: str) -> int:
+    normalized_value = _normalize_spec_text(value)
+    if not normalized_value:
+        return 0
+    if normalized_value in normalized_message:
+        return 4
+    meaningful_tokens = re.findall(r"[\u4e00-\u9fff]{2,}|[a-z0-9+]+", normalized_value)
+    shared_tokens = [token for token in meaningful_tokens if token in normalized_message]
+    if shared_tokens:
+        return len(shared_tokens)
+    chinese_text = "".join(re.findall(r"[\u4e00-\u9fff]+", normalized_value))
+    chinese_bigrams = {chinese_text[index : index + 2] for index in range(max(len(chinese_text) - 1, 0))}
+    shared_bigrams = [token for token in chinese_bigrams if token in normalized_message]
+    if shared_bigrams:
+        return len(shared_bigrams)
+    parts = [
+        part
+        for part in re.split(r"[·/|,，、;；\s]+", value)
+        if part.strip()
+    ]
+    matched_parts = [_normalize_spec_text(part) for part in parts if _normalize_spec_text(part) in normalized_message]
+    if parts and len(matched_parts) == len(parts):
+        return 3
+    if matched_parts:
+        return len(matched_parts)
+    numeric_units = re.findall(r"\d+(?:\.\d+)?(?:ml|g|kg|l|gb|tb|cm|mm|寸|英寸|颗|片|支|瓶|盒|杯|包|双|件)", normalized_value)
+    if numeric_units and all(unit in normalized_message for unit in numeric_units):
+        return len(numeric_units)
+    return 0
+
+
+def _sku_stock(sku: ProductSku, fallback_stock: int) -> int | None:
+    raw = getattr(sku, "stock", None)
+    if raw is None:
+        return fallback_stock
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return fallback_stock
 
 
 def _extract_reference_terms(raw_message: str) -> list[str]:

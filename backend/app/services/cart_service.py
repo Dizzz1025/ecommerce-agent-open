@@ -75,11 +75,15 @@ class CartService:
         product = self._require_product(sku_id)
         state = self.session_memory.get_or_create(session_id)
         requested_specs = self._normalized_specs(selected_specs or {})
+        if len(product.skus) > 1 and not selected_sku_id and not requested_specs:
+            raise ValueError("Multi-SKU product requires selected_sku_id or selected_specs")
         variant = self._find_variant(
             product=product,
             selected_sku_id=selected_sku_id,
             selected_specs=requested_specs,
         )
+        if len(product.skus) > 1 and variant is None:
+            raise ValueError("Multi-SKU product requires a valid selected_sku_id or complete selected_specs")
         effective_selected_sku_id = selected_sku_id
         effective_specs = requested_specs
         if variant is not None:
@@ -231,7 +235,7 @@ class CartService:
             return None
         for variant in product.skus:
             variant_specs = self._normalized_specs(variant.properties)
-            if all(variant_specs.get(key) == value for key, value in normalized_specs.items()):
+            if variant_specs == normalized_specs:
                 return variant
         return None
 

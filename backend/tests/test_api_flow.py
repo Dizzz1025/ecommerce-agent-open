@@ -9,6 +9,37 @@ from app.main import app
 client = TestClient(app)
 
 
+PRODUCT_VARIANTS = {
+    "p_beauty_001": ("s_p_beauty_001_1", {"容量": "30ml 经典装"}),
+    "p_beauty_002": ("s_p_beauty_002_1", {"容量": "30ml 标准装"}),
+    "p_beauty_003": ("s_p_beauty_003_1", {"容量": "160ml 标准装"}),
+    "p_beauty_004": ("s_p_beauty_004_1", {"容量": "30ml 经典装"}),
+    "p_beauty_010": ("s_p_beauty_010_1", {"规格": "60ml 经典金瓶"}),
+    "p_beauty_023": ("s_p_beauty_023_1", {"产品规格": "50ml 清盈型"}),
+    "p_digital_007": ("s_p_digital_007_1", {"版本": "标准版", "颜色": "典雅黑"}),
+    "p_digital_018": (
+        "s_p_digital_018_1",
+        {
+            "产品版本": "标准版 AirPods Pro 3",
+            "充电盒类型": "MagSafe 充电盒",
+            "定制服务": "无刻印",
+            "附加服务": "无AppleCare+",
+        },
+    ),
+    "p_digital_020": (
+        "s_p_digital_020_1",
+        {
+            "屏幕尺寸": "13英寸",
+            "芯片": "M5芯片",
+            "内存": "16GB内存",
+            "固态存储": "512GB SSD",
+            "颜色": "天蓝色",
+        },
+    ),
+    "p_food_003": ("s_p_food_003_1", {"容量": "500ml", "包装": "单瓶装"}),
+}
+
+
 def _parse_sse_events(raw: str) -> list[tuple[str, dict]]:
     events: list[tuple[str, dict]] = []
     for block in raw.strip().split("\n\n"):
@@ -27,6 +58,21 @@ def _parse_sse_events(raw: str) -> list[tuple[str, dict]]:
 
 def _event(events: list[tuple[str, dict]], name: str) -> dict:
     return next(data for event_name, data in events if event_name == name)
+
+
+def _add_cart_variant(session_id: str, sku_id: str, quantity: int = 1):
+    selected_sku_id, selected_specs = PRODUCT_VARIANTS[sku_id]
+    return client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": sku_id,
+            "selected_sku_id": selected_sku_id,
+            "selected_specs": selected_specs,
+            "quantity": quantity,
+            "source": "test",
+        },
+    )
 
 
 def test_products_api_returns_sku_id_products() -> None:
@@ -51,17 +97,57 @@ def test_cart_api_flow() -> None:
         "/api/cart/add",
         json={
             "session_id": session_id,
-            "sku_id": "p_beauty_001",
+            "sku_id": "p_beauty_035",
             "quantity": 1,
             "source": "button",
         },
     )
     assert add_response.status_code == 200
-    assert add_response.json()["items"][0]["sku_id"] == "p_beauty_001"
+    assert add_response.json()["items"][0]["sku_id"] == "p_beauty_035"
 
     get_response = client.get("/api/cart", params={"session_id": session_id})
     assert get_response.status_code == 200
-    assert get_response.json()["items"][0]["sku_id"] == "p_beauty_001"
+    assert get_response.json()["items"][0]["sku_id"] == "p_beauty_035"
+
+
+def test_multi_sku_cart_api_rejects_missing_specs() -> None:
+    session_id = f"test-cart-missing-specs-{uuid4().hex}"
+    response = client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": "p_beauty_001",
+            "quantity": 1,
+            "source": "button",
+        },
+    )
+    assert response.status_code == 400
+    assert "requires selected_sku_id" in response.json()["detail"]
+
+    cart_response = client.get("/api/cart", params={"session_id": session_id})
+    assert cart_response.status_code == 200
+    assert cart_response.json()["items"] == []
+
+
+def test_multi_sku_cart_api_rejects_invalid_specs() -> None:
+    session_id = f"test-cart-invalid-specs-{uuid4().hex}"
+    response = client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": "p_beauty_001",
+            "selected_sku_id": "not-a-real-sku",
+            "selected_specs": {"容量": "30ml"},
+            "quantity": 1,
+            "source": "button",
+        },
+    )
+    assert response.status_code == 400
+    assert "valid selected_sku_id" in response.json()["detail"]
+
+    cart_response = client.get("/api/cart", params={"session_id": session_id})
+    assert cart_response.status_code == 200
+    assert cart_response.json()["items"] == []
 
 
 def test_cart_keeps_selected_specs_and_variant_price() -> None:
@@ -134,6 +220,56 @@ def test_cart_keeps_selected_specs_and_variant_price() -> None:
     }
 
 
+def test_chat_cart_add_multi_sku_requires_spec_selection() -> None:
+    session_id = f"test-chat-spec-selection-{uuid4().hex}"
+    first = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "推荐一款小棕瓶精华"},
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "把第一款加入购物车"},
+    )
+    assert response.status_code == 200
+    events = _parse_sse_events(response.text)
+    assert "cart_update" not in [name for name, _ in events]
+    turn = _event(events, "turn_result")
+    assert "cart_state" not in turn["frontend_data"]
+    spec_selection = turn["frontend_data"]["spec_selection"]
+    assert spec_selection["product_id"] == "p_beauty_001"
+    assert len(spec_selection["sku_options"]) == 3
+    assert spec_selection["sku_options"][0]["sku_id"] == "s_p_beauty_001_1"
+
+    cart_response = client.get("/api/cart", params={"session_id": session_id})
+    assert cart_response.status_code == 200
+    assert cart_response.json()["items"] == []
+
+
+def test_chat_cart_add_multi_sku_with_explicit_spec_adds_variant() -> None:
+    session_id = f"test-chat-explicit-spec-{uuid4().hex}"
+    first = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "推荐一款小棕瓶精华"},
+    )
+    assert first.status_code == 200
+
+    response = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "把第一款30ml加入购物车"},
+    )
+    assert response.status_code == 200
+    events = _parse_sse_events(response.text)
+    assert "cart_update" in [name for name, _ in events]
+    turn = _event(events, "turn_result")
+    cart = turn["frontend_data"]["cart_state"]["cart"]
+    assert cart["items"][0]["selected_sku_id"] == "s_p_beauty_001_1"
+    assert cart["items"][0]["selected_specs"] == {"容量": "30ml 经典装"}
+    assert cart["items"][0]["spec_summary"] == "30ml 经典装"
+    assert cart["items"][0]["price"] == 720.0
+
+
 def test_large_cart_view_update_remove_and_checkout_flow() -> None:
     session_id = "test-boundary-large-cart"
     for sku_id, quantity in [
@@ -142,10 +278,7 @@ def test_large_cart_view_update_remove_and_checkout_flow() -> None:
         ("p_digital_007", 2),
         ("p_food_003", 8),
     ]:
-        response = client.post(
-            "/api/cart/add",
-            json={"session_id": session_id, "sku_id": sku_id, "quantity": quantity, "source": "test"},
-        )
+        response = _add_cart_variant(session_id, sku_id, quantity)
         assert response.status_code == 200
 
     view_response = client.post(
@@ -235,7 +368,10 @@ def test_recommendation_and_cart_add_do_not_auto_navigate() -> None:
     )
     add_turn = _event(_parse_sse_events(add_response.text), "turn_result")
     add_event_types = [item["动作类型"] for item in add_turn["frontend_events"]]
-    assert "update_cart" in add_event_types
+    assert "show_spec_selection" in add_event_types
+    assert "update_cart" not in add_event_types
+    assert "cart_state" not in add_turn["frontend_data"]
+    assert "spec_selection" in add_turn["frontend_data"]
     assert "navigate" not in add_event_types
 
 
@@ -429,7 +565,7 @@ def test_cart_event_uses_recommendation_rank_memory() -> None:
 
     add_response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第二个加入购物车"},
+        json={"session_id": session_id, "message": "把第二个MagSafe无刻印无AppleCare加入购物车"},
     )
     add_turn = _event(_parse_sse_events(add_response.text), "turn_result")
     cart_items = add_turn["frontend_data"]["cart_state"]["cart"]["items"]
@@ -471,10 +607,13 @@ def test_remove_cart_phrase_with_historical_add_word_does_not_add_again() -> Non
         "/api/chat/stream",
         json={"session_id": session_id, "message": "推荐一款适合户外的防晒"},
     )
-    client.post(
+    add_response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款60ml加入购物车"},
     )
+    add_turn = _event(_parse_sse_events(add_response.text), "turn_result")
+    added_items = add_turn["frontend_data"]["cart_state"]["cart"]["items"]
+    assert added_items
     response = client.post(
         "/api/chat/stream",
         json={"session_id": session_id, "message": "刚才加购的防晒不要了"},
@@ -520,11 +659,11 @@ def test_intent_plan_executes_add_then_checkout_sequence() -> None:
     session_id = "test-intent-plan-add-then-checkout"
     client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "推荐一款性价比高的手机"},
+        json={"session_id": session_id, "message": "推荐一款适合油皮的洗面奶"},
     )
     response = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车，然后直接下单，用默认地址"},
+        json={"session_id": session_id, "message": "把第一款120g加入购物车，然后直接下单，用默认地址"},
     )
     assert response.status_code == 200
     turn_result = _event(_parse_sse_events(response.text), "turn_result")
@@ -547,7 +686,7 @@ def test_mixed_cart_clear_then_recommend_backpack_plan_continues_retrieval() -> 
     )
     client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款60ml加入购物车"},
     )
     response = client.post(
         "/api/chat/stream",
@@ -583,13 +722,13 @@ def test_mixed_add_remove_then_recommend_executes_all_steps_in_order() -> None:
     )
     client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第二款加入购物车"},
+        json={"session_id": session_id, "message": "把第二款50ml清盈型加入购物车"},
     )
     response = client.post(
         "/api/chat/stream",
         json={
             "session_id": session_id,
-            "message": "帮我把你推荐的第一个防晒乳加到购物车，把购物车中其他的防晒乳全部删掉，再给我推荐一个200块左右的背包，也是旅游使用的",
+            "message": "帮我把你推荐的第一个60ml防晒乳加到购物车，把购物车中其他的防晒乳全部删掉，再给我推荐一个200块左右的背包，也是旅游使用的",
         },
     )
     assert response.status_code == 200
@@ -620,10 +759,12 @@ def test_fuzzy_remove_previous_cart_item_then_add_second_with_quantity() -> None
     )
     first_turn = _event(_parse_sse_events(first_response.text), "turn_result")
     second_product = first_turn["frontend_data"]["recommended_products"]["products"][1]
-    client.post(
+    first_add = client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款单瓶装加入购物车"},
     )
+    first_add_turn = _event(_parse_sse_events(first_add.text), "turn_result")
+    assert first_add_turn["frontend_data"]["cart_state"]["cart"]["items"]
     response = client.post(
         "/api/chat/stream",
         json={
@@ -633,20 +774,17 @@ def test_fuzzy_remove_previous_cart_item_then_add_second_with_quantity() -> None
     )
     assert response.status_code == 200
     turn_result = _event(_parse_sse_events(response.text), "turn_result")
-    cart = turn_result["frontend_data"]["cart_state"]["cart"]
-    assert cart["total_items"] == 6
-    assert len(cart["items"]) == 1
-    assert cart["items"][0]["sku_id"] == second_product["sku_id"]
-    assert cart["items"][0]["name"] == second_product["name"]
-    assert cart["items"][0]["quantity"] == 6
-    reply = turn_result["frontend_data"]["reply_message"]["text"]
-    assert "移除" in reply
-    assert "数量 6" in reply
+    assert "cart_state" not in turn_result["frontend_data"]
+    spec_selection = turn_result["frontend_data"]["spec_selection"]
+    assert spec_selection["product_id"] == second_product["sku_id"]
+    assert len(spec_selection["sku_options"]) >= 1
+    cart = client.get("/api/cart", params={"session_id": session_id}).json()
+    assert cart["total_items"] == 0
 
     trace = client.get(f"/api/session/{session_id}/trace").json()["traces"][-1]
     assert [step["intent"] for step in trace["parsed_query"]["intent_plan"]["steps"]] == ["cart_remove", "cart_add"]
     assert trace["parsed_query"]["intent_plan"]["steps"][1]["quantity"] == 6
-    assert [call["tool_name"] for call in trace["tool_calls"]] == ["remove_from_cart", "add_to_cart"]
+    assert [call["tool_name"] for call in trace["tool_calls"]] == ["remove_from_cart", "need_spec_selection"]
 
 
 def test_debug_state_and_trace_are_recorded() -> None:
@@ -724,7 +862,7 @@ def test_checkout_creates_demo_order_payload() -> None:
     )
     client.post(
         "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款加入购物车"},
+        json={"session_id": session_id, "message": "把第一款120g加入购物车"},
     )
     response = client.post(
         "/api/chat/stream",
@@ -947,14 +1085,10 @@ def test_northwest_self_drive_scene_does_not_inherit_previous_category() -> None
 
 def test_remove_expensive_cart_item_then_checkout() -> None:
     session_id = "test-remove-expensive-then-checkout"
-    client.post(
-        "/api/chat/stream",
-        json={"session_id": session_id, "message": "推荐两款适合学生的降噪蓝牙耳机"},
-    )
-    client.post(
-        "/api/chat/stream",
-        json={"session_id": session_id, "message": "把第一款和第二款耳机都加入购物车"},
-    )
+    first = _add_cart_variant(session_id, "p_digital_007", 1)
+    assert first.status_code == 200
+    second = _add_cart_variant(session_id, "p_digital_018", 1)
+    assert second.status_code == 200
     response = client.post(
         "/api/chat/stream",
         json={"session_id": session_id, "message": "删除较贵的那款再付款"},
@@ -1325,15 +1459,7 @@ def test_progress_events_are_emitted_and_debugged() -> None:
 
 def test_cart_aware_personalization_boosts_apple_ecosystem_accessory() -> None:
     session_id = f"test-cart-aware-{uuid4()}"
-    add_response = client.post(
-        "/api/cart/add",
-        json={
-            "session_id": session_id,
-            "sku_id": "p_digital_020",
-            "quantity": 1,
-            "source": "test",
-        },
-    )
+    add_response = _add_cart_variant(session_id, "p_digital_020")
     assert add_response.status_code == 200
 
     response = client.post(

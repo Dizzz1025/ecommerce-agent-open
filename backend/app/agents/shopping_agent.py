@@ -496,7 +496,7 @@ class ShoppingAgent:
                             parsed_query=parsed_query,
                             tool_result=tool_result,
                         )
-                if tool_result.payload:
+                if tool_result.payload and tool_result.tool_name != "need_spec_selection":
                     yield SSEEvent(event="cart_update", data=tool_result.payload)
                     yield SSEEvent(event="cart", data={"cart": tool_result.payload})
                     trace.legacy_sse_events.extend(["cart_update", "cart"])
@@ -553,7 +553,7 @@ class ShoppingAgent:
                         )
                     trace.tool_calls.extend(item.model_dump() for item in tool_calls)
                     tool_prefix_messages = [item.message for item in tool_calls if item.ok and item.message]
-                    if tool_result and tool_result.payload:
+                    if tool_result and tool_result.payload and tool_result.tool_name != "need_spec_selection":
                         yield SSEEvent(event="cart_update", data=tool_result.payload)
                         yield SSEEvent(event="cart", data={"cart": tool_result.payload})
                         trace.legacy_sse_events.extend(["cart_update", "cart"])
@@ -609,7 +609,7 @@ class ShoppingAgent:
                         )
                     trace.tool_calls.extend(item.model_dump() for item in tool_calls)
                     tool_prefix_messages = [item.message for item in tool_calls if item.ok and item.message]
-                    if tool_result and tool_result.payload:
+                    if tool_result and tool_result.payload and tool_result.tool_name != "need_spec_selection":
                         yield SSEEvent(event="cart_update", data=tool_result.payload)
                         yield SSEEvent(event="cart", data={"cart": tool_result.payload})
                         trace.legacy_sse_events.extend(["cart_update", "cart"])
@@ -1791,6 +1791,8 @@ class ShoppingAgent:
             )
             if last_result.ok and step.intent == IntentType.CART_ADD.value and expected_sku_id:
                 protected_sku_ids.add(expected_sku_id)
+            if last_result.tool_name == "need_spec_selection":
+                break
             if not last_result.ok and step.intent != IntentType.CART_CLEAR.value:
                 break
         if last_result is None:
@@ -1836,6 +1838,8 @@ class ShoppingAgent:
             )
             if last_result.ok and step.intent == IntentType.CART_ADD.value and expected_sku_id:
                 protected_sku_ids.add(expected_sku_id)
+            if last_result.tool_name == "need_spec_selection":
+                break
             if not last_result.ok:
                 break
         return last_result, calls
@@ -1850,7 +1854,7 @@ class ShoppingAgent:
         tool_result: ToolExecutionResult | None,
         expected_sku_id: str | None = None,
     ) -> None:
-        if tool_result is None or not tool_result.ok:
+        if tool_result is None or not tool_result.ok or tool_result.tool_name == "need_spec_selection":
             return
         sku_ids: list[str] = []
         if expected_sku_id:

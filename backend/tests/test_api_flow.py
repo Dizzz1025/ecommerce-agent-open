@@ -64,6 +64,76 @@ def test_cart_api_flow() -> None:
     assert get_response.json()["items"][0]["sku_id"] == "p_beauty_001"
 
 
+def test_cart_keeps_selected_specs_and_variant_price() -> None:
+    session_id = f"test-cart-specs-{uuid4().hex}"
+    first = client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": "p_beauty_001",
+            "selected_sku_id": "s_p_beauty_001_1",
+            "selected_specs": {"容量": "30ml 经典装"},
+            "unit_price": 1,
+            "quantity": 1,
+            "source": "test",
+        },
+    )
+    assert first.status_code == 200
+    first_item = first.json()["items"][0]
+    assert first_item["selected_sku_id"] == "s_p_beauty_001_1"
+    assert first_item["selected_specs"] == {"容量": "30ml 经典装"}
+    assert first_item["spec_summary"] == "30ml 经典装"
+    assert first_item["price"] == 720.0
+
+    second = client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": "p_beauty_001",
+            "selected_sku_id": "s_p_beauty_001_2",
+            "selected_specs": {"容量": "50ml 加大装"},
+            "quantity": 1,
+            "source": "test",
+        },
+    )
+    assert second.status_code == 200
+    second_cart = second.json()
+    assert len(second_cart["items"]) == 2
+    assert {item["selected_sku_id"] for item in second_cart["items"]} == {
+        "s_p_beauty_001_1",
+        "s_p_beauty_001_2",
+    }
+
+    third = client.post(
+        "/api/cart/add",
+        json={
+            "session_id": session_id,
+            "sku_id": "p_beauty_001",
+            "selected_sku_id": "s_p_beauty_001_1",
+            "selected_specs": {"容量": "30ml 经典装"},
+            "quantity": 1,
+            "source": "test",
+        },
+    )
+    assert third.status_code == 200
+    third_items = third.json()["items"]
+    assert len(third_items) == 2
+    first_variant = next(item for item in third_items if item["selected_sku_id"] == "s_p_beauty_001_1")
+    second_variant = next(item for item in third_items if item["selected_sku_id"] == "s_p_beauty_001_2")
+    assert first_variant["quantity"] == 2
+    assert second_variant["quantity"] == 1
+    assert third.json()["total_items"] == 3
+    assert third.json()["total_price"] == 2420.0
+
+    get_response = client.get("/api/cart", params={"session_id": session_id})
+    assert get_response.status_code == 200
+    assert all(item["cart_item_id"] for item in get_response.json()["items"])
+    assert {item["spec_summary"] for item in get_response.json()["items"]} == {
+        "30ml 经典装",
+        "50ml 加大装",
+    }
+
+
 def test_large_cart_view_update_remove_and_checkout_flow() -> None:
     session_id = "test-boundary-large-cart"
     for sku_id, quantity in [

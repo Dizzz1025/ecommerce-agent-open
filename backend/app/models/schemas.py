@@ -38,17 +38,25 @@ class CartAddRequest(BaseModel):
     session_id: str
     sku_id: str
     quantity: int = Field(default=1, ge=1)
+    selected_sku_id: str | None = None
+    selected_specs: dict[str, Any] = Field(default_factory=dict)
+    unit_price: float | None = None
+    product_name: str | None = None
+    image_url: str | None = None
+    spec_summary: str | None = None
     source: str = "button"
 
 
 class CartRemoveRequest(BaseModel):
     session_id: str
     sku_id: str
+    cart_item_id: str | None = None
 
 
 class CartUpdateRequest(BaseModel):
     session_id: str
     sku_id: str
+    cart_item_id: str | None = None
     quantity: int = Field(..., ge=1)
 
 

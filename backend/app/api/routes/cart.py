@@ -38,6 +38,12 @@ async def add_cart_item(
         session_id=payload.session_id,
         sku_id=payload.sku_id,
         quantity=payload.quantity,
+        selected_sku_id=payload.selected_sku_id,
+        selected_specs=payload.selected_specs,
+        unit_price=payload.unit_price,
+        product_name=payload.product_name,
+        image_url=payload.image_url,
+        spec_summary=payload.spec_summary,
         source=payload.source,
     )
 
@@ -50,6 +56,7 @@ async def remove_cart_item(
     return cart_service.remove(
         session_id=payload.session_id,
         sku_id=payload.sku_id,
+        cart_item_id=payload.cart_item_id,
         source="button",
     )
 
@@ -62,6 +69,7 @@ async def update_cart_item(
     return cart_service.update_quantity(
         session_id=payload.session_id,
         sku_id=payload.sku_id,
+        cart_item_id=payload.cart_item_id,
         quantity=payload.quantity,
         source="button",
     )

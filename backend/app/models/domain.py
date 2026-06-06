@@ -67,7 +67,11 @@ class Product(BaseModel):
 
 
 class CartItem(BaseModel):
+    cart_item_id: str | None = None
     sku_id: str
+    selected_sku_id: str | None = None
+    selected_specs: dict[str, Any] = Field(default_factory=dict)
+    spec_summary: str | None = None
     name: str
     price: float
     quantity: int
@@ -308,6 +312,13 @@ class DialogueStateTracking(BaseModel):
 class CartStateItem(BaseModel):
     sku_id: str
     quantity: int
+    cart_item_id: str | None = None
+    selected_sku_id: str | None = None
+    selected_specs: dict[str, Any] = Field(default_factory=dict)
+    spec_summary: str | None = None
+    unit_price: float | None = None
+    name: str | None = None
+    image_url: str | None = None
 
 
 class CartState(BaseModel):

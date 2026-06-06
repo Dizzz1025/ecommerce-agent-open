@@ -508,6 +508,8 @@ class ShoppingAgent:
                     candidates=[],
                     cart_personalization_context=cart_personalization_context,
                 )
+                yield self._generation_started_event(timer=timer, model_route=model_route)
+                trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
                     timer=timer,
                     model_route=model_route,
@@ -530,6 +532,8 @@ class ShoppingAgent:
                     candidates=[],
                     cart_personalization_context=cart_personalization_context,
                 )
+                yield self._generation_started_event(timer=timer, model_route=model_route)
+                trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
                     timer=timer,
                     model_route=model_route,
@@ -582,6 +586,8 @@ class ShoppingAgent:
                     candidates=candidates,
                     cart_personalization_context=cart_personalization_context,
                 )
+                yield self._generation_started_event(timer=timer, model_route=model_route)
+                trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
                     timer=timer,
                     model_route=model_route,
@@ -693,6 +699,8 @@ class ShoppingAgent:
                     candidates=context_candidates,
                     cart_personalization_context=cart_personalization_context,
                 )
+                yield self._generation_started_event(timer=timer, model_route=model_route)
+                trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
                     timer=timer,
                     model_route=model_route,
@@ -710,6 +718,8 @@ class ShoppingAgent:
                 if tool_prefix_messages:
                     response_text = "\n".join(tool_prefix_messages) + "\n\n" + response_text
             else:
+                yield self._generation_started_event(timer=timer, model_route=model_route)
+                trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
                     timer=timer,
                     model_route=model_route,
@@ -792,6 +802,9 @@ class ShoppingAgent:
             if decision.flow == DialogueFlow.CLARIFICATION:
                 yield SSEEvent(event="clarification", data={"question": response_text, "missing_slots": decision.missing_slots})
                 trace.legacy_sse_events.append("clarification")
+
+            yield self._response_completed_event(timer=timer, response_text=response_text)
+            trace.legacy_sse_events.append("response_completed")
 
             for chunk in self._chunk_text(response_text):
                 yield SSEEvent(event="token", data={"text": chunk, "content": chunk})
@@ -1380,6 +1393,49 @@ class ShoppingAgent:
             call_debug=self._llm_call_debug(),
         )
         return response_text
+
+    def _generation_started_event(
+        self,
+        *,
+        timer: RuntimeTimer,
+        model_route: ModelRouteDecision,
+    ) -> SSEEvent:
+        return SSEEvent(
+            event="generation_started",
+            data={
+                "stage_id": "response_generation",
+                "stage_key": "response_composition",
+                "display_label": "生成推荐结论",
+                "message": "正在生成推荐结论",
+                "elapsed_ms": timer.elapsed_ms(),
+                "stream_supported": self._llm_supports_response_streaming(),
+            },
+        )
+
+    def _response_completed_event(
+        self,
+        *,
+        timer: RuntimeTimer,
+        response_text: str,
+    ) -> SSEEvent:
+        response_duration_ms = timer.last_duration("response_generation")
+        return SSEEvent(
+            event="response_completed",
+            data={
+                "stage_id": "response_generation",
+                "stage_key": "response_composition",
+                "display_label": "生成推荐结论",
+                "text": response_text,
+                "content": response_text,
+                "stage_duration_ms": response_duration_ms,
+                "total_duration_ms": timer.elapsed_ms(),
+                "stream_supported": self._llm_supports_response_streaming(),
+            },
+        )
+
+    def _llm_supports_response_streaming(self) -> bool:
+        stream_method = getattr(self.response_generator.llm_client, "stream_generate_response", None)
+        return callable(stream_method)
 
     def _refresh_local_model_status(self, model_route: ModelRouteDecision) -> tuple[ModelRouteDecision, dict]:
         if not self.model_router.local_models:

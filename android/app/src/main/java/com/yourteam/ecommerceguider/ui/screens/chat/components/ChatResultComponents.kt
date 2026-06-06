@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.yourteam.ecommerceguider.R
+import com.yourteam.ecommerceguider.data.model.AssistantProcessStageStatus
+import com.yourteam.ecommerceguider.data.model.AssistantProcessStageUiModel
 import com.yourteam.ecommerceguider.data.model.AssistantThinkingStatus
 import com.yourteam.ecommerceguider.data.model.AssistantThinkingUiModel
 import com.yourteam.ecommerceguider.data.model.ChatMessageUiModel
@@ -455,7 +458,7 @@ fun AssistantAnswerIntroCard(
     val hasAnswer = answer.isNotBlank() || products.isNotEmpty()
     val hasError = !errorMessage.isNullOrBlank()
     val hasThinking = thinking.status != AssistantThinkingStatus.Idle &&
-        (thinking.lines.isNotEmpty() || isStreaming || hasAnswer)
+        (thinking.stages.isNotEmpty() || isStreaming || hasAnswer)
     if (!hasError && !hasThinking) {
         return
     }
@@ -467,15 +470,14 @@ fun AssistantAnswerIntroCard(
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
+        ThinkingProcessContent(
+            thinking = thinking,
+            expanded = thinkingExpanded,
+            onToggle = onToggleThinking,
+            finalAnswer = answer,
+        )
         if (hasError && !isStreaming) {
-            ErrorContent(errorMessage.orEmpty())
-        } else {
-            ThinkingProcessContent(
-                thinking = thinking,
-                expanded = thinkingExpanded,
-                onToggle = onToggleThinking,
-                compactWhenDone = !isStreaming || hasAnswer,
-            )
+            ErrorContent(message = errorMessage.orEmpty(), compact = true)
         }
     }
 }
@@ -644,16 +646,35 @@ private fun ThinkingProcessContent(
     thinking: AssistantThinkingUiModel,
     expanded: Boolean,
     onToggle: () -> Unit,
-    compactWhenDone: Boolean,
+    finalAnswer: String,
 ) {
-    val steps = thinking.lines.ifEmpty { listOf("正在理解你的需求") }.takeLast(8)
-    val current = steps.lastOrNull().orEmpty()
+    val stages = thinking.stages
+    val completedCount = stages.count { it.status == AssistantProcessStageStatus.Completed }
+        .takeIf { it > 0 }
+        ?: stages.count { it.status != AssistantProcessStageStatus.Pending }
+    val runningStage = stages.firstOrNull { it.status == AssistantProcessStageStatus.Running }
+    val elapsedText = formatDuration(thinking.totalElapsedMs, total = true)
+    val isDone = thinking.status == AssistantThinkingStatus.Done
+    val isFailed = thinking.status == AssistantThinkingStatus.Failed
+    val isGenerating = thinking.status == AssistantThinkingStatus.Generating || thinking.isGeneratingResponse
+    val title = when {
+        isFailed -> "分析未完成 · 已用时 $elapsedText"
+        isDone -> "已完成分析 · 用时 $elapsedText"
+        isGenerating -> "正在生成推荐结论 · $elapsedText"
+        else -> "正在分析 · $elapsedText"
+    }
+    val subtitle = when {
+        isDone -> "共完成 $completedCount 步"
+        isFailed -> "已完成 $completedCount 步"
+        isGenerating -> if (thinking.responseStreamSupported) "正在生成推荐结论" else "正在生成推荐结论"
+        else -> runningStage?.displayLabel ?: "正在理解你的需求"
+    }
     Column(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (compactWhenDone) {
+            if (isDone) {
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -666,6 +687,21 @@ private fun ThinkingProcessContent(
                         contentDescription = "已完成分析",
                         tint = Color.White,
                         modifier = Modifier.size(18.dp),
+                    )
+                }
+            } else if (isFailed) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "!",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
             } else {
@@ -681,16 +717,12 @@ private fun ThinkingProcessContent(
                     .padding(start = 10.dp),
             ) {
                 Text(
-                    text = if (compactWhenDone) "已完成分析" else "AI 正在为你挑选",
+                    text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = if (compactWhenDone) {
-                        "共完成 ${steps.size} 步"
-                    } else {
-                        current.ifBlank { "正在分析" }
-                    },
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = SpatialTextSecondary,
                     maxLines = 1,
@@ -701,39 +733,25 @@ private fun ThinkingProcessContent(
                 onClick = onToggle,
                 shape = SmallShape,
             ) {
-                Text(if (expanded) "收起" else "过程")
+                Text(if (expanded) "收起" else "查看过程")
             }
         }
+
+        if (isGenerating) {
+            GenerationPreview(
+                text = thinking.previewText,
+                streamSupported = thinking.responseStreamSupported,
+            )
+        }
+
+        if (isDone && finalAnswer.isNotBlank()) {
+            AnswerPreviewText(text = finalAnswer)
+        }
+
         if (expanded) {
-            steps.forEachIndexed { index, step ->
-                val isLatest = !compactWhenDone && index == steps.lastIndex
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    if (isLatest) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = SpatialAccent,
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_check_circle_20),
-                            contentDescription = "已完成",
-                            tint = SpatialAccent,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                    Text(
-                        text = step,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (isLatest) {
-                            SpatialTextPrimary
-                        } else {
-                            SpatialTextSecondary
-                        },
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                stages.forEach { stage ->
+                    ProcessStageRow(stage = stage)
                 }
             }
         }
@@ -741,22 +759,168 @@ private fun ThinkingProcessContent(
 }
 
 @Composable
-private fun ErrorContent(message: String) {
+private fun ProcessStageRow(stage: AssistantProcessStageUiModel) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (stage.status) {
+            AssistantProcessStageStatus.Running -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(15.dp),
+                    strokeWidth = 2.dp,
+                    color = SpatialAccentBlue,
+                )
+            }
+            AssistantProcessStageStatus.Completed -> {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check_circle_20),
+                    contentDescription = "已完成",
+                    tint = SpatialTextSecondary,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+            AssistantProcessStageStatus.Failed -> {
+                Box(
+                    modifier = Modifier
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.16f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("!", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+            AssistantProcessStageStatus.Pending -> {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(SpatialTextSecondary.copy(alpha = 0.35f)),
+                )
+            }
+        }
+        Text(
+            text = stage.displayLabel,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (stage.status == AssistantProcessStageStatus.Running) {
+                SpatialTextPrimary
+            } else {
+                SpatialTextSecondary
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        stage.durationMs?.let { duration ->
+            Text(
+                text = formatDuration(duration),
+                style = MaterialTheme.typography.bodySmall,
+                color = SpatialTextSecondary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GenerationPreview(
+    text: String,
+    streamSupported: Boolean,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MediumShape,
+        color = SpatialGlassColorSoft,
+        border = BorderStroke(1.dp, SpatialGlassBorderColor),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "正在生成推荐结论",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = SpatialAccentBlue,
+            )
+            if (text.isNotBlank()) {
+                AnswerPreviewText(text = text)
+            } else {
+                StaticSkeletonPreview(streamSupported = streamSupported)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StaticSkeletonPreview(streamSupported: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text(
+            text = if (streamSupported) "结论生成中" else "模型正在整理最终回复",
+            style = MaterialTheme.typography.bodySmall,
+            color = SpatialTextSecondary,
+        )
+        listOf(0.96f, 0.78f, 0.58f).forEach { fraction ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction)
+                    .height(8.dp)
+                    .clip(SmallShape)
+                    .background(SpatialGlassControlMuted),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnswerPreviewText(text: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        text.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .forEach { paragraph ->
+                Text(
+                    text = paragraph,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SpatialTextBody,
+                )
+            }
+    }
+}
+
+@Composable
+private fun ErrorContent(message: String, compact: Boolean = false) {
     Column(
-        modifier = Modifier.padding(16.dp),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = if (compact) 0.dp else 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = "请求失败",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.error,
-        )
+        if (!compact) {
+            Text(
+                text = "请求失败",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = SpatialTextPrimary,
         )
+    }
+}
+
+private fun formatDuration(durationMs: Long, total: Boolean = false): String {
+    return if (durationMs < 1_000L) {
+        "$durationMs 毫秒"
+    } else {
+        val seconds = durationMs / 1000.0
+        if (total) {
+            String.format("%.1f 秒", seconds)
+        } else {
+            String.format("%.1f 秒", seconds)
+        }
     }
 }
 
@@ -1208,8 +1372,28 @@ private fun AssistantThinkingPreview() {
     EcommerceGuiderTheme {
         AssistantAnswerIntroCard(
             thinking = AssistantThinkingUiModel(
-                status = AssistantThinkingStatus.Streaming,
-                lines = listOf("正在理解你的需求", "正在商品库中查找", "正在比较候选商品"),
+                status = AssistantThinkingStatus.Running,
+                stages = listOf(
+                    AssistantProcessStageUiModel(
+                        stageId = "need_understanding",
+                        displayLabel = "理解你的需求",
+                        status = AssistantProcessStageStatus.Completed,
+                        durationMs = 320,
+                    ),
+                    AssistantProcessStageUiModel(
+                        stageId = "constraint_confirmation",
+                        displayLabel = "确认预算和使用场景",
+                        status = AssistantProcessStageStatus.Completed,
+                        durationMs = 240,
+                    ),
+                    AssistantProcessStageUiModel(
+                        stageId = "product_filtering",
+                        displayLabel = "筛选符合条件的商品",
+                        status = AssistantProcessStageStatus.Running,
+                        startedElapsedMs = 560,
+                    ),
+                ),
+                totalElapsedMs = 1500,
             ),
             isStreaming = true,
             answer = "",

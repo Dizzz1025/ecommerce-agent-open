@@ -2,8 +2,11 @@ package com.yourteam.ecommerceguider.viewmodel
 
 import android.content.ContentResolver
 import android.net.Uri
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourteam.ecommerceguider.data.model.AssistantProcessStageStatus
+import com.yourteam.ecommerceguider.data.model.AssistantProcessStageUiModel
 import com.yourteam.ecommerceguider.data.model.AssistantThinkingStatus
 import com.yourteam.ecommerceguider.data.model.AssistantThinkingUiModel
 import com.yourteam.ecommerceguider.data.model.BackendNavigationUiModel
@@ -16,6 +19,7 @@ import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.repository.ShoppingRepository
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,12 +73,21 @@ class ChatViewModel(
     val navigation: SharedFlow<BackendNavigationUiModel> = _navigation.asSharedFlow()
 
     private var streamJob: Job? = null
+    private var elapsedTickerJob: Job? = null
     private val appliedSectionDeltas = mutableSetOf<String>()
     private var currentTurnId: String? = null
     private var currentAssistantMessageId: String? = null
+    private var currentRequestStartElapsedMs: Long = 0L
+    private var responseCompletedForCurrentTurn: Boolean = false
 
     init {
         refreshCartCount()
+    }
+
+    override fun onCleared() {
+        stopElapsedTicker()
+        streamJob?.cancel()
+        super.onCleared()
     }
 
     fun sendMessage(message: String) {
@@ -112,10 +125,11 @@ class ChatViewModel(
     fun stopStreaming() {
         streamJob?.cancel()
         streamJob = null
+        stopElapsedTicker()
         markInterruptedSections()
         markAssistantMessageDone()
         _isStreaming.value = false
-        finishThinking()
+        markThinkingFailed()
     }
 
     fun toggleThinkingExpanded() {
@@ -289,19 +303,28 @@ class ChatViewModel(
         stream: Flow<ChatStreamEvent>,
     ) {
         val startedAt = System.currentTimeMillis()
+        val startedElapsed = SystemClock.elapsedRealtime()
         val turnId = "turn-local-$startedAt"
         currentTurnId = turnId
         currentAssistantMessageId = null
+        currentRequestStartElapsedMs = startedElapsed
+        responseCompletedForCurrentTurn = false
         _activeTurnId.value = turnId
         _products.value = emptyList()
         _answer.value = ""
         _errorMessage.value = null
         _activeProductCardSpecSelection.value = null
         appliedSectionDeltas.clear()
+        stopElapsedTicker()
         _thinking.value = AssistantThinkingUiModel(
-            status = AssistantThinkingStatus.Started,
-            lines = listOf(initialThinking),
+            status = AssistantThinkingStatus.Running,
+            stages = defaultProcessStages().markStageRunning(
+                stageId = "need_understanding",
+                startedElapsedMs = 0L,
+                summary = initialThinking.takeIf { it.isNotBlank() },
+            ),
             expanded = true,
+            totalElapsedMs = 0L,
         )
         _messages.value = _messages.value + ChatMessageUiModel(
             id = "user-$startedAt",
@@ -311,19 +334,22 @@ class ChatViewModel(
             timestamp = startedAt,
         )
         _isStreaming.value = true
+        startElapsedTicker()
 
         streamJob = viewModelScope.launch {
             runCatching {
                 stream.collect(::handleStreamEvent)
             }.onFailure {
                 if (it is CancellationException) {
+                    stopElapsedTicker()
                     finishThinking()
                     markAssistantMessageDone()
                     _isStreaming.value = false
                     return@onFailure
                 }
                 _errorMessage.value = "请求失败，请检查后端服务和真机端口转发。"
-                finishThinking()
+                stopElapsedTicker()
+                markThinkingFailed()
                 markAssistantMessageDone()
                 _isStreaming.value = false
             }
@@ -332,8 +358,15 @@ class ChatViewModel(
 
     private fun handleStreamEvent(event: ChatStreamEvent) {
         when (event.event) {
-            "progress", "process" -> appendThinkingLine(event.progressText ?: "正在分析用户需求")
-            "token" -> appendAnswerChunk(event.text.orEmpty())
+            "progress", "process" -> handleProgressEvent(event)
+            "generation_started" -> handleGenerationStarted(event)
+            "response_delta" -> appendResponsePreviewDelta(event.text.orEmpty(), event.totalDurationMs)
+            "response_completed" -> handleResponseCompleted(event)
+            "token" -> {
+                if (!responseCompletedForCurrentTurn) {
+                    appendAnswerChunk(event.text.orEmpty())
+                }
+            }
             "recommendation_section_start" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
@@ -383,7 +416,9 @@ class ChatViewModel(
             }
             "frontend_action" -> event.navigation?.let { _navigation.tryEmit(it) }
             "turn_result" -> {
-                event.text?.let { replaceAnswerIfBlank(it) }
+                if (!responseCompletedForCurrentTurn) {
+                    event.text?.let { replaceAnswerIfBlank(it) }
+                }
                 if (event.products.isNotEmpty()) {
                     _products.value = mergeProductsBySku(_products.value, event.products)
                     mergeSectionProductSnapshots(event.products)
@@ -400,10 +435,12 @@ class ChatViewModel(
             "error" -> {
                 _errorMessage.value = event.errorMessage ?: "请求失败，请检查后端服务。"
                 markAssistantMessageDone()
-                finishThinking()
+                stopElapsedTicker()
+                markThinkingFailed()
             }
             "done" -> {
                 _isStreaming.value = false
+                stopElapsedTicker()
                 finishThinking()
                 markAssistantMessageDone()
                 refreshCartCount()
@@ -535,35 +572,165 @@ class ChatViewModel(
         }
     }
 
-    private fun appendThinkingLine(line: String) {
-        if (line.isBlank()) {
+    private fun appendResponsePreviewDelta(delta: String, backendElapsedMs: Long?) {
+        if (delta.isBlank()) {
             return
         }
         val current = _thinking.value
         _thinking.value = current.copy(
-            status = AssistantThinkingStatus.Streaming,
-            lines = (current.lines + line).distinct().takeLast(8),
+            status = AssistantThinkingStatus.Generating,
+            previewText = current.previewText + delta,
+            totalElapsedMs = backendElapsedMs ?: currentElapsedMs(),
+            isGeneratingResponse = true,
+            expanded = false,
+        )
+    }
+
+    private fun handleProgressEvent(event: ChatStreamEvent) {
+        val stageId = mapProgressStage(
+            rawStageId = event.progressStageId,
+            fallbackText = event.progressText,
+        )
+        advanceProcessStage(
+            stageId = stageId,
+            summary = event.progressSummary ?: event.progressText,
+            totalElapsedMs = null,
+        )
+    }
+
+    private fun handleGenerationStarted(event: ChatStreamEvent) {
+        advanceProcessStage(
+            stageId = "response_generation",
+            summary = event.progressText ?: "正在生成推荐结论",
+            totalElapsedMs = null,
+            status = AssistantThinkingStatus.Generating,
+            expanded = false,
+            isGeneratingResponse = true,
+            responseStreamSupported = event.responseStreamSupported == true,
+        )
+    }
+
+    private fun handleResponseCompleted(event: ChatStreamEvent) {
+        responseCompletedForCurrentTurn = true
+        stopElapsedTicker()
+        val completedElapsedMs = currentElapsedMs().takeIf { it > 0L } ?: event.totalDurationMs ?: 0L
+        val stages = completeAllStages(
+            stages = _thinking.value.stages.ifEmpty { defaultProcessStages() },
+            completedElapsedMs = completedElapsedMs,
+            finalStageDurationMs = null,
+        )
+        _thinking.value = _thinking.value.copy(
+            status = AssistantThinkingStatus.Done,
+            stages = stages,
+            expanded = false,
+            previewText = "",
+            totalElapsedMs = completedElapsedMs,
+            isGeneratingResponse = false,
+            responseStreamSupported = event.responseStreamSupported == true,
+        )
+        event.text?.let { replaceFinalAnswer(it) }
+        markAssistantMessageDone()
+    }
+
+    private fun advanceProcessStage(
+        stageId: String,
+        summary: String?,
+        totalElapsedMs: Long? = null,
+        status: AssistantThinkingStatus = AssistantThinkingStatus.Running,
+        expanded: Boolean = _thinking.value.expanded,
+        isGeneratingResponse: Boolean = false,
+        responseStreamSupported: Boolean = _thinking.value.responseStreamSupported,
+    ) {
+        val elapsed = totalElapsedMs ?: currentElapsedMs()
+        val current = _thinking.value
+        val stages = current.stages.ifEmpty { defaultProcessStages() }
+        val targetIndex = stages.indexOfFirst { it.stageId == stageId }
+        if (targetIndex < 0) {
+            return
+        }
+        val updatedStages = stages.mapIndexed { index, stage ->
+            when {
+                index < targetIndex -> stage.completeAt(elapsed)
+                index == targetIndex -> {
+                    if (stage.status == AssistantProcessStageStatus.Completed) {
+                        stage.copy(summary = summary ?: stage.summary)
+                    } else {
+                        stage.copy(
+                            status = AssistantProcessStageStatus.Running,
+                            startedElapsedMs = stage.startedElapsedMs ?: elapsed,
+                            summary = summary ?: stage.summary,
+                        )
+                    }
+                }
+                else -> stage
+            }
+        }
+        _thinking.value = current.copy(
+            status = status,
+            stages = updatedStages,
+            expanded = expanded,
+            totalElapsedMs = elapsed,
+            isGeneratingResponse = isGeneratingResponse,
+            responseStreamSupported = responseStreamSupported,
         )
     }
 
     private fun collapseThinking() {
         val current = _thinking.value
-        if (current.status != AssistantThinkingStatus.Idle) {
-            _thinking.value = current.copy(
-                status = AssistantThinkingStatus.Done,
-                expanded = false,
-            )
+        if (current.status != AssistantThinkingStatus.Idle && current.status != AssistantThinkingStatus.Failed) {
+            _thinking.value = current.copy(expanded = false)
         }
     }
 
     private fun finishThinking() {
         val current = _thinking.value
-        if (current.status != AssistantThinkingStatus.Idle) {
-            _thinking.value = current.copy(
-                status = AssistantThinkingStatus.Done,
-                expanded = false,
-            )
+        if (current.status == AssistantThinkingStatus.Idle || current.status == AssistantThinkingStatus.Failed) {
+            return
         }
+        if (current.status == AssistantThinkingStatus.Done) {
+            _thinking.value = current.copy(expanded = false)
+            return
+        }
+        val elapsed = current.totalElapsedMs.takeIf { it > 0 } ?: currentElapsedMs()
+        _thinking.value = current.copy(
+            status = AssistantThinkingStatus.Done,
+            stages = completeAllStages(
+                stages = current.stages.ifEmpty { defaultProcessStages() },
+                completedElapsedMs = elapsed,
+                finalStageDurationMs = null,
+            ),
+            expanded = false,
+            previewText = "",
+            totalElapsedMs = elapsed,
+            isGeneratingResponse = false,
+        )
+    }
+
+    private fun markThinkingFailed() {
+        val current = _thinking.value
+        if (current.status == AssistantThinkingStatus.Idle) {
+            return
+        }
+        val elapsed = currentElapsedMs()
+        val stages = current.stages.ifEmpty { defaultProcessStages() }
+        val failedStages = stages.map { stage ->
+            if (stage.status == AssistantProcessStageStatus.Running) {
+                stage.copy(
+                    status = AssistantProcessStageStatus.Failed,
+                    durationMs = (elapsed - (stage.startedElapsedMs ?: elapsed)).coerceAtLeast(0L),
+                )
+            } else {
+                stage
+            }
+        }
+        _thinking.value = current.copy(
+            status = AssistantThinkingStatus.Failed,
+            stages = failedStages,
+            expanded = false,
+            previewText = "",
+            totalElapsedMs = elapsed,
+            isGeneratingResponse = false,
+        )
     }
 
     private fun mergeProductsBySku(
@@ -780,6 +947,152 @@ class ChatViewModel(
                 }
                 section.copy(text = stoppedText, done = true)
             }
+        }
+    }
+
+    private fun startElapsedTicker() {
+        stopElapsedTicker()
+        elapsedTickerJob = viewModelScope.launch {
+            while (_isStreaming.value) {
+                val current = _thinking.value
+                if (current.status == AssistantThinkingStatus.Running || current.status == AssistantThinkingStatus.Generating) {
+                    _thinking.value = current.copy(totalElapsedMs = currentElapsedMs())
+                }
+                delay(100)
+            }
+        }
+    }
+
+    private fun stopElapsedTicker() {
+        elapsedTickerJob?.cancel()
+        elapsedTickerJob = null
+    }
+
+    private fun currentElapsedMs(): Long {
+        if (currentRequestStartElapsedMs <= 0L) {
+            return 0L
+        }
+        return (SystemClock.elapsedRealtime() - currentRequestStartElapsedMs).coerceAtLeast(0L)
+    }
+
+    private fun defaultProcessStages(): List<AssistantProcessStageUiModel> = listOf(
+        AssistantProcessStageUiModel(
+            stageId = "need_understanding",
+            displayLabel = "理解你的需求",
+        ),
+        AssistantProcessStageUiModel(
+            stageId = "constraint_confirmation",
+            displayLabel = "确认预算和使用场景",
+        ),
+        AssistantProcessStageUiModel(
+            stageId = "product_filtering",
+            displayLabel = "筛选符合条件的商品",
+        ),
+        AssistantProcessStageUiModel(
+            stageId = "candidate_matching",
+            displayLabel = "比较候选商品的匹配程度",
+        ),
+        AssistantProcessStageUiModel(
+            stageId = "recommendation_plan",
+            displayLabel = "形成个性化推荐方案",
+        ),
+        AssistantProcessStageUiModel(
+            stageId = "response_generation",
+            displayLabel = "生成推荐结论",
+        ),
+    )
+
+    private fun List<AssistantProcessStageUiModel>.markStageRunning(
+        stageId: String,
+        startedElapsedMs: Long,
+        summary: String? = null,
+    ): List<AssistantProcessStageUiModel> = map { stage ->
+        if (stage.stageId == stageId) {
+            stage.copy(
+                status = AssistantProcessStageStatus.Running,
+                startedElapsedMs = startedElapsedMs,
+                summary = summary,
+            )
+        } else {
+            stage
+        }
+    }
+
+    private fun AssistantProcessStageUiModel.completeAt(completedElapsedMs: Long): AssistantProcessStageUiModel {
+        if (status == AssistantProcessStageStatus.Completed) {
+            return this
+        }
+        val duration = startedElapsedMs?.let { start ->
+            (completedElapsedMs - start).coerceAtLeast(0L)
+        } ?: 0L
+        return copy(
+            status = AssistantProcessStageStatus.Completed,
+            durationMs = durationMs ?: duration,
+        )
+    }
+
+    private fun completeAllStages(
+        stages: List<AssistantProcessStageUiModel>,
+        completedElapsedMs: Long,
+        finalStageDurationMs: Long?,
+    ): List<AssistantProcessStageUiModel> {
+        val responseIndex = stages.indexOfFirst { it.stageId == "response_generation" }
+        return stages.mapIndexed { index, stage ->
+            val completed = stage.completeAt(completedElapsedMs)
+            if (index == responseIndex && finalStageDurationMs != null) {
+                completed.copy(durationMs = finalStageDurationMs.coerceAtLeast(0L))
+            } else {
+                completed
+            }
+        }
+    }
+
+    private fun mapProgressStage(rawStageId: String?, fallbackText: String?): String {
+        val raw = rawStageId.orEmpty()
+        return when (raw) {
+            "intent_understanding",
+            "cart_intent_understanding" -> "need_understanding"
+            "constraint_extraction",
+            "memory_context",
+            "cart_inventory_check",
+            "cart_checkout_processing" -> "constraint_confirmation"
+            "retrieval",
+            "cart_updating",
+            "multimodal_processing",
+            "image_analysis" -> "product_filtering"
+            "selection_rerank",
+            "product_postprocessing",
+            "cart_completion" -> "candidate_matching"
+            "response_composition" -> "recommendation_plan"
+            "response_generation",
+            "generation" -> "response_generation"
+            else -> mapProgressText(fallbackText)
+        }
+    }
+
+    private fun mapProgressText(text: String?): String {
+        val value = text.orEmpty()
+        return when {
+            value.contains("预算") || value.contains("场景") || value.contains("条件") || value.contains("偏好") -> "constraint_confirmation"
+            value.contains("商品库") || value.contains("检索") || value.contains("查找") || value.contains("筛选") -> "product_filtering"
+            value.contains("比较") || value.contains("候选") || value.contains("排序") || value.contains("匹配") -> "candidate_matching"
+            value.contains("整理") || value.contains("推荐理由") || value.contains("商品卡片") -> "recommendation_plan"
+            value.contains("生成") || value.contains("结论") || value.contains("回复") -> "response_generation"
+            else -> "need_understanding"
+        }
+    }
+
+    private fun replaceFinalAnswer(text: String) {
+        if (text.isBlank()) {
+            return
+        }
+        val messageId = ensureAssistantMessage()
+        _answer.value = text
+        updateAssistantMessage(messageId) { message ->
+            message.copy(
+                content = text,
+                isStreaming = false,
+            )
         }
     }
 

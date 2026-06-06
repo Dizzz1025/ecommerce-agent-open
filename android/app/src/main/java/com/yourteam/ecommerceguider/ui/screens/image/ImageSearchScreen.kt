@@ -62,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourteam.ecommerceguider.ui.components.ChatBubble
 import com.yourteam.ecommerceguider.ui.screens.chat.components.AssistantAnswerIntroCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.FinalComparisonSummary
 import com.yourteam.ecommerceguider.ui.screens.chat.components.RecommendationSection
@@ -107,9 +106,6 @@ fun ImageSearchScreen(
     var thinkingExpanded by remember { mutableStateOf(false) }
     val activeRecommendationSections = remember(recommendationSections, activeTurnId) {
         recommendationSections.filter { section -> section.turnId == activeTurnId }
-    }
-    val activeAssistantMessage = remember(messages, activeTurnId) {
-        messages.lastOrNull { message -> !message.isUser && message.turnId == activeTurnId }
     }
     val visibleProducts = if (activeRecommendationSections.isNotEmpty()) {
         activeRecommendationSections.mapNotNull { it.product }
@@ -254,14 +250,6 @@ fun ImageSearchScreen(
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(if (isStreaming) "识别中..." else "搜索同款")
-                }
-            }
-
-            if (hasSubmittedImageSearch) {
-                activeAssistantMessage?.let { assistantMessage ->
-                    item {
-                        ChatBubble(message = assistantMessage)
-                    }
                 }
             }
 

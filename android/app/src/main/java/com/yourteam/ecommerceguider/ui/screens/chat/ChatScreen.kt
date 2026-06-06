@@ -220,8 +220,11 @@ fun ChatScreen(
                     item { WelcomeCard() }
                 } else {
                     messages.forEach { message ->
-                        item(key = message.id) {
-                            ChatBubble(message = message)
+                        val hideActiveAssistantBubble = !message.isUser && message.turnId == activeTurnId
+                        if (!hideActiveAssistantBubble) {
+                            item(key = message.id) {
+                                ChatBubble(message = message)
+                            }
                         }
                         if (!message.isUser) {
                             if (message.turnId == activeTurnId) {

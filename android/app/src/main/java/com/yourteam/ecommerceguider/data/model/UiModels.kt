@@ -118,15 +118,36 @@ data class CartSnapshotUiModel(
 
 enum class AssistantThinkingStatus {
     Idle,
-    Started,
-    Streaming,
+    Running,
+    Generating,
     Done,
+    Failed,
 }
+
+enum class AssistantProcessStageStatus {
+    Pending,
+    Running,
+    Completed,
+    Failed,
+}
+
+data class AssistantProcessStageUiModel(
+    val stageId: String,
+    val displayLabel: String,
+    val status: AssistantProcessStageStatus = AssistantProcessStageStatus.Pending,
+    val startedElapsedMs: Long? = null,
+    val durationMs: Long? = null,
+    val summary: String? = null,
+)
 
 data class AssistantThinkingUiModel(
     val status: AssistantThinkingStatus = AssistantThinkingStatus.Idle,
-    val lines: List<String> = emptyList(),
+    val stages: List<AssistantProcessStageUiModel> = emptyList(),
     val expanded: Boolean = true,
+    val previewText: String = "",
+    val totalElapsedMs: Long = 0L,
+    val isGeneratingResponse: Boolean = false,
+    val responseStreamSupported: Boolean = false,
 )
 
 data class ChatMessageUiModel(
@@ -193,6 +214,12 @@ data class ChatStreamEvent(
     val event: String,
     val text: String? = null,
     val progressText: String? = null,
+    val progressStageId: String? = null,
+    val progressDisplayLabel: String? = null,
+    val progressSummary: String? = null,
+    val stageDurationMs: Long? = null,
+    val totalDurationMs: Long? = null,
+    val responseStreamSupported: Boolean? = null,
     val products: List<ProductUiModel> = emptyList(),
     val cart: CartSnapshotUiModel? = null,
     val errorMessage: String? = null,

@@ -325,6 +325,42 @@ class ShoppingRepository(
                 ChatStreamEvent(event = "token", text = text)
             }
 
+            "generation_started" -> {
+                ChatStreamEvent(
+                    event = "generation_started",
+                    progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
+                    progressDisplayLabel = optNullableString("display_label")
+                        ?: optNullableString("user_facing_label"),
+                    progressText = optString("message").ifBlank { optString("text") },
+                    totalDurationMs = optNullableLong("elapsed_ms"),
+                    responseStreamSupported = optNullableBoolean("stream_supported"),
+                )
+            }
+
+            "response_delta" -> {
+                ChatStreamEvent(
+                    event = "response_delta",
+                    text = optString("delta")
+                        .ifBlank { optString("text") }
+                        .ifBlank { optString("content") },
+                    totalDurationMs = optNullableLong("elapsed_ms"),
+                    responseStreamSupported = optNullableBoolean("stream_supported"),
+                )
+            }
+
+            "response_completed" -> {
+                ChatStreamEvent(
+                    event = "response_completed",
+                    text = optString("text").ifBlank { optString("content") },
+                    progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
+                    progressDisplayLabel = optNullableString("display_label")
+                        ?: optNullableString("user_facing_label"),
+                    stageDurationMs = optNullableLong("stage_duration_ms"),
+                    totalDurationMs = optNullableLong("total_duration_ms"),
+                    responseStreamSupported = optNullableBoolean("stream_supported"),
+                )
+            }
+
             "product_cards" -> {
                 ChatStreamEvent(
                     event = "product_cards",
@@ -396,6 +432,12 @@ class ShoppingRepository(
                 ChatStreamEvent(
                     event = eventName,
                     progressText = text.takeIf { it.isNotBlank() },
+                    progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
+                    progressDisplayLabel = optNullableString("user_facing_label")
+                        ?: optNullableString("display_label"),
+                    progressSummary = optNullableString("summary") ?: text.takeIf { it.isNotBlank() },
+                    stageDurationMs = optNullableLong("stage_duration_ms"),
+                    totalDurationMs = optNullableLong("total_duration_ms"),
                 )
             }
 
@@ -837,6 +879,17 @@ class ShoppingRepository(
         return when (val value = opt(key)) {
             is Number -> value.toInt()
             is String -> value.toIntOrNull()
+            else -> null
+        }
+    }
+
+    private fun JSONObject.optNullableLong(key: String): Long? {
+        if (!has(key) || isNull(key)) {
+            return null
+        }
+        return when (val value = opt(key)) {
+            is Number -> value.toLong()
+            is String -> value.toDoubleOrNull()?.toLong()
             else -> null
         }
     }

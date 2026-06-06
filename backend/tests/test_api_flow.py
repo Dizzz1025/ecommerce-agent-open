@@ -1443,14 +1443,29 @@ def test_progress_events_are_emitted_and_debugged() -> None:
     events = _parse_sse_events(response.text)
     event_names = [name for name, _ in events]
     assert "progress" in event_names
+    assert "generation_started" in event_names
+    assert "response_completed" in event_names
     assert event_names.index("progress") < event_names.index("turn_result")
+    assert event_names.index("generation_started") < event_names.index("response_completed")
+    assert event_names.index("response_completed") < event_names.index("turn_result")
 
     progress_events = [data for name, data in events if name == "progress"]
     assert progress_events[0]["event_type"] == "progress_message"
     assert progress_events[0]["text"]
     assert progress_events[0]["can_be_replaced"] is True
 
+    generation_started = _event(events, "generation_started")
+    assert generation_started["display_label"] == "生成推荐结论"
+    assert generation_started["stream_supported"] is False
+
+    response_completed = _event(events, "response_completed")
+    assert response_completed["text"]
+    assert response_completed["stage_duration_ms"] >= 0
+    assert response_completed["total_duration_ms"] >= 0
+    assert response_completed["stream_supported"] is False
+
     turn_result = _event(events, "turn_result")
+    assert response_completed["text"] == turn_result["frontend_data"]["reply_message"]["text"]
     progress_debug = turn_result["system_debug"]["Progress事件"]
     assert progress_debug["progress事件数量"] == len(progress_events)
     assert progress_debug["预测工作类型"]

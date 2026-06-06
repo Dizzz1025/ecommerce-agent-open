@@ -13,6 +13,27 @@ data class ProductSkuUiModel(
     val price: Double = 0.0,
 )
 
+data class ProductReviewUiModel(
+    val rating: Double? = null,
+    val nickname: String? = null,
+    val createdAt: String? = null,
+    val userTags: List<String> = emptyList(),
+    val purchased: Boolean? = null,
+    val content: String = "",
+)
+
+data class ProductPresentationUiModel(
+    val type: String = "",
+    val optionLabel: String? = null,
+    val reason: String? = null,
+    val tradeOff: String? = null,
+    val status: String = "complete",
+    val summary: String? = null,
+    val advantages: List<String> = emptyList(),
+    val suitableFor: String? = null,
+    val contentSource: String = "",
+)
+
 data class ProductUiModel(
     val skuId: String,
     val productId: String? = null,
@@ -37,9 +58,11 @@ data class ProductUiModel(
     val tags: List<String> = emptyList(),
     val matchedReasons: List<String> = emptyList(),
     val skus: List<ProductSkuUiModel> = emptyList(),
+    val reviews: List<ProductReviewUiModel> = emptyList(),
     val ragKnowledge: Map<String, String> = emptyMap(),
     val score: Double? = null,
     val spotlight: SpotlightUiModel = SpotlightUiModel(),
+    val presentation: ProductPresentationUiModel? = null,
 ) {
     val displayTitle: String
         get() = title?.takeIf { it.isNotBlank() } ?: name
@@ -57,6 +80,8 @@ data class ProductUiModel(
 
     val displayReason: String
         get() = listOfNotNull(
+            presentation?.reason?.takeIf { it.isNotBlank() },
+            presentation?.summary?.takeIf { it.isNotBlank() },
             reason,
             highlightShort.takeIf { it.isNotBlank() },
             spotlight.description.takeIf { it.isNotBlank() },
@@ -71,11 +96,15 @@ data class ProductUiModel(
 }
 
 data class CartItemUiModel(
+    val cartItemId: String,
     val skuId: String,
+    val selectedSkuId: String? = null,
+    val selectedSpecs: Map<String, String> = emptyMap(),
     val name: String,
     val price: Double,
     val quantity: Int,
     val imageUrl: String = "",
+    val specSummary: String? = null,
 ) {
     val lineTotal: Double
         get() = price * quantity
@@ -102,14 +131,63 @@ data class AssistantThinkingUiModel(
 
 data class ChatMessageUiModel(
     val id: String,
+    val turnId: String = "",
     val content: String,
     val isUser: Boolean,
+    val isStreaming: Boolean = false,
+    val timestamp: Long = System.currentTimeMillis(),
 )
 
 data class BackendNavigationUiModel(
     val targetPage: String,
     val skuId: String? = null,
 )
+
+data class RecommendationSectionUiModel(
+    val eventId: String? = null,
+    val turnId: String,
+    val sectionIndex: Int,
+    val skuId: String,
+    val optionLabel: String,
+    val text: String = "",
+    val reason: String? = null,
+    val tradeOff: String? = null,
+    val productName: String? = null,
+    val brand: String? = null,
+    val product: ProductUiModel? = null,
+    val done: Boolean = false,
+) {
+    val stableKey: String
+        get() = "$turnId-$sectionIndex-$skuId"
+}
+
+data class SpecSelectionOptionUiModel(
+    val productId: String,
+    val skuId: String,
+    val specText: String,
+    val selectedSpecs: Map<String, String> = emptyMap(),
+    val price: Double = 0.0,
+    val stock: Int? = null,
+    val available: Boolean = true,
+)
+
+data class SpecSelectionUiModel(
+    val id: String,
+    val turnId: String,
+    val productId: String,
+    val productName: String,
+    val imageUrl: String = "",
+    val quantity: Int = 1,
+    val options: List<SpecSelectionOptionUiModel> = emptyList(),
+    val selectedSkuId: String? = null,
+    val source: String = "chat_intent",
+    val anchorProductId: String? = null,
+    val anchorSkuId: String? = null,
+    val anchorRecommendationId: String? = null,
+) {
+    val stableKey: String
+        get() = "$turnId-$id"
+}
 
 data class ChatStreamEvent(
     val event: String,
@@ -120,4 +198,6 @@ data class ChatStreamEvent(
     val errorMessage: String? = null,
     val navigation: BackendNavigationUiModel? = null,
     val product: ProductUiModel? = null,
+    val recommendationSection: RecommendationSectionUiModel? = null,
+    val specSelection: SpecSelectionUiModel? = null,
 )

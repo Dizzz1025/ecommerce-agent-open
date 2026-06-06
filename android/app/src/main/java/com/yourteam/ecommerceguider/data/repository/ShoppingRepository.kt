@@ -8,8 +8,13 @@ import com.yourteam.ecommerceguider.data.model.BackendNavigationUiModel
 import com.yourteam.ecommerceguider.data.model.CartItemUiModel
 import com.yourteam.ecommerceguider.data.model.CartSnapshotUiModel
 import com.yourteam.ecommerceguider.data.model.ChatStreamEvent
+import com.yourteam.ecommerceguider.data.model.ProductPresentationUiModel
+import com.yourteam.ecommerceguider.data.model.ProductReviewUiModel
 import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
+import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
+import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
+import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpotlightUiModel
 import java.io.BufferedOutputStream
 import java.io.IOException
@@ -151,12 +156,29 @@ class ShoppingRepository(
         }
     }
 
-    suspend fun addToCart(skuId: String, quantity: Int = 1): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+    suspend fun addToCart(
+        skuId: String,
+        quantity: Int = 1,
+        selectedSkuId: String? = null,
+        selectedSpecs: Map<String, String> = emptyMap(),
+        unitPrice: Double? = null,
+        productName: String? = null,
+        imageUrl: String? = null,
+        specSummary: String? = null,
+    ): CartSnapshotUiModel = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("session_id", sessionId)
             .put("sku_id", skuId)
             .put("quantity", quantity)
             .put("source", "button")
+        selectedSkuId?.takeIf { it.isNotBlank() }?.let { payload.put("selected_sku_id", it) }
+        if (selectedSpecs.isNotEmpty()) {
+            payload.put("selected_specs", JSONObject(selectedSpecs))
+        }
+        unitPrice?.let { payload.put("unit_price", it) }
+        productName?.takeIf { it.isNotBlank() }?.let { payload.put("product_name", it) }
+        imageUrl?.takeIf { it.isNotBlank() }?.let { payload.put("image_url", it) }
+        specSummary?.takeIf { it.isNotBlank() }?.let { payload.put("spec_summary", it) }
         val connection = openJsonConnection(path = "/api/cart/add", method = "POST")
         try {
             writeJson(connection, payload)
@@ -169,11 +191,16 @@ class ShoppingRepository(
         }
     }
 
-    suspend fun updateCartQuantity(skuId: String, quantity: Int): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+    suspend fun updateCartQuantity(
+        skuId: String,
+        quantity: Int,
+        cartItemId: String? = null,
+    ): CartSnapshotUiModel = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("session_id", sessionId)
             .put("sku_id", skuId)
             .put("quantity", quantity.coerceAtLeast(1))
+        cartItemId?.takeIf { it.isNotBlank() }?.let { payload.put("cart_item_id", it) }
         val connection = openJsonConnection(path = "/api/cart/update", method = "POST")
         try {
             writeJson(connection, payload)
@@ -186,10 +213,11 @@ class ShoppingRepository(
         }
     }
 
-    suspend fun removeFromCart(skuId: String): CartSnapshotUiModel = withContext(Dispatchers.IO) {
+    suspend fun removeFromCart(skuId: String, cartItemId: String? = null): CartSnapshotUiModel = withContext(Dispatchers.IO) {
         val payload = JSONObject()
             .put("session_id", sessionId)
             .put("sku_id", skuId)
+        cartItemId?.takeIf { it.isNotBlank() }?.let { payload.put("cart_item_id", it) }
         val connection = openJsonConnection(path = "/api/cart/remove", method = "POST")
         try {
             writeJson(connection, payload)
@@ -304,6 +332,41 @@ class ShoppingRepository(
                 )
             }
 
+            "product_card" -> {
+                ChatStreamEvent(
+                    event = "product_card",
+                    product = optJSONObject("product")?.toProduct(),
+                    recommendationSection = toRecommendationSection(
+                        text = null,
+                        product = optJSONObject("product")?.toProduct(),
+                    ),
+                )
+            }
+
+            "recommendation_section_start" -> {
+                ChatStreamEvent(
+                    event = eventName,
+                    recommendationSection = toRecommendationSection(),
+                )
+            }
+
+            "recommendation_text_delta" -> {
+                ChatStreamEvent(
+                    event = "recommendation_text_delta",
+                    recommendationSection = toRecommendationSection(text = optNullableString("delta")),
+                )
+            }
+
+            "recommendation_text_done" -> {
+                ChatStreamEvent(
+                    event = "recommendation_text_done",
+                    recommendationSection = toRecommendationSection(
+                        text = optNullableString("reason"),
+                        done = true,
+                    ),
+                )
+            }
+
             "products", "alternatives" -> {
                 ChatStreamEvent(
                     event = eventName,
@@ -340,6 +403,13 @@ class ShoppingRepository(
                 ChatStreamEvent(
                     event = "frontend_action",
                     navigation = toNavigation(product = null),
+                )
+            }
+
+            "spec_selection" -> {
+                ChatStreamEvent(
+                    event = "spec_selection",
+                    specSelection = toSpecSelection(),
                 )
             }
 
@@ -413,6 +483,9 @@ class ShoppingRepository(
             .optJSONObject("cart_state")
             ?.optJSONObject("cart")
             ?.toCartSnapshot()
+        val specSelection = frontendData
+            .optJSONObject("spec_selection")
+            ?.toSpecSelection()
 
         return ChatStreamEvent(
             event = "turn_result",
@@ -428,8 +501,64 @@ class ShoppingRepository(
             cart = cart,
             navigation = navigation,
             product = productDetail,
+            specSelection = specSelection,
             errorMessage = frontendData.optJSONObject("error_message")?.optString("message"),
         )
+    }
+
+    private fun JSONObject.toSpecSelection(): SpecSelectionUiModel? {
+        val productId = optString("product_id").ifBlank { optString("productId") }
+        val productName = optString("product_name").ifBlank { optString("productName") }
+        val options = (optJSONArray("sku_options") ?: optJSONArray("skuOptions")).toSpecOptions(productId)
+        if (productId.isBlank() || productName.isBlank() || options.isEmpty()) {
+            return null
+        }
+        val id = optString("id").ifBlank { "spec-$productId" }
+        return SpecSelectionUiModel(
+            id = id,
+            turnId = optString("turn_id").ifBlank { optString("turnId") }.ifBlank { "turn_current" },
+            productId = productId,
+            productName = productName,
+            imageUrl = absolutizeUrl(optString("image_url").ifBlank { optString("imageUrl") }),
+            quantity = optInt("quantity", 1).coerceAtLeast(1),
+            options = options,
+            selectedSkuId = optNullableString("selected_sku_id") ?: optNullableString("selectedSkuId"),
+        )
+    }
+
+    private fun JSONArray?.toSpecOptions(productId: String): List<SpecSelectionOptionUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val option = optJSONObject(index) ?: continue
+                val skuId = option.optString("sku_id").ifBlank { option.optString("skuId") }
+                val specs = option.optJSONObject("selected_specs").toStringMap()
+                    .ifEmpty { option.optJSONObject("selectedSpecs").toStringMap() }
+                val specText = option.optString("spec_text")
+                    .ifBlank { option.optString("specText") }
+                    .ifBlank { option.optJSONObject("selected_specs").toSpecSummary().orEmpty() }
+                    .ifBlank { option.optJSONObject("selectedSpecs").toSpecSummary().orEmpty() }
+                if (skuId.isBlank() || specText.isBlank()) {
+                    continue
+                }
+                val stock = option.optNullableInt("stock")
+                add(
+                    SpecSelectionOptionUiModel(
+                        productId = option.optString("product_id")
+                            .ifBlank { option.optString("productId") }
+                            .ifBlank { productId },
+                        skuId = skuId,
+                        specText = specText,
+                        selectedSpecs = specs,
+                        price = option.optNumber("price"),
+                        stock = stock,
+                        available = option.optNullableBoolean("available") ?: (stock == null || stock > 0),
+                    )
+                )
+            }
+        }
     }
 
     private fun JSONObject?.toNavigation(product: ProductUiModel?): BackendNavigationUiModel? {
@@ -496,9 +625,67 @@ class ShoppingRepository(
             tags = optJSONArray("tags").toStringList(),
             matchedReasons = optJSONArray("matched_reasons").toStringList(),
             skus = optJSONArray("skus").toSkus(),
+            reviews = optJSONObject("rag_knowledge").toReviews(),
             ragKnowledge = optJSONObject("rag_knowledge").toStringMap(),
             score = optNullableNumber("score"),
             spotlight = optJSONObject("spotlight").toSpotlight(),
+            presentation = optJSONObject("presentation").toPresentation(),
+        )
+    }
+
+    private fun JSONObject?.toPresentation(): ProductPresentationUiModel? {
+        if (this == null) {
+            return null
+        }
+        val type = optString("type")
+        if (type.isBlank()) {
+            return null
+        }
+        return ProductPresentationUiModel(
+            type = type,
+            optionLabel = optNullableString("option_label"),
+            reason = optNullableString("reason"),
+            tradeOff = optNullableString("trade_off"),
+            status = optString("status").ifBlank { "complete" },
+            summary = optNullableString("summary"),
+            advantages = optJSONArray("advantages").toStringList(),
+            suitableFor = optNullableString("suitable_for"),
+            contentSource = optString("content_source"),
+        )
+    }
+
+    private fun JSONObject.toRecommendationSection(
+        text: String? = null,
+        product: ProductUiModel? = null,
+        done: Boolean = false,
+    ): RecommendationSectionUiModel? {
+        val skuId = optString("sku_id").ifBlank {
+            product?.skuId ?: optJSONObject("product")?.optString("sku_id").orEmpty()
+        }
+        if (skuId.isBlank()) {
+            return null
+        }
+        val sectionIndex = optInt("section_index").takeIf { it > 0 } ?: 1
+        val turnId = optNullableString("turn_id") ?: "turn_current"
+        val optionLabel = optNullableString("option_label") ?: when (sectionIndex) {
+            1 -> "方案一"
+            2 -> "方案二"
+            3 -> "方案三"
+            else -> "方案$sectionIndex"
+        }
+        return RecommendationSectionUiModel(
+            eventId = optNullableString("event_id"),
+            turnId = turnId,
+            sectionIndex = sectionIndex,
+            skuId = skuId,
+            optionLabel = optionLabel,
+            text = text.orEmpty(),
+            reason = optNullableString("reason"),
+            tradeOff = optNullableString("trade_off"),
+            productName = optNullableString("product_name") ?: product?.displayTitleShort,
+            brand = optNullableString("brand") ?: product?.brand,
+            product = product ?: optJSONObject("product")?.toProduct(),
+            done = done,
         )
     }
 
@@ -551,11 +738,54 @@ class ShoppingRepository(
                 val item = optJSONObject(index) ?: continue
                 add(
                     CartItemUiModel(
+                        cartItemId = item.optString("cart_item_id")
+                            .ifBlank { item.optString("item_id") }
+                            .ifBlank { item.optString("sku_id") },
                         skuId = item.optString("sku_id"),
+                        selectedSkuId = item.optNullableString("selected_sku_id"),
+                        selectedSpecs = item.optJSONObject("selected_specs").toStringMap(),
                         name = item.optString("name"),
                         price = item.optNumber("price"),
                         quantity = item.optInt("quantity"),
                         imageUrl = absolutizeUrl(item.optString("image_url")),
+                        specSummary = item.optNullableString("spec_summary")
+                            ?: item.optNullableString("selected_spec")
+                            ?: item.optNullableString("spec")
+                            ?: item.optJSONObject("selected_specs").toSpecSummary()
+                            ?: item.optJSONObject("properties").toSpecSummary(),
+                    )
+                )
+            }
+        }
+    }
+
+    private fun JSONObject?.toReviews(): List<ProductReviewUiModel> {
+        val reviews = this?.optJSONArray("user_reviews") ?: return emptyList()
+        return buildList(reviews.length()) {
+            for (index in 0 until reviews.length()) {
+                val review = reviews.optJSONObject(index) ?: continue
+                val content = review.optString("content").trim()
+                if (content.isBlank()) {
+                    continue
+                }
+                add(
+                    ProductReviewUiModel(
+                        rating = review.optNullableNumber("rating")?.coerceIn(0.0, 5.0),
+                        nickname = review.optNullableString("nickname")
+                            ?: review.optNullableString("user_name")
+                            ?: review.optNullableString("userName"),
+                        createdAt = review.optNullableString("created_at")
+                            ?: review.optNullableString("createdAt")
+                            ?: review.optNullableString("date")
+                            ?: review.optNullableString("time"),
+                        userTags = review.optJSONArray("user_tags").toStringList()
+                            .ifEmpty { review.optJSONArray("userTags").toStringList() }
+                            .ifEmpty { review.optJSONArray("tags").toStringList() }
+                            .ifEmpty { review.optNullableString("skin_type")?.let(::listOf).orEmpty() },
+                        purchased = review.optNullableBoolean("purchased")
+                            ?: review.optNullableBoolean("is_purchased")
+                            ?: review.optNullableBoolean("verified_purchase"),
+                        content = content,
                     )
                 )
             }
@@ -578,7 +808,7 @@ class ShoppingRepository(
 
     private fun JSONObject.optNullableString(key: String): String? {
         val value = optString(key)
-        return value.takeIf { it.isNotBlank() }
+        return value.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
     }
 
     private fun JSONObject.optNumber(key: String): Double {
@@ -600,6 +830,33 @@ class ShoppingRepository(
         }
     }
 
+    private fun JSONObject.optNullableInt(key: String): Int? {
+        if (!has(key) || isNull(key)) {
+            return null
+        }
+        return when (val value = opt(key)) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull()
+            else -> null
+        }
+    }
+
+    private fun JSONObject.optNullableBoolean(key: String): Boolean? {
+        if (!has(key) || isNull(key)) {
+            return null
+        }
+        return when (val value = opt(key)) {
+            is Boolean -> value
+            is Number -> value.toInt() != 0
+            is String -> when (value.trim().lowercase()) {
+                "true", "1", "yes", "y", "已购", "verified" -> true
+                "false", "0", "no", "n" -> false
+                else -> null
+            }
+            else -> null
+        }
+    }
+
     private fun JSONObject?.toStringMap(): Map<String, String> {
         if (this == null) {
             return emptyMap()
@@ -614,6 +871,20 @@ class ShoppingRepository(
                 }
             }
         }
+    }
+
+    private fun JSONObject?.toSpecSummary(): String? {
+        if (this == null) {
+            return null
+        }
+        val values = toStringMap()
+            .entries
+            .sortedBy { it.key }
+            .map { it.value }
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+        return values.joinToString(" / ").takeIf { it.isNotBlank() }
     }
 
     private fun JSONArray.optStringOrNull(index: Int): String? {

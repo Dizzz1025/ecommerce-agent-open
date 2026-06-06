@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
@@ -20,10 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.MaterialTheme
 import com.yourteam.ecommerceguider.R
 
 @Composable
@@ -41,23 +43,29 @@ fun ChatInputBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .spatialGlass(
+                shape = RoundedCornerShape(30.dp),
+                fillColor = SpatialGlassColorDock,
+                elevation = 4.dp,
+            )
+            .padding(horizontal = 11.dp, vertical = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
             onClick = onImageClick,
             enabled = !isStreaming,
-            modifier = Modifier.size(44.dp),
+            modifier = Modifier
+                .size(44.dp)
+                .background(SpatialGlassControl, RoundedCornerShape(16.dp)),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_photo_24),
                 contentDescription = "拍图找同款",
                 tint = if (isStreaming) {
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                    SpatialTextPlaceholder
                 } else {
-                    MaterialTheme.colorScheme.primary
+                    SpatialIconNeutral
                 },
             )
         }
@@ -66,32 +74,43 @@ fun ChatInputBar(
             onValueChange = { text = it },
             modifier = Modifier.weight(1f),
             enabled = !isStreaming,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(20.dp),
             maxLines = 4,
             placeholder = { Text("输入你的需求") },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                focusedContainerColor = SpatialGlassControl,
+                unfocusedContainerColor = SpatialGlassControlMuted,
+                disabledContainerColor = SpatialGlassControlDisabled,
+                focusedBorderColor = SpatialAccentBlue.copy(alpha = 0.32f),
+                unfocusedBorderColor = SpatialGlassBorderColor,
+                disabledBorderColor = SpatialGlassControl,
+                focusedTextColor = SpatialTextBody,
+                unfocusedTextColor = SpatialTextBody,
+                cursorColor = SpatialAccent,
             ),
         )
         if (isStreaming) {
             OutlinedButton(
                 onClick = onStop,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = SpatialGlassControl,
+                    contentColor = SpatialAccent,
+                ),
             ) {
                 Text("停止")
             }
         } else {
             IconButton(
                 onClick = onVoiceClick,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(SpatialGlassControl, RoundedCornerShape(16.dp)),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_mic_24),
                     contentDescription = "语音输入",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = SpatialIconNeutral,
                 )
             }
             IconButton(
@@ -103,15 +122,23 @@ fun ChatInputBar(
                         text = TextFieldValue("")
                     }
                 },
-                modifier = Modifier.size(44.dp),
+                modifier = if (canSend) {
+                    Modifier
+                        .size(44.dp)
+                        .background(SpatialPrimaryGradient, CircleShape)
+                } else {
+                    Modifier
+                        .size(44.dp)
+                        .background(SpatialGlassControl, CircleShape)
+                },
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_send_24),
                     contentDescription = "发送",
                     tint = if (canSend) {
-                        MaterialTheme.colorScheme.primary
+                        Color.White
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.42f)
+                        SpatialTextPlaceholder
                     },
                 )
             }

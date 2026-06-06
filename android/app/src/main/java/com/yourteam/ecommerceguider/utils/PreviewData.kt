@@ -73,6 +73,7 @@ object PreviewData {
 
     val sampleCartItems = listOf(
         CartItemUiModel(
+            cartItemId = "p001",
             skuId = "p001",
             name = "清爽控油氨基酸洗面奶",
             price = 89.0,

@@ -2,6 +2,7 @@ package com.yourteam.ecommerceguider.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.repository.ShoppingRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,14 @@ class ProductDetailViewModel(
     private val _cartMessage = MutableStateFlow<String?>(null)
     val cartMessage: StateFlow<String?> = _cartMessage.asStateFlow()
 
+    private val _cartItemCount = MutableStateFlow(0)
+    val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
+
     private var loadedSkuId: String? = null
+
+    init {
+        refreshCartCount()
+    }
 
     fun loadProduct(skuId: String) {
         if (loadedSkuId == skuId && _product.value != null) {
@@ -47,15 +55,48 @@ class ProductDetailViewModel(
         }
     }
 
-    fun addToCart(skuId: String) {
+    fun addToCart(product: ProductUiModel, selectedSku: ProductSkuUiModel?) {
+        if (product.skus.isNotEmpty() && selectedSku == null) {
+            _cartMessage.value = "请选择商品规格"
+            return
+        }
+        val selectedSpecs = selectedSku?.properties.orEmpty()
+        val specSummary = selectedSpecs.toSpecSummary()
         viewModelScope.launch {
-            runCatching { repository.addToCart(skuId = skuId) }
-                .onSuccess { _cartMessage.value = "已加入购物车" }
+            runCatching {
+                repository.addToCart(
+                    skuId = product.skuId,
+                    selectedSkuId = selectedSku?.skuId,
+                    selectedSpecs = selectedSpecs,
+                    unitPrice = selectedSku?.price ?: product.price,
+                    productName = product.displayTitle,
+                    imageUrl = product.imageUrl,
+                    specSummary = specSummary,
+                )
+            }
+                .onSuccess { snapshot ->
+                    _cartItemCount.value = snapshot.totalItems
+                    _cartMessage.value = "已加入购物车"
+                }
                 .onFailure { _cartMessage.value = "加购失败，请稍后重试" }
         }
     }
 
     fun clearCartMessage() {
         _cartMessage.value = null
+    }
+
+    private fun refreshCartCount() {
+        viewModelScope.launch {
+            _cartItemCount.value = runCatching { repository.getCart().totalItems }.getOrDefault(0)
+        }
+    }
+
+    private fun Map<String, String>.toSpecSummary(): String? {
+        return entries
+            .filter { it.key.isNotBlank() && it.value.isNotBlank() }
+            .sortedBy { it.key }
+            .joinToString(" · ") { it.value.trim() }
+            .takeIf { it.isNotBlank() }
     }
 }

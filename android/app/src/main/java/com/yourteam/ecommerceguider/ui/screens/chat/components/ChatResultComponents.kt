@@ -1,6 +1,5 @@
 package com.yourteam.ecommerceguider.ui.screens.chat.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,13 +45,34 @@ import com.yourteam.ecommerceguider.data.model.AssistantThinkingStatus
 import com.yourteam.ecommerceguider.data.model.AssistantThinkingUiModel
 import com.yourteam.ecommerceguider.data.model.ChatMessageUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
+import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
+import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
+import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.theme.EcommerceGuiderTheme
 import com.yourteam.ecommerceguider.ui.components.ProductCard
+import com.yourteam.ecommerceguider.ui.components.SpatialAccent
+import com.yourteam.ecommerceguider.ui.components.SpatialAccentBlue
+import com.yourteam.ecommerceguider.ui.components.SpatialAccentMuted
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassBorderColor
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassColor
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassColorDock
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassColorSoft
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassColorStrong
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassControl
+import com.yourteam.ecommerceguider.ui.components.SpatialGlassControlMuted
+import com.yourteam.ecommerceguider.ui.components.SpatialIconMuted
+import com.yourteam.ecommerceguider.ui.components.SpatialIconNeutral
+import com.yourteam.ecommerceguider.ui.components.SpatialPrimaryGradient
+import com.yourteam.ecommerceguider.ui.components.SpatialTextBody
+import com.yourteam.ecommerceguider.ui.components.SpatialTextPrimary
+import com.yourteam.ecommerceguider.ui.components.SpatialTextSecondary
+import com.yourteam.ecommerceguider.ui.components.formatPrice
+import com.yourteam.ecommerceguider.ui.components.spatialGlass
 import com.yourteam.ecommerceguider.utils.PreviewData
 
-private val LargeShape = RoundedCornerShape(16.dp)
-private val MediumShape = RoundedCornerShape(12.dp)
-private val SmallShape = RoundedCornerShape(8.dp)
+private val LargeShape = RoundedCornerShape(26.dp)
+private val MediumShape = RoundedCornerShape(20.dp)
+private val SmallShape = RoundedCornerShape(999.dp)
 
 @Composable
 fun GuideTopBar(
@@ -61,13 +83,18 @@ fun GuideTopBar(
     onAddressClick: () -> Unit,
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        color = Color.Transparent,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 9.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .spatialGlass(
+                    shape = RoundedCornerShape(28.dp),
+                    fillColor = SpatialGlassColorDock,
+                    elevation = 3.dp,
+                )
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -75,7 +102,7 @@ fun GuideTopBar(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(SpatialPrimaryGradient),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -95,7 +122,7 @@ fun GuideTopBar(
                 Text(
                     text = "先筛选，再帮你看取舍",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = SpatialTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -111,6 +138,7 @@ fun GuideTopBar(
                     Icon(
                         painter = painterResource(R.drawable.ic_history_24),
                         contentDescription = "历史需求",
+                        tint = SpatialIconMuted,
                     )
                 }
             }
@@ -118,6 +146,7 @@ fun GuideTopBar(
                 Icon(
                     painter = painterResource(R.drawable.ic_location_24),
                     contentDescription = "地址",
+                    tint = SpatialIconMuted,
                 )
             }
             BadgedBox(
@@ -131,6 +160,7 @@ fun GuideTopBar(
                     Icon(
                         painter = painterResource(R.drawable.ic_cart_24),
                         contentDescription = "购物车",
+                        tint = SpatialAccentBlue,
                     )
                 }
             }
@@ -141,9 +171,27 @@ fun GuideTopBar(
 @Composable
 fun HistoryRequestsDialog(
     messages: List<ChatMessageUiModel>,
+    recommendationSections: List<RecommendationSectionUiModel>,
+    onProductClick: (String) -> Unit,
+    onAddToCart: (ProductUiModel, String) -> Unit,
+    activeSpecSelection: SpecSelectionUiModel? = null,
+    onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
     onDismiss: () -> Unit,
 ) {
-    val requests = messages.filter { it.isUser }.takeLast(12)
+    val turns = messages
+        .filter { it.isUser }
+        .map { userMessage ->
+            ChatHistoryTurn(
+                userMessage = userMessage,
+                assistantMessage = messages.firstOrNull { message ->
+                    !message.isUser && message.turnId == userMessage.turnId
+                },
+                sections = recommendationSections.filter { section ->
+                    section.turnId == userMessage.turnId
+                },
+            )
+        }
+        .takeLast(12)
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -153,27 +201,40 @@ fun HistoryRequestsDialog(
         },
         title = { Text("历史需求") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (requests.isEmpty()) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (turns.isEmpty()) {
                     Text(
                         text = "还没有历史需求。",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = SpatialTextSecondary,
                     )
                 } else {
-                    requests.forEach { message ->
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MediumShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                        ) {
+                    turns.forEachIndexed { index, turn ->
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
-                                text = message.content,
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
+                                text = "第 ${index + 1} 轮",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = SpatialAccent,
                             )
+                            HistoryTextBlock(label = "用户", text = turn.userMessage.content)
+                            turn.assistantMessage?.content
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { assistantText ->
+                                    HistoryTextBlock(label = "助手", text = assistantText)
+                                }
+                            turn.sections.forEach { section ->
+                                HistoryRecommendationBlock(
+                                    section = section,
+                                    onProductClick = onProductClick,
+                                    onAddToCart = onAddToCart,
+                                    activeSpecSelection = activeSpecSelection,
+                                    onSpecOptionClick = onSpecOptionClick,
+                                )
+                            }
                         }
                     }
                 }
@@ -182,13 +243,121 @@ fun HistoryRequestsDialog(
     )
 }
 
+private data class ChatHistoryTurn(
+    val userMessage: ChatMessageUiModel,
+    val assistantMessage: ChatMessageUiModel?,
+    val sections: List<RecommendationSectionUiModel>,
+)
+
+@Composable
+private fun HistoryTextBlock(
+    label: String,
+    text: String,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = MediumShape, fillColor = SpatialGlassColorSoft, elevation = 4.dp),
+        shape = MediumShape,
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = SpatialAccent,
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryRecommendationBlock(
+    section: RecommendationSectionUiModel,
+    onProductClick: (String) -> Unit,
+    onAddToCart: (ProductUiModel, String) -> Unit,
+    activeSpecSelection: SpecSelectionUiModel? = null,
+    onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
+) {
+    val inlineSpecSelection = activeSpecSelection?.takeIf { selection ->
+        selection.source == "product_card" &&
+            selection.anchorRecommendationId == section.stableKey
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = MediumShape, fillColor = SpatialGlassColor, elevation = 4.dp),
+        shape = MediumShape,
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = section.optionLabel,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = SpatialAccent,
+            )
+            section.text
+                .takeIf { it.isNotBlank() }
+                ?.let { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SpatialTextSecondary,
+                    )
+                }
+            section.tradeOff
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+                ?.let { tradeOff ->
+                    Text(
+                        text = "需要注意：$tradeOff",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SpatialTextSecondary,
+                    )
+                }
+            section.product?.let { product ->
+                ProductCard(
+                    product = product,
+                    onClick = onProductClick,
+                    onAddToCart = { selectedProduct -> onAddToCart(selectedProduct, section.stableKey) },
+                    rank = section.sectionIndex,
+                    isPrimary = false,
+                    roleLabel = section.optionLabel,
+                    showRecommendationReason = false,
+                )
+            }
+            inlineSpecSelection?.let { selection ->
+                InlineSpecSelectionPanel(
+                    selection = selection,
+                    onOptionClick = { option -> onSpecOptionClick(selection, option) },
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun WelcomeCard() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColorStrong, elevation = 5.dp),
         shape = LargeShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -202,7 +371,7 @@ fun WelcomeCard() {
             Text(
                 text = "我会根据真实商品数据给出首选、备选和可以继续追问的方向。",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = SpatialTextSecondary,
             )
         }
     }
@@ -218,10 +387,11 @@ fun RequirementSummaryCard(
         return
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColor, elevation = 4.dp),
         shape = LargeShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
+        color = Color.Transparent,
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -229,16 +399,16 @@ fun RequirementSummaryCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "当前需求",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
+                        Text(
+                            text = "当前需求",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = SpatialAccent,
                     )
                     Text(
                         text = content,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = SpatialTextSecondary,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -255,13 +425,13 @@ fun RequirementSummaryCard(
                     chips.forEach { chip ->
                         Surface(
                             shape = SmallShape,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.42f),
+                            color = SpatialAccentMuted,
                         ) {
                             Text(
                                 text = chip,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = SpatialAccent,
                                 maxLines = 1,
                             )
                         }
@@ -270,12 +440,6 @@ fun RequirementSummaryCard(
             }
         }
     }
-}
-
-private enum class AssistantStage {
-    Thinking,
-    Answer,
-    Error,
 }
 
 @Composable
@@ -288,44 +452,188 @@ fun AssistantAnswerIntroCard(
     thinkingExpanded: Boolean,
     onToggleThinking: () -> Unit,
 ) {
-    val hasAnswer = answer.isNotBlank()
-    val hasError = !errorMessage.isNullOrBlank() && !hasAnswer
-    val showThinking = !hasAnswer && !hasError && isStreaming
-    if (!hasAnswer && !hasError && !showThinking) {
+    val hasAnswer = answer.isNotBlank() || products.isNotEmpty()
+    val hasError = !errorMessage.isNullOrBlank()
+    val hasThinking = thinking.status != AssistantThinkingStatus.Idle &&
+        (thinking.lines.isNotEmpty() || isStreaming || hasAnswer)
+    if (!hasError && !hasThinking) {
         return
     }
-    val stage = when {
-        hasAnswer -> AssistantStage.Answer
-        hasError -> AssistantStage.Error
-        else -> AssistantStage.Thinking
-    }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColorStrong, elevation = 5.dp),
         shape = LargeShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Crossfade(
-            targetState = stage,
-            label = "assistant-answer-stage",
-        ) { target ->
-            when (target) {
-                AssistantStage.Thinking -> ThinkingProcessContent(
-                    thinking = thinking,
-                    expanded = thinkingExpanded,
-                    onToggle = onToggleThinking,
-                    compactWhenDone = false,
-                )
+        if (hasError && !isStreaming) {
+            ErrorContent(errorMessage.orEmpty())
+        } else {
+            ThinkingProcessContent(
+                thinking = thinking,
+                expanded = thinkingExpanded,
+                onToggle = onToggleThinking,
+                compactWhenDone = !isStreaming || hasAnswer,
+            )
+        }
+    }
+}
 
-                AssistantStage.Answer -> AnswerIntroContent(
-                    answer = answer,
-                    products = products,
-                    thinking = thinking,
-                    thinkingExpanded = thinkingExpanded,
-                    onToggleThinking = onToggleThinking,
-                )
+@Composable
+fun SpecSelectionCard(
+    selection: SpecSelectionUiModel,
+    onOptionClick: (SpecSelectionOptionUiModel) -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColorStrong, elevation = 5.dp),
+        shape = LargeShape,
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "请选择规格",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = selection.productName,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SpatialTextSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                selection.options.forEach { option ->
+                    val chosen = selection.selectedSkuId == option.skuId
+                    val locked = selection.selectedSkuId != null
+                    val enabled = option.available && option.stock != 0 && !locked
+                    OutlinedButton(
+                        onClick = { onOptionClick(option) },
+                        enabled = enabled,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MediumShape,
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (chosen) {
+                                SpatialAccent
+                            } else {
+                                SpatialGlassBorderColor
+                            },
+                        ),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (chosen) {
+                                SpatialAccentMuted
+                            } else {
+                                SpatialGlassControl
+                            },
+                            contentColor = SpatialTextPrimary,
+                            disabledContainerColor = SpatialGlassControlMuted,
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = option.specText,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            if (option.stock == 0) {
+                                Text(
+                                    text = "暂时无库存",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = SpatialTextSecondary,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (chosen) "已加入" else "¥${formatPrice(option.price)}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (chosen) {
+                                SpatialAccent
+                            } else {
+                                SpatialTextPrimary
+                            },
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+            Text(
+                text = "点击规格后将直接加入购物车",
+                style = MaterialTheme.typography.bodySmall,
+                color = SpatialTextSecondary,
+            )
+        }
+    }
+}
 
-                AssistantStage.Error -> ErrorContent(errorMessage.orEmpty())
+@Composable
+private fun InlineSpecSelectionPanel(
+    selection: SpecSelectionUiModel,
+    onOptionClick: (SpecSelectionOptionUiModel) -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp)
+            .spatialGlass(shape = MediumShape, fillColor = SpatialGlassColorSoft, elevation = 3.dp),
+        shape = MediumShape,
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "选择规格",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = SpatialTextPrimary,
+            )
+            selection.options.forEach { option ->
+                val chosen = selection.selectedSkuId == option.skuId
+                val enabled = option.available && option.stock != 0 && selection.selectedSkuId == null
+                OutlinedButton(
+                    onClick = { onOptionClick(option) },
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MediumShape,
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (chosen) SpatialAccent else SpatialGlassBorderColor,
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (chosen) SpatialAccentMuted else SpatialGlassControl,
+                        contentColor = SpatialTextPrimary,
+                        disabledContainerColor = SpatialGlassControlMuted,
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = option.specText,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = if (option.stock == 0) "暂无库存" else "¥${formatPrice(option.price)}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (option.stock == 0) SpatialTextSecondary else SpatialTextPrimary,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -346,16 +654,25 @@ private fun ThinkingProcessContent(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (compactWhenDone) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_check_circle_20),
-                    contentDescription = "已完成分析",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(SpatialPrimaryGradient),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_check_circle_20),
+                        contentDescription = "已完成分析",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             } else {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
+                    color = SpatialAccent,
                 )
             }
             Column(
@@ -375,12 +692,15 @@ private fun ThinkingProcessContent(
                         current.ifBlank { "正在分析" }
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = SpatialTextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            TextButton(onClick = onToggle) {
+            TextButton(
+                onClick = onToggle,
+                shape = SmallShape,
+            ) {
                 Text(if (expanded) "收起" else "过程")
             }
         }
@@ -395,12 +715,13 @@ private fun ThinkingProcessContent(
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
+                            color = SpatialAccent,
                         )
                     } else {
                         Icon(
                             painter = painterResource(R.drawable.ic_check_circle_20),
                             contentDescription = "已完成",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = SpatialAccent,
                             modifier = Modifier.size(16.dp),
                         )
                     }
@@ -408,57 +729,14 @@ private fun ThinkingProcessContent(
                         text = step,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isLatest) {
-                            MaterialTheme.colorScheme.onSurface
+                            SpatialTextPrimary
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            SpatialTextSecondary
                         },
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun AnswerIntroContent(
-    answer: String,
-    products: List<ProductUiModel>,
-    thinking: AssistantThinkingUiModel,
-    thinkingExpanded: Boolean,
-    onToggleThinking: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        ThinkingProcessContent(
-            thinking = thinking,
-            expanded = thinkingExpanded,
-            onToggle = onToggleThinking,
-            compactWhenDone = true,
-        )
-        val category = products.firstNotNullOfOrNull { it.category.takeIf(String::isNotBlank) }
-        Text(
-            text = if (products.isNotEmpty()) {
-                "为你筛选了 ${products.size} 款${category.orEmpty()}"
-            } else {
-                "导购建议"
-            },
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-        answer
-            .lineSequence()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .take(3)
-            .forEach { paragraph ->
-                Text(
-                    text = paragraph,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
     }
 }
 
@@ -477,7 +755,7 @@ private fun ErrorContent(message: String) {
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = SpatialTextPrimary,
         )
     }
 }
@@ -488,58 +766,163 @@ fun RecommendationSection(
     index: Int,
     totalCount: Int,
     onProductClick: (String) -> Unit,
-    onAddToCart: (String) -> Unit,
+    onAddToCart: (ProductUiModel, String) -> Unit,
+    activeSpecSelection: SpecSelectionUiModel? = null,
+    onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
 ) {
-    val isPrimary = index == 0
-    val roleLabel = when {
-        isPrimary -> "首选推荐"
-        index == 1 -> "另一款备选"
-        else -> "更多选择"
+    val presentation = product.presentation
+    val roleLabel = presentation?.optionLabel?.takeIf { it.isNotBlank() } ?: when (index) {
+        0 -> "方案一"
+        1 -> "方案二"
+        2 -> "方案三"
+        else -> "方案${index + 1}"
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(
-            modifier = Modifier.padding(horizontal = 2.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = roleLabel,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = if (isPrimary) {
-                    "可以先看 ${product.brand} ${product.displayTitleShort}"
+    RecommendationSection(
+        section = RecommendationSectionUiModel(
+            turnId = "snapshot",
+            sectionIndex = index + 1,
+            skuId = product.skuId,
+            optionLabel = roleLabel,
+            text = product.displayReason,
+            reason = presentation?.reason,
+            tradeOff = presentation?.tradeOff,
+            productName = product.displayTitleShort,
+            brand = product.brand,
+            product = product,
+            done = true,
+        ),
+        totalCount = totalCount,
+        onProductClick = onProductClick,
+        onAddToCart = onAddToCart,
+        activeSpecSelection = activeSpecSelection,
+        onSpecOptionClick = onSpecOptionClick,
+    )
+}
+
+@Composable
+fun RecommendationSection(
+    section: RecommendationSectionUiModel,
+    totalCount: Int,
+    onProductClick: (String) -> Unit,
+    onAddToCart: (ProductUiModel, String) -> Unit,
+    activeSpecSelection: SpecSelectionUiModel? = null,
+    onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
+) {
+    val product = section.product
+    val inlineSpecSelection = activeSpecSelection?.takeIf { selection ->
+        selection.source == "product_card" &&
+            selection.anchorRecommendationId == section.stableKey
+    }
+    val roleLabel = section.optionLabel.ifBlank {
+        when (section.sectionIndex) {
+            1 -> "方案一"
+            2 -> "方案二"
+            3 -> "方案三"
+            else -> "方案${section.sectionIndex}"
+        }
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(
+                shape = LargeShape,
+                fillColor = if (section.sectionIndex == 1) {
+                    SpatialGlassColorStrong
                 } else {
-                    "${roleLabel}：${product.brand} ${product.displayTitleShort}"
+                    SpatialGlassColor
                 },
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val reason = product.displayReason.ifBlank {
-                product.displayTags.take(3).joinToString(" · ").takeIf { it.isNotBlank() }.orEmpty()
-            }
-            if (reason.isNotBlank()) {
+                elevation = if (section.sectionIndex == 1) 6.dp else 4.dp,
+            ),
+        shape = LargeShape,
+        color = Color.Transparent,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 17.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp),
+        ) {
+            Surface(
+                shape = SmallShape,
+                color = Color.Transparent,
+                modifier = Modifier.background(SpatialPrimaryGradient, SmallShape),
+            ) {
                 Text(
-                    text = reason,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
+                    text = roleLabel,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                )
+            }
+            val title = section.productName
+                ?: product?.displayTitleShort
+                ?: section.brand
+            if (!title.isNullOrBlank()) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            section.text
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .forEach { paragraph ->
+                    Text(
+                        text = paragraph,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SpatialTextBody,
+                    )
+                }
+            section.tradeOff
+                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+                ?.let { tradeOff ->
+                    Text(
+                        text = "需要注意：$tradeOff",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SpatialTextSecondary,
+                    )
+                }
+            if (!section.done && product == null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Text(
+                        text = "正在继续生成",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SpatialTextSecondary,
+                    )
+                }
+            }
+            product?.let {
+                ProductCard(
+                    product = it,
+                    onClick = onProductClick,
+                    onAddToCart = { selectedProduct ->
+                        onAddToCart(selectedProduct, section.stableKey)
+                    },
+                    rank = section.sectionIndex,
+                    totalCount = totalCount,
+                    isPrimary = section.sectionIndex == 1,
+                    roleLabel = roleLabel,
+                    showRecommendationReason = false,
+                )
+            }
+            inlineSpecSelection?.let { selection ->
+                InlineSpecSelectionPanel(
+                    selection = selection,
+                    onOptionClick = { option -> onSpecOptionClick(selection, option) },
+                )
+            }
         }
-        ProductCard(
-            product = product,
-            onClick = onProductClick,
-            onAddToCart = onAddToCart,
-            rank = index + 1,
-            totalCount = totalCount,
-            isPrimary = isPrimary,
-            roleLabel = roleLabel,
-        )
     }
 }
 
@@ -549,28 +932,31 @@ fun FinalComparisonSummary(products: List<ProductUiModel>) {
         return
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColor, elevation = 4.dp),
         shape = LargeShape,
-        color = MaterialTheme.colorScheme.surface,
+        color = Color.Transparent,
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = "一句话对比",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
+                color = SpatialTextPrimary,
             )
             val names = products.take(3).map { it.brand.ifBlank { it.displayTitleShort } }
             Text(
                 text = when (names.size) {
                     1 -> "可以先查看 ${names[0]} 的详情，再决定是否加入购物车。"
-                    2 -> "首选先看 ${names[0]}，也可以把 ${names[1]} 作为备选一起比较。"
-                    else -> "首选先看 ${names[0]}，备选可比较 ${names.drop(1).joinToString("、")}。"
+                    2 -> "${names[0]} 和 ${names[1]} 可以放在一起比较价格、亮点和适用场景。"
+                    else -> "这几款可以从价格、亮点和适用场景一起比较：${names.joinToString("、")}。"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = SpatialTextSecondary,
             )
         }
     }
@@ -579,9 +965,11 @@ fun FinalComparisonSummary(products: List<ProductUiModel>) {
 @Composable
 fun EmptyProductsCard() {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColor, elevation = 4.dp),
         shape = LargeShape,
-        color = MaterialTheme.colorScheme.surface,
+        color = Color.Transparent,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -595,7 +983,7 @@ fun EmptyProductsCard() {
             Text(
                 text = "可以尝试放宽预算或调整筛选条件。",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = SpatialTextSecondary,
             )
         }
     }
@@ -619,8 +1007,8 @@ fun FollowUpSuggestionChips(
             val isCompare = action.text == "对比这几款"
             Surface(
                 shape = SmallShape,
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)),
+                color = SpatialGlassControl,
+                border = BorderStroke(1.dp, SpatialGlassBorderColor),
                 modifier = Modifier.clickable {
                     if (isCompare) onCompare() else onSend(action.text)
                 },
@@ -634,11 +1022,12 @@ fun FollowUpSuggestionChips(
                         painter = painterResource(action.iconRes),
                         contentDescription = action.text,
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = SpatialIconNeutral,
                     )
                     Text(
                         text = action.text,
                         style = MaterialTheme.typography.labelMedium,
+                        color = SpatialTextPrimary,
                         maxLines = 1,
                     )
                 }
@@ -653,10 +1042,12 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
         return
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .spatialGlass(shape = LargeShape, fillColor = SpatialGlassColor, elevation = 4.dp),
         shape = LargeShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -668,12 +1059,13 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
                 fontWeight = FontWeight.Bold,
             )
             products.take(3).forEachIndexed { index, product ->
+                val presentation = product.presentation?.takeIf { it.type == "comparison" }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "${index + 1}",
+                        text = "商品${index + 1}",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = SpatialAccent,
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -688,9 +1080,45 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
                                 .filter { it.isNotBlank() }
                                 .joinToString(" · "),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = SpatialTextSecondary,
                             maxLines = 1,
                         )
+                        presentation?.summary?.takeIf { it.isNotBlank() }?.let { summary ->
+                            Text(
+                                text = summary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SpatialTextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (!presentation?.advantages.isNullOrEmpty()) {
+                            Text(
+                                text = "优势：${presentation?.advantages.orEmpty().take(3).joinToString(" · ")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SpatialTextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        presentation?.suitableFor?.takeIf { it.isNotBlank() }?.let { suitable ->
+                            Text(
+                                text = "适合：$suitable",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SpatialTextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        presentation?.tradeOff?.takeIf { it.isNotBlank() }?.let { tradeOff ->
+                            Text(
+                                text = "取舍：$tradeOff",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SpatialTextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }
@@ -708,9 +1136,11 @@ fun CartCheckoutBar(
         return
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .spatialGlass(shape = MediumShape, fillColor = SpatialGlassColorDock, elevation = 4.dp),
+        color = Color.Transparent,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -723,13 +1153,22 @@ fun CartCheckoutBar(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
             )
-            OutlinedButton(onClick = onCartClick, shape = MediumShape) {
+            OutlinedButton(
+                onClick = onCartClick,
+                shape = MediumShape,
+                border = BorderStroke(1.dp, SpatialGlassBorderColor),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = SpatialGlassControl,
+                    contentColor = SpatialAccent,
+                ),
+            ) {
                 Text("查看购物车")
             }
             Button(
                 onClick = onCheckoutClick,
                 shape = MediumShape,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.background(SpatialPrimaryGradient, MediumShape),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
             ) {
                 Text("去结算")
             }
@@ -791,7 +1230,7 @@ private fun RecommendationSectionPreview() {
             index = 0,
             totalCount = 3,
             onProductClick = {},
-            onAddToCart = {},
+            onAddToCart = { _, _ -> },
         )
     }
 }

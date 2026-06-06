@@ -41,6 +41,7 @@ fun ProductImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 20.dp,
+    contentScale: ContentScale = ContentScale.Crop,
 ) {
     var imageBitmap by remember(imageUrl) { mutableStateOf<ImageBitmap?>(null) }
     var imageState by remember(imageUrl) { mutableStateOf(ProductImageState.Loading) }
@@ -87,7 +88,7 @@ fun ProductImage(
                 bitmap = bitmap,
                 contentDescription = contentDescription,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
+                contentScale = contentScale,
             )
         } else {
             Text(

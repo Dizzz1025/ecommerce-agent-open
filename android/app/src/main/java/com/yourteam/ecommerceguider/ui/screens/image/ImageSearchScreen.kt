@@ -62,9 +62,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yourteam.ecommerceguider.ui.components.ChatBubble
 import com.yourteam.ecommerceguider.ui.screens.chat.components.AssistantAnswerIntroCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.FinalComparisonSummary
 import com.yourteam.ecommerceguider.ui.screens.chat.components.RecommendationSection
+import com.yourteam.ecommerceguider.ui.screens.chat.components.SpecSelectionCard
 import com.yourteam.ecommerceguider.viewmodel.ChatViewModel
 import com.yourteam.ecommerceguider.viewmodel.simpleViewModelFactory
 import kotlinx.coroutines.Dispatchers
@@ -84,7 +86,12 @@ fun ImageSearchScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val answer by viewModel.answer.collectAsState()
+    val messages by viewModel.messages.collectAsState()
     val products by viewModel.products.collectAsState()
+    val recommendationSections by viewModel.recommendationSections.collectAsState()
+    val specSelections by viewModel.specSelections.collectAsState()
+    val activeProductCardSpecSelection by viewModel.activeProductCardSpecSelection.collectAsState()
+    val activeTurnId by viewModel.activeTurnId.collectAsState()
     val thinking by viewModel.thinking.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
@@ -98,6 +105,17 @@ fun ImageSearchScreen(
     var isCheckingImage by remember { mutableStateOf(false) }
     var hasSubmittedImageSearch by remember { mutableStateOf(false) }
     var thinkingExpanded by remember { mutableStateOf(false) }
+    val activeRecommendationSections = remember(recommendationSections, activeTurnId) {
+        recommendationSections.filter { section -> section.turnId == activeTurnId }
+    }
+    val activeAssistantMessage = remember(messages, activeTurnId) {
+        messages.lastOrNull { message -> !message.isUser && message.turnId == activeTurnId }
+    }
+    val visibleProducts = if (activeRecommendationSections.isNotEmpty()) {
+        activeRecommendationSections.mapNotNull { it.product }
+    } else {
+        products
+    }
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -239,6 +257,14 @@ fun ImageSearchScreen(
                 }
             }
 
+            if (hasSubmittedImageSearch) {
+                activeAssistantMessage?.let { assistantMessage ->
+                    item {
+                        ChatBubble(message = assistantMessage)
+                    }
+                }
+            }
+
             item {
                 if (hasSubmittedImageSearch) {
                     AssistantAnswerIntroCard(
@@ -246,21 +272,47 @@ fun ImageSearchScreen(
                         isStreaming = isStreaming,
                         answer = answer,
                         errorMessage = errorMessage,
-                        products = products,
+                        products = visibleProducts,
                         thinkingExpanded = thinkingExpanded,
                         onToggleThinking = { thinkingExpanded = !thinkingExpanded },
                     )
                 }
             }
 
-            if (hasSubmittedImageSearch && products.isNotEmpty()) {
+            if (hasSubmittedImageSearch) {
+                val activeSpecSelections = specSelections.filter { selection -> selection.turnId == activeTurnId }
+                itemsIndexed(activeSpecSelections, key = { _, selection -> selection.stableKey }) { _, selection ->
+                    SpecSelectionCard(
+                        selection = selection,
+                        onOptionClick = { option -> viewModel.addSelectedSpecToCart(selection, option) },
+                    )
+                }
+            }
+
+            if (hasSubmittedImageSearch && activeRecommendationSections.isNotEmpty()) {
+                itemsIndexed(activeRecommendationSections, key = { _, section -> section.stableKey }) { _, section ->
+                    RecommendationSection(
+                        section = section,
+                        totalCount = activeRecommendationSections.size,
+                        onProductClick = onProductClick,
+                        onAddToCart = viewModel::addProductCardToCart,
+                        activeSpecSelection = activeProductCardSpecSelection,
+                        onSpecOptionClick = viewModel::addSelectedSpecToCart,
+                    )
+                }
+                if (visibleProducts.isNotEmpty()) {
+                    item { FinalComparisonSummary(products = visibleProducts) }
+                }
+            } else if (hasSubmittedImageSearch && products.isNotEmpty()) {
                 itemsIndexed(products, key = { _, product -> product.skuId }) { index, product ->
                     RecommendationSection(
                         product = product,
                         index = index,
                         totalCount = products.size,
                         onProductClick = onProductClick,
-                        onAddToCart = viewModel::addToCart,
+                        onAddToCart = viewModel::addProductCardToCart,
+                        activeSpecSelection = activeProductCardSpecSelection,
+                        onSpecOptionClick = viewModel::addSelectedSpecToCart,
                     )
                 }
                 item { FinalComparisonSummary(products = products) }

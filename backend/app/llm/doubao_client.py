@@ -1,13 +1,18 @@
 import base64
+from datetime import datetime
 import json
 from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 
+from app.core.logging import get_logger
 from app.llm.base import BaseLLMClient
 from app.models.domain import IntentType
+
+
+logger = get_logger(__name__)
 
 
 class DoubaoClient(BaseLLMClient):
@@ -16,6 +21,9 @@ class DoubaoClient(BaseLLMClient):
         self.base_url = base_url
         self.model = model
         self.last_call_debug: dict[str, Any] = {}
+
+    def supports_response_streaming(self) -> bool:
+        return bool(self.api_key and self.base_url)
 
     def generate_response(
         self,
@@ -41,6 +49,175 @@ class DoubaoClient(BaseLLMClient):
                 }
             )
             return self._fallback(product_names)
+
+        url = self.base_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        payload = {
+            "model": self.model,
+            "temperature": 0.2,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an ecommerce shopping assistant. Answer in Chinese. "
+                        "Use only verified product facts from the user message. "
+                        "Do not invent products, prices, brands, stock, specs, discounts, or effects. "
+                        "Keep the reply concise and suitable for a mobile shopping UI."
+                    ),
+                },
+                {"role": "user", "content": context},
+            ],
+        }
+        try:
+            debug["http_request_sent"] = True
+            with httpx.Client(timeout=20) as client:
+                response = client.post(
+                    url,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=payload,
+                )
+                debug["http_status_code"] = response.status_code
+                response.raise_for_status()
+                data = response.json()
+            content = data["choices"][0]["message"]["content"].strip()
+            debug.update(
+                {
+                    "http_request_succeeded": True,
+                    "raw_output_received": bool(content),
+                    "raw_output_preview": _truncate(content),
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            if not content:
+                debug.update(
+                    {
+                        "fallback_triggered": True,
+                        "fallback_reason": "empty_model_output",
+                    }
+                )
+                return self._fallback(product_names)
+            return content
+        except Exception as exc:
+            debug.update(
+                {
+                    "exception_type": exc.__class__.__name__,
+                    "error_message": _safe_error(exc),
+                    "fallback_triggered": True,
+                    "fallback_reason": "http_or_parse_exception",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            return self._fallback(product_names)
+
+    def stream_generate_response(
+        self,
+        intent: IntentType,
+        message: str,
+        context: str,
+        product_names: list[str],
+    ) -> Iterator[str]:
+        start = perf_counter()
+        debug = self._new_call_debug(intent=intent, context=context, product_names=product_names)
+        debug["stream"] = True
+        self.last_call_debug = debug
+        if not self.api_key or not self.base_url:
+            missing = []
+            if not self.api_key:
+                missing.append("api_key")
+            if not self.base_url:
+                missing.append("base_url")
+            debug.update(
+                {
+                    "fallback_triggered": True,
+                    "fallback_reason": f"missing_config:{','.join(missing)}",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            return
+
+        url = self.base_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        payload = {
+            "model": self.model,
+            "temperature": 0.2,
+            "stream": True,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "你是电商导购助手。只能基于后端提供的 Verified product facts 和 RecommendationPlan 表达。"
+                        "不得编造或修改商品、价格、品牌、库存、规格、参数和业务结果。"
+                        "如果用户可见文本需要分段，请严格遵守用户消息中的输出协议。"
+                    ),
+                },
+                {"role": "user", "content": context},
+            ],
+        }
+        collected: list[str] = []
+        chunk_index = 0
+        last_yield_at: float | None = None
+        debug_recommendation_stream = "RECOMMENDATION_PRESENTATION_STREAM" in context
+        try:
+            debug["http_request_sent"] = True
+            with httpx.Client(timeout=30) as client:
+                with client.stream(
+                    "POST",
+                    url,
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=payload,
+                ) as response:
+                    debug["http_status_code"] = response.status_code
+                    response.raise_for_status()
+                    debug["http_request_succeeded"] = True
+                    for line in response.iter_lines():
+                        if not line:
+                            continue
+                        line = line.strip()
+                        if line.startswith("data:"):
+                            line = line.removeprefix("data:").strip()
+                        if not line or line == "[DONE]":
+                            continue
+                        delta = _stream_delta_from_line(line)
+                        if not delta:
+                            continue
+                        collected.append(delta)
+                        if debug_recommendation_stream:
+                            now = perf_counter()
+                            interval_ms = None if last_yield_at is None else round((now - last_yield_at) * 1000, 2)
+                            last_yield_at = now
+                            chunk_index += 1
+                            logger.info(
+                                "[llm_stream_delta] path=doubao_stream chunk=%s len=%s interval_ms=%s ts=%s",
+                                chunk_index,
+                                len(delta),
+                                interval_ms,
+                                datetime.now().isoformat(timespec="milliseconds"),
+                            )
+                        yield delta
+            content = "".join(collected)
+            debug.update(
+                {
+                    "raw_output_received": bool(content),
+                    "raw_output_preview": _truncate(content),
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            if not content:
+                debug.update({"fallback_triggered": True, "fallback_reason": "empty_model_output"})
+        except Exception as exc:
+            debug.update(
+                {
+                    "exception_type": exc.__class__.__name__,
+                    "error_message": _safe_error(exc),
+                    "fallback_triggered": True,
+                    "fallback_reason": "stream_http_or_parse_exception",
+                    "duration_ms": _elapsed_ms(start),
+                }
+            )
+            raise
+        return
 
         url = self.base_url.rstrip("/")
         if not url.endswith("/chat/completions"):
@@ -538,6 +715,29 @@ class DoubaoClient(BaseLLMClient):
 
 def _extract_json(content: str) -> dict:
     return _extract_json_with_debug(content)[0]
+
+
+def _stream_delta_from_line(line: str) -> str:
+    try:
+        data = json.loads(line)
+    except json.JSONDecodeError:
+        return ""
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return ""
+    choice = choices[0] if isinstance(choices[0], dict) else {}
+    delta = choice.get("delta")
+    if isinstance(delta, dict):
+        content = delta.get("content")
+        if isinstance(content, str):
+            return content
+    message = choice.get("message")
+    if isinstance(message, dict):
+        content = message.get("content")
+        if isinstance(content, str):
+            return content
+    text = choice.get("text")
+    return text if isinstance(text, str) else ""
 
 
 def _extract_json_with_debug(content: str) -> tuple[dict, dict[str, Any]]:

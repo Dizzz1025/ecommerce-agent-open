@@ -3,6 +3,7 @@ package com.yourteam.ecommerceguider.viewmodel
 import android.content.ContentResolver
 import android.net.Uri
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yourteam.ecommerceguider.data.model.AssistantProcessStageStatus
@@ -28,6 +29,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+private const val STREAM_DEBUG_TAG = "RecommendationStream"
 
 class ChatViewModel(
     private val repository: ShoppingRepository = ShoppingRepository(),
@@ -74,6 +77,7 @@ class ChatViewModel(
 
     private var streamJob: Job? = null
     private var elapsedTickerJob: Job? = null
+    private val recommendationTypewriterJobs = mutableMapOf<String, Job>()
     private val appliedSectionDeltas = mutableSetOf<String>()
     private var currentTurnId: String? = null
     private var currentAssistantMessageId: String? = null
@@ -86,6 +90,7 @@ class ChatViewModel(
 
     override fun onCleared() {
         stopElapsedTicker()
+        cancelRecommendationTypewriters()
         streamJob?.cancel()
         super.onCleared()
     }
@@ -127,6 +132,7 @@ class ChatViewModel(
         streamJob = null
         stopElapsedTicker()
         markInterruptedSections()
+        cancelRecommendationTypewritersForTurn(currentTurnId)
         markAssistantMessageDone()
         _isStreaming.value = false
         markThinkingFailed()
@@ -302,6 +308,8 @@ class ChatViewModel(
         initialThinking: String,
         stream: Flow<ChatStreamEvent>,
     ) {
+        flushRecommendationTypewriters()
+        cancelRecommendationTypewriters()
         val startedAt = System.currentTimeMillis()
         val startedElapsed = SystemClock.elapsedRealtime()
         val turnId = "turn-local-$startedAt"
@@ -370,6 +378,7 @@ class ChatViewModel(
             "recommendation_section_start" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
+                    ensureAssistantMessage()
                     upsertRecommendationSection(section)
                 }
                 collapseThinking()
@@ -387,6 +396,16 @@ class ChatViewModel(
                     finishRecommendationSection(section)
                 }
                 collapseThinking()
+            }
+            "recommendation_section_done" -> {
+                event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
+                    adoptTurnId(section.turnId)
+                    markRecommendationSectionDone(section)
+                }
+                collapseThinking()
+            }
+            "generation_degraded" -> {
+                // Keep already streamed text; fallback section events will arrive separately.
             }
             "product_card" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
@@ -416,7 +435,7 @@ class ChatViewModel(
             }
             "frontend_action" -> event.navigation?.let { _navigation.tryEmit(it) }
             "turn_result" -> {
-                if (!responseCompletedForCurrentTurn) {
+                if (shouldApplyTurnResultText(event)) {
                     event.text?.let { replaceAnswerIfBlank(it) }
                 }
                 if (event.products.isNotEmpty()) {
@@ -487,6 +506,9 @@ class ChatViewModel(
         if (text.isBlank()) {
             return
         }
+        if (_answer.value.isNotBlank()) {
+            return
+        }
         val messageId = ensureAssistantMessage()
         _answer.value = text
         updateAssistantMessage(messageId) { message ->
@@ -495,6 +517,24 @@ class ChatViewModel(
                 isStreaming = false,
             )
         }
+    }
+
+    private fun shouldApplyTurnResultText(event: ChatStreamEvent): Boolean {
+        if (event.text.isNullOrBlank()) {
+            return false
+        }
+        if (hasRecommendationSectionsForCurrentTurn() || event.products.isNotEmpty()) {
+            return false
+        }
+        return true
+    }
+
+    private fun hasRecommendationSectionsForCurrentTurn(): Boolean {
+        val activeTurn = currentTurnId
+        if (activeTurn.isNullOrBlank()) {
+            return _recommendationSections.value.isNotEmpty()
+        }
+        return _recommendationSections.value.any { section -> section.turnId == activeTurn }
     }
 
     private fun ensureAssistantMessage(): String {
@@ -628,7 +668,7 @@ class ChatViewModel(
             isGeneratingResponse = false,
             responseStreamSupported = event.responseStreamSupported == true,
         )
-        event.text?.let { replaceFinalAnswer(it) }
+        event.text?.takeIf { it.isNotBlank() }?.let { replaceFinalAnswer(it) }
         markAssistantMessageDone()
     }
 
@@ -762,17 +802,39 @@ class ChatViewModel(
 
     private fun appendRecommendationSectionDelta(section: RecommendationSectionUiModel) {
         val delta = section.text.takeIf { it.isNotBlank() } ?: return
-        val key = section.eventId ?: "${section.stableKey}:${delta.hashCode()}"
+        val key = section.eventId
+            ?: section.sequence?.let { sequence -> "${section.requestId ?: section.turnId}:${section.sectionIndex}:$sequence" }
+            ?: "${section.stableKey}:${delta.hashCode()}"
         if (!appliedSectionDeltas.add(key)) {
             return
         }
+        val updateAt = System.currentTimeMillis()
         updateRecommendationSection(section) { current ->
+            val nextText = current.text + delta
+            Log.d(
+                STREAM_DEBUG_TAG,
+                "state recommendation_text_delta ts=$updateAt section=${section.sectionIndex} " +
+                    "sku=${section.skuId} delta_len=${delta.length} cumulative_len=${nextText.length}",
+            )
             current.copy(
-                text = current.text + delta,
+                text = nextText,
                 productName = section.productName ?: current.productName,
                 brand = section.brand ?: current.brand,
             )
         }
+        advanceRecommendationDisplayText(section.stableKey)
+        ensureRecommendationTypewriter(section.stableKey)
+    }
+
+    private fun markRecommendationSectionDone(section: RecommendationSectionUiModel) {
+        updateRecommendationSection(section) { current ->
+            current.copy(
+                done = true,
+                productName = section.productName ?: current.productName,
+                brand = section.brand ?: current.brand,
+            )
+        }
+        ensureRecommendationTypewriter(section.stableKey)
     }
 
     private fun finishRecommendationSection(section: RecommendationSectionUiModel) {
@@ -783,6 +845,7 @@ class ChatViewModel(
                 ?: current.text
             current.copy(
                 text = finalText,
+                displayText = alignedRecommendationDisplayText(finalText, current.displayText),
                 reason = section.reason ?: current.reason,
                 tradeOff = section.tradeOff ?: current.tradeOff,
                 productName = section.productName ?: current.productName,
@@ -790,6 +853,7 @@ class ChatViewModel(
                 done = true,
             )
         }
+        ensureRecommendationTypewriter(section.stableKey)
     }
 
     private fun attachRecommendationProduct(section: RecommendationSectionUiModel) {
@@ -802,6 +866,7 @@ class ChatViewModel(
                 ?: reason.orEmpty()
             current.copy(
                 text = finalText,
+                displayText = alignedRecommendationDisplayText(finalText, current.displayText),
                 reason = reason,
                 tradeOff = section.tradeOff ?: product?.presentation?.tradeOff ?: current.tradeOff,
                 productName = section.productName ?: product?.displayTitleShort ?: current.productName,
@@ -810,6 +875,87 @@ class ChatViewModel(
                 done = true,
             )
         }
+        ensureRecommendationTypewriter(section.stableKey)
+    }
+
+    private fun ensureRecommendationTypewriter(sectionKey: String) {
+        if (sectionKey.isBlank() || recommendationTypewriterJobs[sectionKey]?.isActive == true) {
+            return
+        }
+        recommendationTypewriterJobs[sectionKey] = viewModelScope.launch {
+            try {
+                while (true) {
+                    val section = _recommendationSections.value.firstOrNull { it.stableKey == sectionKey } ?: break
+                    val fullText = section.text
+                    val shownLength = section.displayText.length.coerceAtMost(fullText.length)
+                    val backlog = fullText.length - shownLength
+                    if (backlog <= 0) {
+                        break
+                    }
+                    if (!advanceRecommendationDisplayText(sectionKey)) {
+                        break
+                    }
+                    delay(recommendationTypewriterDelayMillis(backlog, section.done))
+                }
+            } finally {
+                recommendationTypewriterJobs.remove(sectionKey)
+            }
+        }
+    }
+
+    private fun advanceRecommendationDisplayText(sectionKey: String): Boolean {
+        var advanced = false
+        _recommendationSections.value = _recommendationSections.value.map { current ->
+            if (current.stableKey != sectionKey) {
+                current
+            } else {
+                val fullText = current.text
+                val shownLength = current.displayText.length.coerceAtMost(fullText.length)
+                val backlog = fullText.length - shownLength
+                if (backlog <= 0) {
+                    current
+                } else {
+                    val targetLength = (shownLength + recommendationTypewriterStepSize(backlog, current.done))
+                        .coerceAtMost(fullText.length)
+                    advanced = true
+                    Log.d(
+                        STREAM_DEBUG_TAG,
+                        "[typewriter_tick] ts=${System.currentTimeMillis()} sectionIndex=${current.sectionIndex} " +
+                            "sku=${current.skuId} display_len=$targetLength full_len=${fullText.length}",
+                    )
+                    current.copy(displayText = fullText.substring(0, targetLength))
+                }
+            }
+        }
+        return advanced
+    }
+
+    private fun recommendationTypewriterStepSize(backlog: Int, done: Boolean): Int = when {
+        done && backlog > 100 -> 8
+        done && backlog > 30 -> 6
+        done -> 3
+        backlog > 100 -> 6
+        backlog > 30 -> 3
+        else -> 2
+    }
+
+    private fun recommendationTypewriterDelayMillis(backlog: Int, done: Boolean): Long = when {
+        done && backlog > 100 -> 6L
+        done && backlog > 30 -> 8L
+        done -> 10L
+        backlog > 100 -> 8L
+        backlog > 30 -> 12L
+        else -> 18L
+    }
+
+    private fun alignedRecommendationDisplayText(fullText: String, displayText: String): String {
+        if (fullText.isBlank() || displayText.isBlank()) {
+            return ""
+        }
+        if (fullText.startsWith(displayText)) {
+            return displayText
+        }
+        return fullText.take(displayText.length.coerceAtMost(fullText.length))
     }
 
     private fun mergeSectionProductSnapshots(products: List<ProductUiModel>) {
@@ -945,9 +1091,35 @@ class ChatViewModel(
                 } else {
                     "${section.text}\n生成已停止"
                 }
-                section.copy(text = stoppedText, done = true)
+                section.copy(text = stoppedText, displayText = stoppedText, done = true)
             }
         }
+    }
+
+    private fun flushRecommendationTypewriters() {
+        _recommendationSections.value = _recommendationSections.value.map { section ->
+            if (section.text == section.displayText) {
+                section
+            } else {
+                section.copy(displayText = section.text)
+            }
+        }
+    }
+
+    private fun cancelRecommendationTypewriters() {
+        recommendationTypewriterJobs.values.forEach { job -> job.cancel() }
+        recommendationTypewriterJobs.clear()
+    }
+
+    private fun cancelRecommendationTypewritersForTurn(turnId: String?) {
+        if (turnId.isNullOrBlank()) {
+            cancelRecommendationTypewriters()
+            return
+        }
+        val prefix = "$turnId-"
+        recommendationTypewriterJobs.keys
+            .filter { key -> key.startsWith(prefix) }
+            .forEach { key -> recommendationTypewriterJobs.remove(key)?.cancel() }
     }
 
     private fun startElapsedTicker() {

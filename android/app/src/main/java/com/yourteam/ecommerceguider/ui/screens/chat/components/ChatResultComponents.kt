@@ -313,7 +313,8 @@ private fun HistoryRecommendationBlock(
                 fontWeight = FontWeight.SemiBold,
                 color = SpatialAccent,
             )
-            section.text
+            val reasonText = section.displayText.ifBlank { section.text }
+            reasonText
                 .takeIf { it.isNotBlank() }
                 ?.let { text ->
                     Text(
@@ -948,6 +949,7 @@ fun RecommendationSection(
             skuId = product.skuId,
             optionLabel = roleLabel,
             text = product.displayReason,
+            displayText = product.displayReason,
             reason = presentation?.reason,
             tradeOff = presentation?.tradeOff,
             productName = product.displayTitleShort,
@@ -1030,7 +1032,8 @@ fun RecommendationSection(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            section.text
+            val reasonText = section.displayText
+            reasonText
                 .lineSequence()
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
@@ -1041,6 +1044,13 @@ fun RecommendationSection(
                         color = SpatialTextBody,
                     )
                 }
+            if (reasonText.isBlank() && (!section.done || section.text.isNotBlank())) {
+                Text(
+                    text = "正在生成推荐理由...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SpatialTextSecondary,
+                )
+            }
             section.tradeOff
                 ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
                 ?.let { tradeOff ->
@@ -1050,7 +1060,7 @@ fun RecommendationSection(
                         color = SpatialTextSecondary,
                     )
                 }
-            if (!section.done && product == null) {
+            if (!section.done && product == null && reasonText.isNotBlank()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

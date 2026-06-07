@@ -3,6 +3,7 @@ package com.yourteam.ecommerceguider.data.repository
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import com.yourteam.ecommerceguider.BuildConfig
 import com.yourteam.ecommerceguider.data.model.BackendNavigationUiModel
 import com.yourteam.ecommerceguider.data.model.CartItemUiModel
@@ -34,6 +35,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+
+private const val STREAM_DEBUG_TAG = "RecommendationStream"
 
 object ShoppingSession {
     val sessionId: String by lazy {
@@ -286,6 +289,7 @@ class ShoppingRepository(
         inputStream.bufferedReader(StandardCharsets.UTF_8).use { reader ->
             var currentEvent = "message"
             val dataLines = mutableListOf<String>()
+            var lastRecommendationDeltaAt: Long? = null
 
             suspend fun flushEvent() {
                 if (dataLines.isEmpty()) {
@@ -297,7 +301,30 @@ class ShoppingRepository(
                 } catch (_: JSONException) {
                     JSONObject()
                 }
-                json.toChatStreamEvent(currentEvent)?.let { emitEvent(it) }
+                json.toChatStreamEvent(currentEvent)?.let { event ->
+                    val section = event.recommendationSection
+                    when (event.event) {
+                        "recommendation_text_delta" -> {
+                            val now = System.currentTimeMillis()
+                            val intervalMs = lastRecommendationDeltaAt?.let { now - it }
+                            lastRecommendationDeltaAt = now
+                            Log.d(
+                                STREAM_DEBUG_TAG,
+                                "[android_recv_delta] ts=$now sectionIndex=${section?.sectionIndex} " +
+                                    "sku=${section?.skuId} len=${section?.text?.length ?: 0} interval_ms=$intervalMs",
+                            )
+                        }
+                        "recommendation_text_done" -> {
+                            val now = System.currentTimeMillis()
+                            Log.d(
+                                STREAM_DEBUG_TAG,
+                                "[recommendation_text_done] ts=$now sectionIndex=${section?.sectionIndex} " +
+                                    "sku=${section?.skuId} len=${section?.text?.length ?: section?.reason?.length ?: 0}",
+                            )
+                        }
+                    }
+                    emitEvent(event)
+                }
                 currentEvent = "message"
                 dataLines.clear()
             }
@@ -328,6 +355,8 @@ class ShoppingRepository(
             "generation_started" -> {
                 ChatStreamEvent(
                     event = "generation_started",
+                    requestId = optNullableString("request_id"),
+                    sequence = optNullableLong("sequence"),
                     progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
                     progressDisplayLabel = optNullableString("display_label")
                         ?: optNullableString("user_facing_label"),
@@ -351,6 +380,8 @@ class ShoppingRepository(
             "response_completed" -> {
                 ChatStreamEvent(
                     event = "response_completed",
+                    requestId = optNullableString("request_id"),
+                    sequence = optNullableLong("sequence"),
                     text = optString("text").ifBlank { optString("content") },
                     progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
                     progressDisplayLabel = optNullableString("display_label")
@@ -400,6 +431,22 @@ class ShoppingRepository(
                         text = optNullableString("reason"),
                         done = true,
                     ),
+                )
+            }
+
+            "recommendation_section_done" -> {
+                ChatStreamEvent(
+                    event = "recommendation_section_done",
+                    recommendationSection = toRecommendationSection(done = true),
+                )
+            }
+
+            "generation_degraded" -> {
+                ChatStreamEvent(
+                    event = "generation_degraded",
+                    requestId = optNullableString("request_id"),
+                    sequence = optNullableLong("sequence"),
+                    errorMessage = optNullableString("message") ?: optNullableString("reason"),
                 )
             }
 
@@ -717,6 +764,8 @@ class ShoppingRepository(
         }
         return RecommendationSectionUiModel(
             eventId = optNullableString("event_id"),
+            requestId = optNullableString("request_id"),
+            sequence = optNullableLong("sequence"),
             turnId = turnId,
             sectionIndex = sectionIndex,
             skuId = skuId,

@@ -1,6 +1,8 @@
+from collections.abc import Iterator
 from typing import Any
 
 from app.llm.base import BaseLLMClient
+from app.agents.recommendation_streaming import RecommendationPlan, recommendation_plan_prompt
 from app.models.agent import (
     CandidateProduct,
     DialogueFlow,
@@ -189,6 +191,20 @@ class ResponseGenerationModule:
             context=context,
             product_names=product_names,
         ) or self._recommendation_template(parsed_query, candidates)
+
+    def stream_recommendation_presentation(self, plan: RecommendationPlan) -> Iterator[str]:
+        self.last_llm_called = True
+        self.last_response_strategy = {
+            "streaming_recommendation_presentation": True,
+            "plan_item_count": len(plan.items),
+            "fact_locked_fields": ["sku_id", "rank", "price", "stock", "specs"],
+        }
+        return self.llm_client.stream_generate_response(
+            intent=IntentType.RECOMMEND,
+            message=plan.user_need,
+            context=recommendation_plan_prompt(plan),
+            product_names=[item.name for item in plan.items],
+        )
 
     @staticmethod
     def _cart_response(parsed_query: ParsedQuery, tool_result: ToolExecutionResult | None) -> str:

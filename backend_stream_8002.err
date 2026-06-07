@@ -1,0 +1,719 @@
+INFO:     Started server process [33256]
+INFO:     Waiting for application startup.
+INFO:app.main:Local model diagnostics: backend_dir=D:\0603version\backend models_dir=D:\0603version\backend\models bge={'resolved_path': 'D:\\0603version\\backend\\models\\bge-small-zh-v1.5', 'path_exists': True, 'loaded': False, 'load_error': None} text2vec={'resolved_path': 'D:\\0603version\\backend\\models\\text2vec-base-chinese', 'path_exists': True, 'loaded': False, 'load_error': None} reranker={'resolved_path': 'D:\\0603version\\backend\\models\\bge-reranker-base', 'path_exists': True, 'loaded': False, 'load_error': None}
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8002 (Press CTRL+C to quit)
+INFO:httpx:HTTP Request: POST https://ark.cn-beijing.volces.com/api/v3/chat/completions "HTTP/1.1 200 OK"
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: D:\0603version\backend\models\bge-small-zh-v1.5
+INFO:sentence_transformers.SentenceTransformer:Load pretrained SentenceTransformer: D:\0603version\backend\models\text2vec-base-chinese
+INFO:httpx:HTTP Request: POST https://ark.cn-beijing.volces.com/api/v3/chat/completions "HTTP/1.1 200 OK"
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=1 len=2 interval_ms=None ts=2026-06-07T16:19:38.948
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=2 len=2 interval_ms=1.04 ts=2026-06-07T16:19:38.949
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=3 len=5 interval_ms=16.73 ts=2026-06-07T16:19:38.966
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=4 len=1 interval_ms=0.32 ts=2026-06-07T16:19:38.966
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=5 len=1 interval_ms=0.34 ts=2026-06-07T16:19:38.966
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=6 len=2 interval_ms=0.24 ts=2026-06-07T16:19:38.966
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=7 len=1 interval_ms=19.54 ts=2026-06-07T16:19:38.986
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=3 len=1 cumulative_len=1 interval_ms=None ts=2026-06-07T16:19:38.986
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=8 len=2 interval_ms=0.81 ts=2026-06-07T16:19:38.986
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=4 len=2 cumulative_len=3 interval_ms=0.53 ts=2026-06-07T16:19:38.986
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=9 len=2 interval_ms=0.42 ts=2026-06-07T16:19:38.987
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=5 len=2 cumulative_len=5 interval_ms=0.41 ts=2026-06-07T16:19:38.987
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=10 len=2 interval_ms=0.4 ts=2026-06-07T16:19:38.987
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=6 len=2 cumulative_len=7 interval_ms=0.39 ts=2026-06-07T16:19:38.987
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=11 len=4 interval_ms=29.91 ts=2026-06-07T16:19:39.017
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=7 len=4 cumulative_len=11 interval_ms=30.42 ts=2026-06-07T16:19:39.017
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=12 len=5 interval_ms=1.1 ts=2026-06-07T16:19:39.018
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=8 len=5 cumulative_len=16 interval_ms=0.58 ts=2026-06-07T16:19:39.018
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=13 len=1 interval_ms=0.45 ts=2026-06-07T16:19:39.018
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=9 len=1 cumulative_len=17 interval_ms=0.45 ts=2026-06-07T16:19:39.018
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=14 len=1 interval_ms=0.46 ts=2026-06-07T16:19:39.019
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=10 len=1 cumulative_len=18 interval_ms=0.49 ts=2026-06-07T16:19:39.019
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=15 len=1 interval_ms=22.09 ts=2026-06-07T16:19:39.041
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=11 len=1 cumulative_len=19 interval_ms=22.61 ts=2026-06-07T16:19:39.042
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=16 len=4 interval_ms=1.13 ts=2026-06-07T16:19:39.043
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=12 len=4 cumulative_len=23 interval_ms=0.59 ts=2026-06-07T16:19:39.043
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=17 len=1 interval_ms=0.37 ts=2026-06-07T16:19:39.043
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=13 len=1 cumulative_len=24 interval_ms=0.39 ts=2026-06-07T16:19:39.043
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=18 len=2 interval_ms=0.41 ts=2026-06-07T16:19:39.043
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=14 len=2 cumulative_len=26 interval_ms=0.4 ts=2026-06-07T16:19:39.043
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=19 len=2 interval_ms=29.29 ts=2026-06-07T16:19:39.073
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=15 len=2 cumulative_len=28 interval_ms=29.78 ts=2026-06-07T16:19:39.073
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=20 len=2 interval_ms=1.04 ts=2026-06-07T16:19:39.073
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=16 len=2 cumulative_len=30 interval_ms=0.57 ts=2026-06-07T16:19:39.073
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=21 len=1 interval_ms=0.47 ts=2026-06-07T16:19:39.073
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=17 len=1 cumulative_len=31 interval_ms=0.46 ts=2026-06-07T16:19:39.073
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=22 len=2 interval_ms=0.47 ts=2026-06-07T16:19:39.075
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=18 len=2 cumulative_len=33 interval_ms=0.48 ts=2026-06-07T16:19:39.075
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=23 len=2 interval_ms=13.91 ts=2026-06-07T16:19:39.089
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=19 len=2 cumulative_len=35 interval_ms=14.16 ts=2026-06-07T16:19:39.089
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=24 len=1 interval_ms=0.81 ts=2026-06-07T16:19:39.089
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=20 len=1 cumulative_len=36 interval_ms=0.58 ts=2026-06-07T16:19:39.089
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=25 len=1 interval_ms=0.46 ts=2026-06-07T16:19:39.090
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=21 len=1 cumulative_len=37 interval_ms=0.69 ts=2026-06-07T16:19:39.090
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=26 len=4 interval_ms=0.71 ts=2026-06-07T16:19:39.090
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=22 len=4 cumulative_len=41 interval_ms=0.48 ts=2026-06-07T16:19:39.090
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=27 len=1 interval_ms=12.71 ts=2026-06-07T16:19:39.103
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=23 len=1 cumulative_len=42 interval_ms=12.9 ts=2026-06-07T16:19:39.104
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=28 len=1 interval_ms=0.94 ts=2026-06-07T16:19:39.104
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=24 len=1 cumulative_len=43 interval_ms=0.79 ts=2026-06-07T16:19:39.104
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=29 len=1 interval_ms=0.86 ts=2026-06-07T16:19:39.105
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=25 len=1 cumulative_len=44 interval_ms=0.81 ts=2026-06-07T16:19:39.105
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=30 len=1 interval_ms=0.47 ts=2026-06-07T16:19:39.106
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=26 len=1 cumulative_len=45 interval_ms=0.44 ts=2026-06-07T16:19:39.106
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=31 len=1 interval_ms=19.16 ts=2026-06-07T16:19:39.125
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=27 len=1 cumulative_len=46 interval_ms=19.37 ts=2026-06-07T16:19:39.125
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=32 len=1 interval_ms=0.66 ts=2026-06-07T16:19:39.125
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=28 len=1 cumulative_len=47 interval_ms=0.48 ts=2026-06-07T16:19:39.125
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=33 len=1 interval_ms=0.41 ts=2026-06-07T16:19:39.125
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=29 len=1 cumulative_len=48 interval_ms=0.38 ts=2026-06-07T16:19:39.125
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=34 len=2 interval_ms=0.58 ts=2026-06-07T16:19:39.126
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=30 len=2 cumulative_len=50 interval_ms=0.64 ts=2026-06-07T16:19:39.126
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=35 len=2 interval_ms=20.86 ts=2026-06-07T16:19:39.147
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=31 len=2 cumulative_len=52 interval_ms=21.11 ts=2026-06-07T16:19:39.148
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=36 len=2 interval_ms=0.86 ts=2026-06-07T16:19:39.148
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=32 len=2 cumulative_len=54 interval_ms=0.59 ts=2026-06-07T16:19:39.148
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=37 len=1 interval_ms=0.43 ts=2026-06-07T16:19:39.149
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=33 len=1 cumulative_len=55 interval_ms=0.41 ts=2026-06-07T16:19:39.149
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=38 len=1 interval_ms=0.38 ts=2026-06-07T16:19:39.149
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=34 len=1 cumulative_len=56 interval_ms=0.37 ts=2026-06-07T16:19:39.149
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=39 len=1 interval_ms=33.61 ts=2026-06-07T16:19:39.183
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=35 len=1 cumulative_len=57 interval_ms=34.23 ts=2026-06-07T16:19:39.183
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=40 len=1 interval_ms=1.22 ts=2026-06-07T16:19:39.184
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=36 len=1 cumulative_len=58 interval_ms=0.7 ts=2026-06-07T16:19:39.184
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=41 len=1 interval_ms=0.67 ts=2026-06-07T16:19:39.185
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=37 len=1 cumulative_len=59 interval_ms=0.59 ts=2026-06-07T16:19:39.185
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=42 len=1 interval_ms=0.58 ts=2026-06-07T16:19:39.185
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=38 len=1 cumulative_len=60 interval_ms=0.56 ts=2026-06-07T16:19:39.185
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=43 len=2 interval_ms=18.16 ts=2026-06-07T16:19:39.203
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=39 len=2 cumulative_len=62 interval_ms=18.39 ts=2026-06-07T16:19:39.204
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=44 len=2 interval_ms=0.82 ts=2026-06-07T16:19:39.204
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=40 len=2 cumulative_len=64 interval_ms=0.71 ts=2026-06-07T16:19:39.204
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=45 len=1 interval_ms=0.57 ts=2026-06-07T16:19:39.205
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=41 len=1 cumulative_len=65 interval_ms=0.45 ts=2026-06-07T16:19:39.205
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=46 len=1 interval_ms=0.38 ts=2026-06-07T16:19:39.205
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=42 len=1 cumulative_len=66 interval_ms=0.36 ts=2026-06-07T16:19:39.205
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=47 len=1 interval_ms=24.52 ts=2026-06-07T16:19:39.229
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=43 len=1 cumulative_len=67 interval_ms=25.21 ts=2026-06-07T16:19:39.229
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=48 len=1 interval_ms=1.29 ts=2026-06-07T16:19:39.231
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=44 len=1 cumulative_len=68 interval_ms=0.75 ts=2026-06-07T16:19:39.231
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=49 len=1 interval_ms=0.8 ts=2026-06-07T16:19:39.231
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=45 len=1 cumulative_len=69 interval_ms=0.67 ts=2026-06-07T16:19:39.231
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=50 len=1 interval_ms=0.5 ts=2026-06-07T16:19:39.232
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=46 len=1 cumulative_len=70 interval_ms=0.6 ts=2026-06-07T16:19:39.232
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=51 len=1 interval_ms=17.42 ts=2026-06-07T16:19:39.249
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=47 len=1 cumulative_len=71 interval_ms=17.64 ts=2026-06-07T16:19:39.250
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=52 len=2 interval_ms=0.91 ts=2026-06-07T16:19:39.250
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=48 len=2 cumulative_len=73 interval_ms=0.64 ts=2026-06-07T16:19:39.250
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=53 len=1 interval_ms=0.64 ts=2026-06-07T16:19:39.250
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=49 len=1 cumulative_len=74 interval_ms=0.62 ts=2026-06-07T16:19:39.250
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=54 len=1 interval_ms=0.65 ts=2026-06-07T16:19:39.252
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=50 len=1 cumulative_len=75 interval_ms=0.65 ts=2026-06-07T16:19:39.252
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=55 len=2 interval_ms=14.84 ts=2026-06-07T16:19:39.267
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=51 len=2 cumulative_len=77 interval_ms=15.11 ts=2026-06-07T16:19:39.267
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=56 len=1 interval_ms=0.99 ts=2026-06-07T16:19:39.268
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=52 len=1 cumulative_len=78 interval_ms=0.79 ts=2026-06-07T16:19:39.268
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=57 len=2 interval_ms=0.6 ts=2026-06-07T16:19:39.268
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=53 len=2 cumulative_len=80 interval_ms=0.5 ts=2026-06-07T16:19:39.268
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=58 len=2 interval_ms=0.58 ts=2026-06-07T16:19:39.269
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=54 len=2 cumulative_len=82 interval_ms=0.58 ts=2026-06-07T16:19:39.269
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=59 len=1 interval_ms=11.69 ts=2026-06-07T16:19:39.280
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=55 len=1 cumulative_len=83 interval_ms=11.86 ts=2026-06-07T16:19:39.280
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=60 len=4 interval_ms=0.7 ts=2026-06-07T16:19:39.281
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=56 len=4 cumulative_len=87 interval_ms=0.6 ts=2026-06-07T16:19:39.281
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=61 len=2 interval_ms=0.52 ts=2026-06-07T16:19:39.281
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=57 len=2 cumulative_len=89 interval_ms=0.48 ts=2026-06-07T16:19:39.282
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=62 len=1 interval_ms=0.68 ts=2026-06-07T16:19:39.282
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=58 len=1 cumulative_len=90 interval_ms=0.63 ts=2026-06-07T16:19:39.282
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=63 len=2 interval_ms=18.26 ts=2026-06-07T16:19:39.300
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=59 len=2 cumulative_len=92 interval_ms=18.49 ts=2026-06-07T16:19:39.301
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=64 len=2 interval_ms=0.81 ts=2026-06-07T16:19:39.301
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=60 len=2 cumulative_len=94 interval_ms=0.61 ts=2026-06-07T16:19:39.301
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=65 len=2 interval_ms=0.52 ts=2026-06-07T16:19:39.301
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=61 len=2 cumulative_len=96 interval_ms=0.48 ts=2026-06-07T16:19:39.301
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=66 len=2 interval_ms=0.53 ts=2026-06-07T16:19:39.302
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=62 len=2 cumulative_len=98 interval_ms=0.54 ts=2026-06-07T16:19:39.302
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=67 len=2 interval_ms=26.1 ts=2026-06-07T16:19:39.328
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=63 len=2 cumulative_len=100 interval_ms=26.83 ts=2026-06-07T16:19:39.329
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=68 len=2 interval_ms=1.43 ts=2026-06-07T16:19:39.330
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=64 len=2 cumulative_len=102 interval_ms=0.82 ts=2026-06-07T16:19:39.330
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=69 len=1 interval_ms=0.68 ts=2026-06-07T16:19:39.330
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=65 len=1 cumulative_len=103 interval_ms=0.7 ts=2026-06-07T16:19:39.330
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=70 len=2 interval_ms=0.59 ts=2026-06-07T16:19:39.331
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=66 len=2 cumulative_len=105 interval_ms=0.48 ts=2026-06-07T16:19:39.331
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=71 len=2 interval_ms=21.45 ts=2026-06-07T16:19:39.352
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=67 len=2 cumulative_len=107 interval_ms=21.98 ts=2026-06-07T16:19:39.353
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=72 len=1 interval_ms=1.19 ts=2026-06-07T16:19:39.353
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=68 len=1 cumulative_len=108 interval_ms=0.72 ts=2026-06-07T16:19:39.353
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=73 len=2 interval_ms=0.55 ts=2026-06-07T16:19:39.355
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=69 len=2 cumulative_len=110 interval_ms=0.52 ts=2026-06-07T16:19:39.355
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=74 len=1 interval_ms=0.55 ts=2026-06-07T16:19:39.355
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=70 len=1 cumulative_len=111 interval_ms=0.52 ts=2026-06-07T16:19:39.355
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=75 len=2 interval_ms=17.2 ts=2026-06-07T16:19:39.372
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=71 len=2 cumulative_len=113 interval_ms=17.45 ts=2026-06-07T16:19:39.372
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=76 len=2 interval_ms=1.03 ts=2026-06-07T16:19:39.372
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=72 len=2 cumulative_len=115 interval_ms=0.84 ts=2026-06-07T16:19:39.374
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=77 len=1 interval_ms=0.64 ts=2026-06-07T16:19:39.374
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=73 len=1 cumulative_len=116 interval_ms=0.54 ts=2026-06-07T16:19:39.374
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=78 len=1 interval_ms=0.49 ts=2026-06-07T16:19:39.374
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=74 len=1 cumulative_len=117 interval_ms=0.53 ts=2026-06-07T16:19:39.375
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=79 len=2 interval_ms=23.62 ts=2026-06-07T16:19:39.398
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=75 len=2 cumulative_len=119 interval_ms=24.1 ts=2026-06-07T16:19:39.398
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=80 len=2 interval_ms=1.07 ts=2026-06-07T16:19:39.398
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=76 len=2 cumulative_len=121 interval_ms=0.64 ts=2026-06-07T16:19:39.399
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=81 len=1 interval_ms=0.61 ts=2026-06-07T16:19:39.399
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=77 len=1 cumulative_len=122 interval_ms=0.84 ts=2026-06-07T16:19:39.400
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=82 len=1 interval_ms=0.72 ts=2026-06-07T16:19:39.400
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=78 len=1 cumulative_len=123 interval_ms=0.51 ts=2026-06-07T16:19:39.400
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=83 len=1 interval_ms=14.16 ts=2026-06-07T16:19:39.414
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=79 len=1 cumulative_len=124 interval_ms=14.41 ts=2026-06-07T16:19:39.415
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=84 len=1 interval_ms=0.82 ts=2026-06-07T16:19:39.415
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=80 len=1 cumulative_len=125 interval_ms=0.55 ts=2026-06-07T16:19:39.415
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=85 len=2 interval_ms=0.51 ts=2026-06-07T16:19:39.416
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=81 len=2 cumulative_len=127 interval_ms=0.43 ts=2026-06-07T16:19:39.416
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=86 len=2 interval_ms=0.35 ts=2026-06-07T16:19:39.416
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=82 len=2 cumulative_len=129 interval_ms=0.36 ts=2026-06-07T16:19:39.416
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=87 len=2 interval_ms=12.25 ts=2026-06-07T16:19:39.428
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=83 len=2 cumulative_len=131 interval_ms=12.49 ts=2026-06-07T16:19:39.429
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=88 len=1 interval_ms=0.76 ts=2026-06-07T16:19:39.429
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=84 len=1 cumulative_len=132 interval_ms=0.51 ts=2026-06-07T16:19:39.429
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=89 len=2 interval_ms=0.44 ts=2026-06-07T16:19:39.429
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=85 len=2 cumulative_len=134 interval_ms=0.44 ts=2026-06-07T16:19:39.430
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=90 len=2 interval_ms=0.42 ts=2026-06-07T16:19:39.430
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=86 len=2 cumulative_len=136 interval_ms=0.42 ts=2026-06-07T16:19:39.430
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=91 len=1 interval_ms=18.71 ts=2026-06-07T16:19:39.449
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=87 len=1 cumulative_len=137 interval_ms=19.03 ts=2026-06-07T16:19:39.449
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=92 len=2 interval_ms=0.89 ts=2026-06-07T16:19:39.449
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=88 len=2 cumulative_len=139 interval_ms=0.66 ts=2026-06-07T16:19:39.449
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=93 len=2 interval_ms=0.63 ts=2026-06-07T16:19:39.450
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=89 len=2 cumulative_len=141 interval_ms=0.65 ts=2026-06-07T16:19:39.450
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=94 len=1 interval_ms=0.63 ts=2026-06-07T16:19:39.450
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=90 len=1 cumulative_len=142 interval_ms=0.57 ts=2026-06-07T16:19:39.451
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=95 len=2 interval_ms=20.39 ts=2026-06-07T16:19:39.470
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=91 len=2 cumulative_len=144 interval_ms=20.58 ts=2026-06-07T16:19:39.471
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=96 len=2 interval_ms=0.8 ts=2026-06-07T16:19:39.472
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=92 len=2 cumulative_len=146 interval_ms=0.64 ts=2026-06-07T16:19:39.472
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=97 len=1 interval_ms=0.44 ts=2026-06-07T16:19:39.472
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=93 len=1 cumulative_len=147 interval_ms=0.35 ts=2026-06-07T16:19:39.472
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=98 len=2 interval_ms=0.56 ts=2026-06-07T16:19:39.473
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=94 len=2 cumulative_len=149 interval_ms=0.65 ts=2026-06-07T16:19:39.473
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=99 len=1 interval_ms=10.84 ts=2026-06-07T16:19:39.484
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=95 len=1 cumulative_len=150 interval_ms=11.32 ts=2026-06-07T16:19:39.484
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=100 len=2 interval_ms=1.89 ts=2026-06-07T16:19:39.485
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=96 len=2 cumulative_len=152 interval_ms=1.35 ts=2026-06-07T16:19:39.485
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=101 len=2 interval_ms=0.47 ts=2026-06-07T16:19:39.486
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=97 len=2 cumulative_len=154 interval_ms=0.43 ts=2026-06-07T16:19:39.486
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=102 len=3 interval_ms=0.35 ts=2026-06-07T16:19:39.486
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=98 len=3 cumulative_len=157 interval_ms=0.35 ts=2026-06-07T16:19:39.486
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=103 len=1 interval_ms=65.31 ts=2026-06-07T16:19:39.551
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=99 len=1 cumulative_len=158 interval_ms=66.01 ts=2026-06-07T16:19:39.553
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=104 len=2 interval_ms=1.19 ts=2026-06-07T16:19:39.553
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=100 len=2 cumulative_len=160 interval_ms=0.54 ts=2026-06-07T16:19:39.553
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=105 len=1 interval_ms=0.41 ts=2026-06-07T16:19:39.553
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=101 len=1 cumulative_len=161 interval_ms=0.37 ts=2026-06-07T16:19:39.553
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=106 len=1 interval_ms=0.44 ts=2026-06-07T16:19:39.553
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=102 len=1 cumulative_len=162 interval_ms=0.44 ts=2026-06-07T16:19:39.553
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=107 len=2 interval_ms=23.57 ts=2026-06-07T16:19:39.577
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=103 len=2 cumulative_len=164 interval_ms=24.23 ts=2026-06-07T16:19:39.578
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=108 len=2 interval_ms=1.28 ts=2026-06-07T16:19:39.578
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=104 len=2 cumulative_len=166 interval_ms=0.73 ts=2026-06-07T16:19:39.578
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=109 len=1 interval_ms=0.59 ts=2026-06-07T16:19:39.579
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=105 len=1 cumulative_len=167 interval_ms=0.58 ts=2026-06-07T16:19:39.579
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=110 len=1 interval_ms=0.45 ts=2026-06-07T16:19:39.579
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=106 len=1 cumulative_len=168 interval_ms=0.39 ts=2026-06-07T16:19:39.579
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=111 len=1 interval_ms=21.12 ts=2026-06-07T16:19:39.601
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=107 len=1 cumulative_len=169 interval_ms=21.52 ts=2026-06-07T16:19:39.601
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=112 len=2 interval_ms=1.27 ts=2026-06-07T16:19:39.602
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=108 len=2 cumulative_len=171 interval_ms=0.91 ts=2026-06-07T16:19:39.602
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=113 len=1 interval_ms=0.49 ts=2026-06-07T16:19:39.602
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=109 len=1 cumulative_len=172 interval_ms=0.48 ts=2026-06-07T16:19:39.602
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=114 len=2 interval_ms=0.5 ts=2026-06-07T16:19:39.603
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=110 len=2 cumulative_len=174 interval_ms=0.43 ts=2026-06-07T16:19:39.603
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=115 len=1 interval_ms=14.76 ts=2026-06-07T16:19:39.618
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=111 len=1 cumulative_len=175 interval_ms=15.69 ts=2026-06-07T16:19:39.618
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=116 len=2 interval_ms=2.09 ts=2026-06-07T16:19:39.620
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=112 len=2 cumulative_len=177 interval_ms=1.31 ts=2026-06-07T16:19:39.621
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=117 len=2 interval_ms=0.57 ts=2026-06-07T16:19:39.621
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=113 len=2 cumulative_len=179 interval_ms=0.57 ts=2026-06-07T16:19:39.621
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=118 len=2 interval_ms=0.51 ts=2026-06-07T16:19:39.621
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=114 len=2 cumulative_len=181 interval_ms=0.63 ts=2026-06-07T16:19:39.621
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=119 len=2 interval_ms=14.21 ts=2026-06-07T16:19:39.635
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=115 len=2 cumulative_len=183 interval_ms=14.12 ts=2026-06-07T16:19:39.636
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=120 len=1 interval_ms=0.61 ts=2026-06-07T16:19:39.636
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=116 len=1 cumulative_len=184 interval_ms=0.45 ts=2026-06-07T16:19:39.636
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=121 len=2 interval_ms=0.36 ts=2026-06-07T16:19:39.636
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=117 len=2 cumulative_len=186 interval_ms=0.42 ts=2026-06-07T16:19:39.636
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=122 len=1 interval_ms=0.46 ts=2026-06-07T16:19:39.637
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=118 len=1 cumulative_len=187 interval_ms=0.43 ts=2026-06-07T16:19:39.637
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=123 len=2 interval_ms=20.77 ts=2026-06-07T16:19:39.657
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=119 len=2 cumulative_len=189 interval_ms=21.21 ts=2026-06-07T16:19:39.657
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=124 len=2 interval_ms=1.1 ts=2026-06-07T16:19:39.659
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=120 len=2 cumulative_len=191 interval_ms=0.75 ts=2026-06-07T16:19:39.659
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=125 len=2 interval_ms=0.82 ts=2026-06-07T16:19:39.660
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=121 len=2 cumulative_len=193 interval_ms=0.71 ts=2026-06-07T16:19:39.660
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=126 len=2 interval_ms=0.42 ts=2026-06-07T16:19:39.660
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=122 len=2 cumulative_len=195 interval_ms=0.44 ts=2026-06-07T16:19:39.660
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=127 len=2 interval_ms=18.4 ts=2026-06-07T16:19:39.678
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=123 len=2 cumulative_len=197 interval_ms=18.9 ts=2026-06-07T16:19:39.679
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=128 len=2 interval_ms=1.13 ts=2026-06-07T16:19:39.679
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=124 len=2 cumulative_len=199 interval_ms=0.72 ts=2026-06-07T16:19:39.680
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=129 len=1 interval_ms=0.5 ts=2026-06-07T16:19:39.680
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=125 len=1 cumulative_len=200 interval_ms=0.53 ts=2026-06-07T16:19:39.680
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=130 len=2 interval_ms=0.49 ts=2026-06-07T16:19:39.680
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=126 len=2 cumulative_len=202 interval_ms=0.42 ts=2026-06-07T16:19:39.680
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=131 len=1 interval_ms=10.25 ts=2026-06-07T16:19:39.690
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=127 len=1 cumulative_len=203 interval_ms=10.53 ts=2026-06-07T16:19:39.691
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=132 len=1 interval_ms=0.82 ts=2026-06-07T16:19:39.691
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=0 section_index=1 seq=128 len=1 cumulative_len=204 interval_ms=0.58 ts=2026-06-07T16:19:39.691
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=133 len=2 interval_ms=0.47 ts=2026-06-07T16:19:39.692
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=134 len=3 interval_ms=0.21 ts=2026-06-07T16:19:39.692
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=135 len=3 interval_ms=16.2 ts=2026-06-07T16:19:39.708
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=136 len=5 interval_ms=0.39 ts=2026-06-07T16:19:39.709
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=137 len=2 interval_ms=0.25 ts=2026-06-07T16:19:39.709
+INFO:app.agents.shopping_agent:[recommendation_text_done] path=streaming request_id=turn_q001 section_id=0 section_index=1 seq=129 len=202 ts=2026-06-07T16:19:39.709
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=138 len=1 interval_ms=1.08 ts=2026-06-07T16:19:39.710
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=139 len=2 interval_ms=21.17 ts=2026-06-07T16:19:39.732
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=140 len=2 interval_ms=0.6 ts=2026-06-07T16:19:39.732
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=141 len=5 interval_ms=0.26 ts=2026-06-07T16:19:39.732
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=142 len=1 interval_ms=0.24 ts=2026-06-07T16:19:39.732
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=143 len=1 interval_ms=19.92 ts=2026-06-07T16:19:39.752
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=144 len=2 interval_ms=0.32 ts=2026-06-07T16:19:39.752
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=145 len=1 interval_ms=0.27 ts=2026-06-07T16:19:39.752
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=133 len=1 cumulative_len=1 interval_ms=61.34 ts=2026-06-07T16:19:39.752
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=146 len=2 interval_ms=0.48 ts=2026-06-07T16:19:39.753
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=134 len=2 cumulative_len=3 interval_ms=0.46 ts=2026-06-07T16:19:39.753
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=147 len=2 interval_ms=17.53 ts=2026-06-07T16:19:39.771
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=135 len=2 cumulative_len=5 interval_ms=17.79 ts=2026-06-07T16:19:39.772
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=148 len=2 interval_ms=0.86 ts=2026-06-07T16:19:39.772
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=136 len=2 cumulative_len=7 interval_ms=0.7 ts=2026-06-07T16:19:39.772
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=149 len=2 interval_ms=0.57 ts=2026-06-07T16:19:39.772
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=137 len=2 cumulative_len=9 interval_ms=0.44 ts=2026-06-07T16:19:39.772
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=150 len=1 interval_ms=0.42 ts=2026-06-07T16:19:39.772
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=138 len=1 cumulative_len=10 interval_ms=0.41 ts=2026-06-07T16:19:39.773
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=151 len=2 interval_ms=19.86 ts=2026-06-07T16:19:39.792
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=139 len=2 cumulative_len=12 interval_ms=20.28 ts=2026-06-07T16:19:39.793
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=152 len=2 interval_ms=1.03 ts=2026-06-07T16:19:39.793
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=140 len=2 cumulative_len=14 interval_ms=0.7 ts=2026-06-07T16:19:39.793
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=153 len=1 interval_ms=0.45 ts=2026-06-07T16:19:39.793
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=141 len=1 cumulative_len=15 interval_ms=0.45 ts=2026-06-07T16:19:39.794
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=154 len=2 interval_ms=0.56 ts=2026-06-07T16:19:39.794
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=142 len=2 cumulative_len=17 interval_ms=0.62 ts=2026-06-07T16:19:39.794
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=155 len=3 interval_ms=15.8 ts=2026-06-07T16:19:39.810
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=143 len=3 cumulative_len=20 interval_ms=15.92 ts=2026-06-07T16:19:39.811
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=156 len=1 interval_ms=0.88 ts=2026-06-07T16:19:39.812
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=144 len=1 cumulative_len=21 interval_ms=0.78 ts=2026-06-07T16:19:39.812
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=157 len=1 interval_ms=0.55 ts=2026-06-07T16:19:39.812
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=145 len=1 cumulative_len=22 interval_ms=0.41 ts=2026-06-07T16:19:39.812
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=158 len=1 interval_ms=0.53 ts=2026-06-07T16:19:39.812
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=146 len=1 cumulative_len=23 interval_ms=0.61 ts=2026-06-07T16:19:39.812
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=159 len=4 interval_ms=17.93 ts=2026-06-07T16:19:39.830
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=147 len=4 cumulative_len=27 interval_ms=18.08 ts=2026-06-07T16:19:39.831
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=160 len=1 interval_ms=0.92 ts=2026-06-07T16:19:39.831
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=148 len=1 cumulative_len=28 interval_ms=0.67 ts=2026-06-07T16:19:39.831
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=161 len=1 interval_ms=0.38 ts=2026-06-07T16:19:39.832
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=149 len=1 cumulative_len=29 interval_ms=0.53 ts=2026-06-07T16:19:39.832
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=162 len=2 interval_ms=0.63 ts=2026-06-07T16:19:39.832
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=150 len=2 cumulative_len=31 interval_ms=0.55 ts=2026-06-07T16:19:39.832
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=163 len=2 interval_ms=26.39 ts=2026-06-07T16:19:39.858
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=151 len=2 cumulative_len=33 interval_ms=26.77 ts=2026-06-07T16:19:39.859
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=164 len=2 interval_ms=1.04 ts=2026-06-07T16:19:39.859
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=152 len=2 cumulative_len=35 interval_ms=0.79 ts=2026-06-07T16:19:39.860
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=165 len=1 interval_ms=0.74 ts=2026-06-07T16:19:39.860
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=153 len=1 cumulative_len=36 interval_ms=0.62 ts=2026-06-07T16:19:39.860
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=166 len=2 interval_ms=0.49 ts=2026-06-07T16:19:39.860
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=154 len=2 cumulative_len=38 interval_ms=0.59 ts=2026-06-07T16:19:39.860
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=167 len=2 interval_ms=15.78 ts=2026-06-07T16:19:39.877
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=155 len=2 cumulative_len=40 interval_ms=15.82 ts=2026-06-07T16:19:39.877
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=168 len=2 interval_ms=0.63 ts=2026-06-07T16:19:39.877
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=156 len=2 cumulative_len=42 interval_ms=0.44 ts=2026-06-07T16:19:39.877
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=169 len=1 interval_ms=0.38 ts=2026-06-07T16:19:39.878
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=157 len=1 cumulative_len=43 interval_ms=0.46 ts=2026-06-07T16:19:39.878
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=170 len=1 interval_ms=0.53 ts=2026-06-07T16:19:39.878
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=158 len=1 cumulative_len=44 interval_ms=0.46 ts=2026-06-07T16:19:39.878
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=171 len=1 interval_ms=16.42 ts=2026-06-07T16:19:39.894
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=159 len=1 cumulative_len=45 interval_ms=16.75 ts=2026-06-07T16:19:39.895
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=172 len=1 interval_ms=0.89 ts=2026-06-07T16:19:39.895
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=160 len=1 cumulative_len=46 interval_ms=0.6 ts=2026-06-07T16:19:39.895
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=173 len=1 interval_ms=0.46 ts=2026-06-07T16:19:39.896
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=161 len=1 cumulative_len=47 interval_ms=0.41 ts=2026-06-07T16:19:39.896
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=174 len=1 interval_ms=0.38 ts=2026-06-07T16:19:39.896
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=162 len=1 cumulative_len=48 interval_ms=0.38 ts=2026-06-07T16:19:39.896
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=175 len=1 interval_ms=18.93 ts=2026-06-07T16:19:39.915
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=163 len=1 cumulative_len=49 interval_ms=19.14 ts=2026-06-07T16:19:39.916
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=176 len=2 interval_ms=0.75 ts=2026-06-07T16:19:39.916
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=164 len=2 cumulative_len=51 interval_ms=0.58 ts=2026-06-07T16:19:39.916
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=177 len=2 interval_ms=0.91 ts=2026-06-07T16:19:39.917
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=165 len=2 cumulative_len=53 interval_ms=0.95 ts=2026-06-07T16:19:39.917
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=178 len=2 interval_ms=0.66 ts=2026-06-07T16:19:39.918
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=166 len=2 cumulative_len=55 interval_ms=0.67 ts=2026-06-07T16:19:39.918
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=179 len=1 interval_ms=17.78 ts=2026-06-07T16:19:39.936
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=167 len=1 cumulative_len=56 interval_ms=17.85 ts=2026-06-07T16:19:39.936
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=180 len=1 interval_ms=0.59 ts=2026-06-07T16:19:39.936
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=168 len=1 cumulative_len=57 interval_ms=0.48 ts=2026-06-07T16:19:39.936
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=181 len=1 interval_ms=0.46 ts=2026-06-07T16:19:39.937
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=169 len=1 cumulative_len=58 interval_ms=0.44 ts=2026-06-07T16:19:39.937
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=182 len=1 interval_ms=0.49 ts=2026-06-07T16:19:39.937
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=170 len=1 cumulative_len=59 interval_ms=0.45 ts=2026-06-07T16:19:39.937
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=183 len=1 interval_ms=16.66 ts=2026-06-07T16:19:39.954
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=171 len=1 cumulative_len=60 interval_ms=16.89 ts=2026-06-07T16:19:39.954
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=184 len=1 interval_ms=0.91 ts=2026-06-07T16:19:39.954
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=172 len=1 cumulative_len=61 interval_ms=0.69 ts=2026-06-07T16:19:39.954
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=185 len=2 interval_ms=0.5 ts=2026-06-07T16:19:39.955
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=173 len=2 cumulative_len=63 interval_ms=0.49 ts=2026-06-07T16:19:39.955
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=186 len=2 interval_ms=0.39 ts=2026-06-07T16:19:39.955
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=174 len=2 cumulative_len=65 interval_ms=0.38 ts=2026-06-07T16:19:39.955
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=187 len=1 interval_ms=20.29 ts=2026-06-07T16:19:39.975
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=175 len=1 cumulative_len=66 interval_ms=20.54 ts=2026-06-07T16:19:39.976
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=188 len=1 interval_ms=0.8 ts=2026-06-07T16:19:39.976
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=176 len=1 cumulative_len=67 interval_ms=0.65 ts=2026-06-07T16:19:39.976
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=189 len=1 interval_ms=0.6 ts=2026-06-07T16:19:39.977
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=177 len=1 cumulative_len=68 interval_ms=0.54 ts=2026-06-07T16:19:39.977
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=190 len=1 interval_ms=0.53 ts=2026-06-07T16:19:39.977
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=178 len=1 cumulative_len=69 interval_ms=0.49 ts=2026-06-07T16:19:39.977
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=191 len=1 interval_ms=15.94 ts=2026-06-07T16:19:39.993
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=179 len=1 cumulative_len=70 interval_ms=16.36 ts=2026-06-07T16:19:39.994
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=192 len=1 interval_ms=1.03 ts=2026-06-07T16:19:39.994
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=180 len=1 cumulative_len=71 interval_ms=0.71 ts=2026-06-07T16:19:39.995
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=193 len=2 interval_ms=0.56 ts=2026-06-07T16:19:39.995
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=181 len=2 cumulative_len=73 interval_ms=0.45 ts=2026-06-07T16:19:39.995
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=194 len=2 interval_ms=0.47 ts=2026-06-07T16:19:39.995
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=182 len=2 cumulative_len=75 interval_ms=0.47 ts=2026-06-07T16:19:39.996
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=195 len=2 interval_ms=14.26 ts=2026-06-07T16:19:40.010
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=183 len=2 cumulative_len=77 interval_ms=14.47 ts=2026-06-07T16:19:40.010
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=196 len=1 interval_ms=0.76 ts=2026-06-07T16:19:40.010
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=184 len=1 cumulative_len=78 interval_ms=0.6 ts=2026-06-07T16:19:40.010
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=197 len=1 interval_ms=0.46 ts=2026-06-07T16:19:40.010
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=185 len=1 cumulative_len=79 interval_ms=0.55 ts=2026-06-07T16:19:40.011
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=198 len=2 interval_ms=0.64 ts=2026-06-07T16:19:40.011
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=186 len=2 cumulative_len=81 interval_ms=0.48 ts=2026-06-07T16:19:40.012
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=199 len=2 interval_ms=19.47 ts=2026-06-07T16:19:40.031
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=187 len=2 cumulative_len=83 interval_ms=19.64 ts=2026-06-07T16:19:40.032
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=200 len=2 interval_ms=0.6 ts=2026-06-07T16:19:40.032
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=188 len=2 cumulative_len=85 interval_ms=0.43 ts=2026-06-07T16:19:40.032
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=201 len=1 interval_ms=0.45 ts=2026-06-07T16:19:40.032
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=189 len=1 cumulative_len=86 interval_ms=0.46 ts=2026-06-07T16:19:40.032
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=202 len=2 interval_ms=0.35 ts=2026-06-07T16:19:40.032
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=190 len=2 cumulative_len=88 interval_ms=0.41 ts=2026-06-07T16:19:40.032
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=203 len=2 interval_ms=17.17 ts=2026-06-07T16:19:40.050
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=191 len=2 cumulative_len=90 interval_ms=17.6 ts=2026-06-07T16:19:40.050
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=204 len=2 interval_ms=1.23 ts=2026-06-07T16:19:40.051
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=192 len=2 cumulative_len=92 interval_ms=0.9 ts=2026-06-07T16:19:40.051
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=205 len=1 interval_ms=1.04 ts=2026-06-07T16:19:40.052
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=193 len=1 cumulative_len=93 interval_ms=0.93 ts=2026-06-07T16:19:40.052
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=206 len=2 interval_ms=0.48 ts=2026-06-07T16:19:40.052
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=194 len=2 cumulative_len=95 interval_ms=0.43 ts=2026-06-07T16:19:40.052
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=207 len=1 interval_ms=14.96 ts=2026-06-07T16:19:40.067
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=195 len=1 cumulative_len=96 interval_ms=15.39 ts=2026-06-07T16:19:40.068
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=208 len=1 interval_ms=0.92 ts=2026-06-07T16:19:40.068
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=196 len=1 cumulative_len=97 interval_ms=0.57 ts=2026-06-07T16:19:40.069
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=209 len=1 interval_ms=0.52 ts=2026-06-07T16:19:40.069
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=197 len=1 cumulative_len=98 interval_ms=0.45 ts=2026-06-07T16:19:40.069
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=210 len=1 interval_ms=0.38 ts=2026-06-07T16:19:40.069
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=198 len=1 cumulative_len=99 interval_ms=0.37 ts=2026-06-07T16:19:40.069
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=211 len=1 interval_ms=82.23 ts=2026-06-07T16:19:40.151
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=199 len=1 cumulative_len=100 interval_ms=82.91 ts=2026-06-07T16:19:40.153
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=212 len=1 interval_ms=1.53 ts=2026-06-07T16:19:40.153
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=200 len=1 cumulative_len=101 interval_ms=1.04 ts=2026-06-07T16:19:40.153
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=213 len=2 interval_ms=0.65 ts=2026-06-07T16:19:40.153
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=201 len=2 cumulative_len=103 interval_ms=0.46 ts=2026-06-07T16:19:40.153
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=214 len=2 interval_ms=0.45 ts=2026-06-07T16:19:40.153
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=202 len=2 cumulative_len=105 interval_ms=0.48 ts=2026-06-07T16:19:40.153
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=215 len=1 interval_ms=31.58 ts=2026-06-07T16:19:40.186
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=203 len=1 cumulative_len=106 interval_ms=31.83 ts=2026-06-07T16:19:40.186
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=216 len=2 interval_ms=0.76 ts=2026-06-07T16:19:40.186
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=204 len=2 cumulative_len=108 interval_ms=0.55 ts=2026-06-07T16:19:40.186
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=217 len=1 interval_ms=0.51 ts=2026-06-07T16:19:40.187
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=205 len=1 cumulative_len=109 interval_ms=0.46 ts=2026-06-07T16:19:40.187
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=218 len=2 interval_ms=0.43 ts=2026-06-07T16:19:40.187
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=206 len=2 cumulative_len=111 interval_ms=0.39 ts=2026-06-07T16:19:40.187
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=219 len=1 interval_ms=39.84 ts=2026-06-07T16:19:40.227
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=207 len=1 cumulative_len=112 interval_ms=40.17 ts=2026-06-07T16:19:40.228
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=220 len=1 interval_ms=0.85 ts=2026-06-07T16:19:40.228
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=208 len=1 cumulative_len=113 interval_ms=0.64 ts=2026-06-07T16:19:40.228
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=221 len=1 interval_ms=0.56 ts=2026-06-07T16:19:40.229
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=209 len=1 cumulative_len=114 interval_ms=0.44 ts=2026-06-07T16:19:40.229
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=222 len=1 interval_ms=0.46 ts=2026-06-07T16:19:40.229
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=210 len=1 cumulative_len=115 interval_ms=0.56 ts=2026-06-07T16:19:40.229
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=223 len=3 interval_ms=40.79 ts=2026-06-07T16:19:40.270
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=211 len=3 cumulative_len=118 interval_ms=41.41 ts=2026-06-07T16:19:40.270
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=224 len=1 interval_ms=1.43 ts=2026-06-07T16:19:40.271
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=212 len=1 cumulative_len=119 interval_ms=0.93 ts=2026-06-07T16:19:40.271
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=225 len=2 interval_ms=0.78 ts=2026-06-07T16:19:40.272
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=213 len=2 cumulative_len=121 interval_ms=0.67 ts=2026-06-07T16:19:40.272
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=226 len=2 interval_ms=0.52 ts=2026-06-07T16:19:40.273
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=214 len=2 cumulative_len=123 interval_ms=0.43 ts=2026-06-07T16:19:40.273
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=227 len=2 interval_ms=41.62 ts=2026-06-07T16:19:40.314
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=215 len=2 cumulative_len=125 interval_ms=42.05 ts=2026-06-07T16:19:40.315
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=228 len=2 interval_ms=0.94 ts=2026-06-07T16:19:40.315
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=216 len=2 cumulative_len=127 interval_ms=0.55 ts=2026-06-07T16:19:40.315
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=229 len=1 interval_ms=0.48 ts=2026-06-07T16:19:40.316
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=217 len=1 cumulative_len=128 interval_ms=0.48 ts=2026-06-07T16:19:40.316
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=230 len=2 interval_ms=0.42 ts=2026-06-07T16:19:40.316
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=218 len=2 cumulative_len=130 interval_ms=0.38 ts=2026-06-07T16:19:40.316
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=231 len=1 interval_ms=43.19 ts=2026-06-07T16:19:40.359
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=219 len=1 cumulative_len=131 interval_ms=43.67 ts=2026-06-07T16:19:40.360
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=232 len=2 interval_ms=1.0 ts=2026-06-07T16:19:40.360
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=220 len=2 cumulative_len=133 interval_ms=0.51 ts=2026-06-07T16:19:40.360
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=233 len=2 interval_ms=0.47 ts=2026-06-07T16:19:40.360
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=221 len=2 cumulative_len=135 interval_ms=0.45 ts=2026-06-07T16:19:40.360
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=234 len=1 interval_ms=0.44 ts=2026-06-07T16:19:40.361
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=222 len=1 cumulative_len=136 interval_ms=0.45 ts=2026-06-07T16:19:40.361
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=235 len=2 interval_ms=47.34 ts=2026-06-07T16:19:40.409
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=223 len=2 cumulative_len=138 interval_ms=47.91 ts=2026-06-07T16:19:40.409
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=236 len=2 interval_ms=1.03 ts=2026-06-07T16:19:40.409
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=224 len=2 cumulative_len=140 interval_ms=0.5 ts=2026-06-07T16:19:40.409
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=237 len=1 interval_ms=0.74 ts=2026-06-07T16:19:40.410
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=225 len=1 cumulative_len=141 interval_ms=0.73 ts=2026-06-07T16:19:40.410
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=238 len=1 interval_ms=0.44 ts=2026-06-07T16:19:40.410
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=226 len=1 cumulative_len=142 interval_ms=0.45 ts=2026-06-07T16:19:40.411
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=239 len=2 interval_ms=33.49 ts=2026-06-07T16:19:40.444
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=227 len=2 cumulative_len=144 interval_ms=33.87 ts=2026-06-07T16:19:40.445
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=240 len=2 interval_ms=0.85 ts=2026-06-07T16:19:40.445
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=228 len=2 cumulative_len=146 interval_ms=0.44 ts=2026-06-07T16:19:40.445
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=241 len=1 interval_ms=0.64 ts=2026-06-07T16:19:40.446
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=229 len=1 cumulative_len=147 interval_ms=0.72 ts=2026-06-07T16:19:40.446
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=242 len=1 interval_ms=0.51 ts=2026-06-07T16:19:40.446
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=230 len=1 cumulative_len=148 interval_ms=0.51 ts=2026-06-07T16:19:40.446
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=243 len=2 interval_ms=38.1 ts=2026-06-07T16:19:40.484
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=231 len=2 cumulative_len=150 interval_ms=38.48 ts=2026-06-07T16:19:40.485
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=244 len=2 interval_ms=0.98 ts=2026-06-07T16:19:40.485
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=232 len=2 cumulative_len=152 interval_ms=0.54 ts=2026-06-07T16:19:40.485
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=245 len=2 interval_ms=0.43 ts=2026-06-07T16:19:40.486
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=233 len=2 cumulative_len=154 interval_ms=0.39 ts=2026-06-07T16:19:40.486
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=246 len=2 interval_ms=0.41 ts=2026-06-07T16:19:40.486
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=234 len=2 cumulative_len=156 interval_ms=0.41 ts=2026-06-07T16:19:40.486
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=247 len=1 interval_ms=37.5 ts=2026-06-07T16:19:40.523
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=235 len=1 cumulative_len=157 interval_ms=38.2 ts=2026-06-07T16:19:40.524
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=248 len=1 interval_ms=1.23 ts=2026-06-07T16:19:40.525
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=236 len=1 cumulative_len=158 interval_ms=0.54 ts=2026-06-07T16:19:40.525
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=249 len=1 interval_ms=0.44 ts=2026-06-07T16:19:40.525
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=237 len=1 cumulative_len=159 interval_ms=0.44 ts=2026-06-07T16:19:40.525
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=250 len=2 interval_ms=0.4 ts=2026-06-07T16:19:40.525
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=238 len=2 cumulative_len=161 interval_ms=0.43 ts=2026-06-07T16:19:40.526
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=251 len=2 interval_ms=41.79 ts=2026-06-07T16:19:40.567
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=239 len=2 cumulative_len=163 interval_ms=42.31 ts=2026-06-07T16:19:40.568
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=252 len=2 interval_ms=1.06 ts=2026-06-07T16:19:40.568
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=240 len=2 cumulative_len=165 interval_ms=0.57 ts=2026-06-07T16:19:40.569
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=253 len=1 interval_ms=0.52 ts=2026-06-07T16:19:40.569
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=241 len=1 cumulative_len=166 interval_ms=0.46 ts=2026-06-07T16:19:40.569
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=254 len=1 interval_ms=0.43 ts=2026-06-07T16:19:40.569
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=242 len=1 cumulative_len=167 interval_ms=0.45 ts=2026-06-07T16:19:40.569
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=255 len=2 interval_ms=46.78 ts=2026-06-07T16:19:40.616
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=243 len=2 cumulative_len=169 interval_ms=47.3 ts=2026-06-07T16:19:40.617
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=256 len=1 interval_ms=1.02 ts=2026-06-07T16:19:40.617
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=244 len=1 cumulative_len=170 interval_ms=0.52 ts=2026-06-07T16:19:40.618
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=257 len=2 interval_ms=0.44 ts=2026-06-07T16:19:40.618
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=245 len=2 cumulative_len=172 interval_ms=0.48 ts=2026-06-07T16:19:40.618
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=258 len=2 interval_ms=0.5 ts=2026-06-07T16:19:40.618
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=246 len=2 cumulative_len=174 interval_ms=0.44 ts=2026-06-07T16:19:40.618
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=259 len=2 interval_ms=47.02 ts=2026-06-07T16:19:40.665
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=247 len=2 cumulative_len=176 interval_ms=47.5 ts=2026-06-07T16:19:40.665
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=260 len=2 interval_ms=1.0 ts=2026-06-07T16:19:40.665
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=248 len=2 cumulative_len=178 interval_ms=0.54 ts=2026-06-07T16:19:40.667
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=261 len=2 interval_ms=0.51 ts=2026-06-07T16:19:40.667
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=249 len=2 cumulative_len=180 interval_ms=0.56 ts=2026-06-07T16:19:40.667
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=262 len=2 interval_ms=0.9 ts=2026-06-07T16:19:40.668
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=250 len=2 cumulative_len=182 interval_ms=1.02 ts=2026-06-07T16:19:40.668
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=263 len=1 interval_ms=26.74 ts=2026-06-07T16:19:40.694
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=251 len=1 cumulative_len=183 interval_ms=27.03 ts=2026-06-07T16:19:40.695
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=264 len=1 interval_ms=1.12 ts=2026-06-07T16:19:40.696
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=1 section_index=2 seq=252 len=1 cumulative_len=184 interval_ms=0.7 ts=2026-06-07T16:19:40.696
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=265 len=2 interval_ms=0.6 ts=2026-06-07T16:19:40.696
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=266 len=3 interval_ms=0.25 ts=2026-06-07T16:19:40.697
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=267 len=3 interval_ms=97.16 ts=2026-06-07T16:19:40.793
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=268 len=5 interval_ms=0.84 ts=2026-06-07T16:19:40.794
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=269 len=2 interval_ms=0.29 ts=2026-06-07T16:19:40.795
+INFO:app.agents.shopping_agent:[recommendation_text_done] path=streaming request_id=turn_q001 section_id=1 section_index=2 seq=253 len=182 ts=2026-06-07T16:19:40.795
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=270 len=1 interval_ms=1.07 ts=2026-06-07T16:19:40.796
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=271 len=2 interval_ms=15.85 ts=2026-06-07T16:19:40.811
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=272 len=2 interval_ms=0.37 ts=2026-06-07T16:19:40.812
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=273 len=5 interval_ms=0.29 ts=2026-06-07T16:19:40.812
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=274 len=1 interval_ms=0.25 ts=2026-06-07T16:19:40.813
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=275 len=1 interval_ms=94.94 ts=2026-06-07T16:19:40.908
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=276 len=2 interval_ms=0.7 ts=2026-06-07T16:19:40.908
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=277 len=1 interval_ms=0.57 ts=2026-06-07T16:19:40.908
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=257 len=1 cumulative_len=1 interval_ms=213.14 ts=2026-06-07T16:19:40.909
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=278 len=2 interval_ms=0.48 ts=2026-06-07T16:19:40.909
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=258 len=2 cumulative_len=3 interval_ms=0.45 ts=2026-06-07T16:19:40.909
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=279 len=2 interval_ms=18.78 ts=2026-06-07T16:19:40.927
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=259 len=2 cumulative_len=5 interval_ms=19.01 ts=2026-06-07T16:19:40.928
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=280 len=2 interval_ms=1.1 ts=2026-06-07T16:19:40.929
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=260 len=2 cumulative_len=7 interval_ms=0.85 ts=2026-06-07T16:19:40.929
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=281 len=2 interval_ms=0.41 ts=2026-06-07T16:19:40.929
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=261 len=2 cumulative_len=9 interval_ms=0.41 ts=2026-06-07T16:19:40.929
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=282 len=1 interval_ms=0.38 ts=2026-06-07T16:19:40.929
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=262 len=1 cumulative_len=10 interval_ms=0.39 ts=2026-06-07T16:19:40.930
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=283 len=2 interval_ms=29.7 ts=2026-06-07T16:19:40.959
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=263 len=2 cumulative_len=12 interval_ms=30.39 ts=2026-06-07T16:19:40.960
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=284 len=5 interval_ms=1.18 ts=2026-06-07T16:19:40.960
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=264 len=5 cumulative_len=17 interval_ms=0.53 ts=2026-06-07T16:19:40.960
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=285 len=1 interval_ms=0.49 ts=2026-06-07T16:19:40.960
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=265 len=1 cumulative_len=18 interval_ms=0.46 ts=2026-06-07T16:19:40.962
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=286 len=1 interval_ms=0.38 ts=2026-06-07T16:19:40.962
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=266 len=1 cumulative_len=19 interval_ms=0.38 ts=2026-06-07T16:19:40.962
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=287 len=1 interval_ms=43.91 ts=2026-06-07T16:19:41.006
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=267 len=1 cumulative_len=20 interval_ms=44.42 ts=2026-06-07T16:19:41.006
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=288 len=1 interval_ms=1.08 ts=2026-06-07T16:19:41.006
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=268 len=1 cumulative_len=21 interval_ms=0.65 ts=2026-06-07T16:19:41.006
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=289 len=1 interval_ms=0.48 ts=2026-06-07T16:19:41.006
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=269 len=1 cumulative_len=22 interval_ms=0.43 ts=2026-06-07T16:19:41.008
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=290 len=2 interval_ms=0.44 ts=2026-06-07T16:19:41.008
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=270 len=2 cumulative_len=24 interval_ms=0.45 ts=2026-06-07T16:19:41.008
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=291 len=2 interval_ms=39.96 ts=2026-06-07T16:19:41.047
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=271 len=2 cumulative_len=26 interval_ms=40.57 ts=2026-06-07T16:19:41.048
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=292 len=2 interval_ms=1.36 ts=2026-06-07T16:19:41.049
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=272 len=2 cumulative_len=28 interval_ms=0.9 ts=2026-06-07T16:19:41.049
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=293 len=1 interval_ms=0.66 ts=2026-06-07T16:19:41.049
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=273 len=1 cumulative_len=29 interval_ms=0.55 ts=2026-06-07T16:19:41.050
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=294 len=2 interval_ms=0.88 ts=2026-06-07T16:19:41.050
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=274 len=2 cumulative_len=31 interval_ms=0.91 ts=2026-06-07T16:19:41.050
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=295 len=1 interval_ms=47.02 ts=2026-06-07T16:19:41.097
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=275 len=1 cumulative_len=32 interval_ms=47.66 ts=2026-06-07T16:19:41.098
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=296 len=1 interval_ms=1.31 ts=2026-06-07T16:19:41.099
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=276 len=1 cumulative_len=33 interval_ms=0.61 ts=2026-06-07T16:19:41.099
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=297 len=2 interval_ms=0.45 ts=2026-06-07T16:19:41.099
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=277 len=2 cumulative_len=35 interval_ms=0.49 ts=2026-06-07T16:19:41.099
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=298 len=1 interval_ms=1.42 ts=2026-06-07T16:19:41.100
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=278 len=1 cumulative_len=36 interval_ms=1.34 ts=2026-06-07T16:19:41.100
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=299 len=1 interval_ms=37.39 ts=2026-06-07T16:19:41.138
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=279 len=1 cumulative_len=37 interval_ms=37.81 ts=2026-06-07T16:19:41.139
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=300 len=1 interval_ms=0.91 ts=2026-06-07T16:19:41.139
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=280 len=1 cumulative_len=38 interval_ms=0.46 ts=2026-06-07T16:19:41.139
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=301 len=1 interval_ms=0.5 ts=2026-06-07T16:19:41.140
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=281 len=1 cumulative_len=39 interval_ms=0.53 ts=2026-06-07T16:19:41.140
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=302 len=1 interval_ms=0.46 ts=2026-06-07T16:19:41.140
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=282 len=1 cumulative_len=40 interval_ms=0.43 ts=2026-06-07T16:19:41.140
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=303 len=1 interval_ms=29.5 ts=2026-06-07T16:19:41.169
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=283 len=1 cumulative_len=41 interval_ms=29.99 ts=2026-06-07T16:19:41.170
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=304 len=2 interval_ms=0.99 ts=2026-06-07T16:19:41.170
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=284 len=2 cumulative_len=43 interval_ms=0.57 ts=2026-06-07T16:19:41.170
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=305 len=2 interval_ms=0.56 ts=2026-06-07T16:19:41.170
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=285 len=2 cumulative_len=45 interval_ms=0.56 ts=2026-06-07T16:19:41.170
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=306 len=1 interval_ms=0.53 ts=2026-06-07T16:19:41.171
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=286 len=1 cumulative_len=46 interval_ms=0.48 ts=2026-06-07T16:19:41.171
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=307 len=1 interval_ms=65.61 ts=2026-06-07T16:19:41.237
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=287 len=1 cumulative_len=47 interval_ms=65.8 ts=2026-06-07T16:19:41.238
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=308 len=1 interval_ms=0.74 ts=2026-06-07T16:19:41.238
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=288 len=1 cumulative_len=48 interval_ms=0.58 ts=2026-06-07T16:19:41.238
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=309 len=1 interval_ms=0.51 ts=2026-06-07T16:19:41.238
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=289 len=1 cumulative_len=49 interval_ms=0.47 ts=2026-06-07T16:19:41.239
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=310 len=1 interval_ms=0.41 ts=2026-06-07T16:19:41.239
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=290 len=1 cumulative_len=50 interval_ms=0.44 ts=2026-06-07T16:19:41.239
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=311 len=1 interval_ms=32.07 ts=2026-06-07T16:19:41.270
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=291 len=1 cumulative_len=51 interval_ms=32.52 ts=2026-06-07T16:19:41.272
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=312 len=1 interval_ms=0.98 ts=2026-06-07T16:19:41.272
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=292 len=1 cumulative_len=52 interval_ms=0.51 ts=2026-06-07T16:19:41.272
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=313 len=2 interval_ms=0.45 ts=2026-06-07T16:19:41.272
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=293 len=2 cumulative_len=54 interval_ms=0.47 ts=2026-06-07T16:19:41.272
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=314 len=2 interval_ms=0.44 ts=2026-06-07T16:19:41.272
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=294 len=2 cumulative_len=56 interval_ms=0.45 ts=2026-06-07T16:19:41.273
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=315 len=2 interval_ms=49.82 ts=2026-06-07T16:19:41.322
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=295 len=2 cumulative_len=58 interval_ms=50.26 ts=2026-06-07T16:19:41.323
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=316 len=2 interval_ms=0.94 ts=2026-06-07T16:19:41.323
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=296 len=2 cumulative_len=60 interval_ms=0.56 ts=2026-06-07T16:19:41.323
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=317 len=1 interval_ms=0.47 ts=2026-06-07T16:19:41.323
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=297 len=1 cumulative_len=61 interval_ms=0.41 ts=2026-06-07T16:19:41.323
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=318 len=2 interval_ms=0.39 ts=2026-06-07T16:19:41.323
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=298 len=2 cumulative_len=63 interval_ms=0.37 ts=2026-06-07T16:19:41.325
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=319 len=1 interval_ms=40.28 ts=2026-06-07T16:19:41.365
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=299 len=1 cumulative_len=64 interval_ms=40.69 ts=2026-06-07T16:19:41.365
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=320 len=2 interval_ms=0.85 ts=2026-06-07T16:19:41.365
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=300 len=2 cumulative_len=66 interval_ms=0.55 ts=2026-06-07T16:19:41.366
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=321 len=2 interval_ms=0.6 ts=2026-06-07T16:19:41.366
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=301 len=2 cumulative_len=68 interval_ms=0.48 ts=2026-06-07T16:19:41.366
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=322 len=2 interval_ms=0.45 ts=2026-06-07T16:19:41.367
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=302 len=2 cumulative_len=70 interval_ms=0.42 ts=2026-06-07T16:19:41.367
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=323 len=1 interval_ms=119.06 ts=2026-06-07T16:19:41.485
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=303 len=1 cumulative_len=71 interval_ms=119.65 ts=2026-06-07T16:19:41.486
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=324 len=2 interval_ms=1.06 ts=2026-06-07T16:19:41.486
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=304 len=2 cumulative_len=73 interval_ms=0.55 ts=2026-06-07T16:19:41.487
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=325 len=2 interval_ms=0.47 ts=2026-06-07T16:19:41.487
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=305 len=2 cumulative_len=75 interval_ms=0.42 ts=2026-06-07T16:19:41.487
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=326 len=1 interval_ms=0.46 ts=2026-06-07T16:19:41.487
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=306 len=1 cumulative_len=76 interval_ms=0.47 ts=2026-06-07T16:19:41.488
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=327 len=1 interval_ms=18.04 ts=2026-06-07T16:19:41.506
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=307 len=1 cumulative_len=77 interval_ms=18.28 ts=2026-06-07T16:19:41.506
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=328 len=2 interval_ms=0.81 ts=2026-06-07T16:19:41.506
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=308 len=2 cumulative_len=79 interval_ms=0.59 ts=2026-06-07T16:19:41.506
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=329 len=2 interval_ms=0.42 ts=2026-06-07T16:19:41.506
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=309 len=2 cumulative_len=81 interval_ms=0.45 ts=2026-06-07T16:19:41.507
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=330 len=1 interval_ms=0.45 ts=2026-06-07T16:19:41.507
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=310 len=1 cumulative_len=82 interval_ms=0.39 ts=2026-06-07T16:19:41.507
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=331 len=2 interval_ms=21.08 ts=2026-06-07T16:19:41.528
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=311 len=2 cumulative_len=84 interval_ms=21.36 ts=2026-06-07T16:19:41.529
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=332 len=1 interval_ms=0.84 ts=2026-06-07T16:19:41.529
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=312 len=1 cumulative_len=85 interval_ms=0.59 ts=2026-06-07T16:19:41.529
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=333 len=2 interval_ms=0.4 ts=2026-06-07T16:19:41.529
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=313 len=2 cumulative_len=87 interval_ms=0.51 ts=2026-06-07T16:19:41.530
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=334 len=1 interval_ms=0.61 ts=2026-06-07T16:19:41.530
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=314 len=1 cumulative_len=88 interval_ms=0.46 ts=2026-06-07T16:19:41.530
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=335 len=1 interval_ms=41.02 ts=2026-06-07T16:19:41.571
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=315 len=1 cumulative_len=89 interval_ms=41.62 ts=2026-06-07T16:19:41.572
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=336 len=1 interval_ms=1.2 ts=2026-06-07T16:19:41.572
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=316 len=1 cumulative_len=90 interval_ms=0.71 ts=2026-06-07T16:19:41.573
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=337 len=1 interval_ms=0.51 ts=2026-06-07T16:19:41.573
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=317 len=1 cumulative_len=91 interval_ms=0.48 ts=2026-06-07T16:19:41.573
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=338 len=1 interval_ms=0.66 ts=2026-06-07T16:19:41.573
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=318 len=1 cumulative_len=92 interval_ms=0.61 ts=2026-06-07T16:19:41.573
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=339 len=2 interval_ms=41.78 ts=2026-06-07T16:19:41.615
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=319 len=2 cumulative_len=94 interval_ms=42.29 ts=2026-06-07T16:19:41.616
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=340 len=2 interval_ms=1.15 ts=2026-06-07T16:19:41.616
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=320 len=2 cumulative_len=96 interval_ms=0.77 ts=2026-06-07T16:19:41.617
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=341 len=2 interval_ms=0.79 ts=2026-06-07T16:19:41.617
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=321 len=2 cumulative_len=98 interval_ms=0.79 ts=2026-06-07T16:19:41.617
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=342 len=1 interval_ms=0.8 ts=2026-06-07T16:19:41.618
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=322 len=1 cumulative_len=99 interval_ms=0.81 ts=2026-06-07T16:19:41.618
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=343 len=3 interval_ms=49.62 ts=2026-06-07T16:19:41.668
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=323 len=3 cumulative_len=102 interval_ms=49.87 ts=2026-06-07T16:19:41.668
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=344 len=2 interval_ms=1.17 ts=2026-06-07T16:19:41.668
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=324 len=2 cumulative_len=104 interval_ms=1.0 ts=2026-06-07T16:19:41.669
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=345 len=2 interval_ms=0.88 ts=2026-06-07T16:19:41.669
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=325 len=2 cumulative_len=106 interval_ms=0.77 ts=2026-06-07T16:19:41.670
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=346 len=2 interval_ms=1.06 ts=2026-06-07T16:19:41.670
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=326 len=2 cumulative_len=108 interval_ms=1.23 ts=2026-06-07T16:19:41.671
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=347 len=1 interval_ms=35.4 ts=2026-06-07T16:19:41.706
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=327 len=1 cumulative_len=109 interval_ms=35.56 ts=2026-06-07T16:19:41.707
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=348 len=2 interval_ms=0.96 ts=2026-06-07T16:19:41.707
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=328 len=2 cumulative_len=111 interval_ms=0.56 ts=2026-06-07T16:19:41.707
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=349 len=2 interval_ms=0.51 ts=2026-06-07T16:19:41.708
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=329 len=2 cumulative_len=113 interval_ms=0.48 ts=2026-06-07T16:19:41.708
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=350 len=2 interval_ms=0.48 ts=2026-06-07T16:19:41.708
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=330 len=2 cumulative_len=115 interval_ms=0.45 ts=2026-06-07T16:19:41.708
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=351 len=2 interval_ms=42.56 ts=2026-06-07T16:19:41.751
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=331 len=2 cumulative_len=117 interval_ms=42.76 ts=2026-06-07T16:19:41.751
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=352 len=2 interval_ms=0.65 ts=2026-06-07T16:19:41.752
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=332 len=2 cumulative_len=119 interval_ms=0.5 ts=2026-06-07T16:19:41.752
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=353 len=1 interval_ms=0.53 ts=2026-06-07T16:19:41.752
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=333 len=1 cumulative_len=120 interval_ms=0.48 ts=2026-06-07T16:19:41.752
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=354 len=2 interval_ms=0.47 ts=2026-06-07T16:19:41.752
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=334 len=2 cumulative_len=122 interval_ms=0.47 ts=2026-06-07T16:19:41.753
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=355 len=1 interval_ms=82.44 ts=2026-06-07T16:19:41.834
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=335 len=1 cumulative_len=123 interval_ms=83.12 ts=2026-06-07T16:19:41.835
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=356 len=2 interval_ms=1.26 ts=2026-06-07T16:19:41.836
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=336 len=2 cumulative_len=125 interval_ms=0.66 ts=2026-06-07T16:19:41.836
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=357 len=2 interval_ms=0.63 ts=2026-06-07T16:19:41.836
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=337 len=2 cumulative_len=127 interval_ms=0.55 ts=2026-06-07T16:19:41.836
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=358 len=1 interval_ms=0.41 ts=2026-06-07T16:19:41.837
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=338 len=1 cumulative_len=128 interval_ms=0.4 ts=2026-06-07T16:19:41.837
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=359 len=2 interval_ms=41.76 ts=2026-06-07T16:19:41.879
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=339 len=2 cumulative_len=130 interval_ms=42.52 ts=2026-06-07T16:19:41.879
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=360 len=2 interval_ms=1.46 ts=2026-06-07T16:19:41.880
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=340 len=2 cumulative_len=132 interval_ms=0.9 ts=2026-06-07T16:19:41.880
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=361 len=1 interval_ms=0.66 ts=2026-06-07T16:19:41.880
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=341 len=1 cumulative_len=133 interval_ms=0.46 ts=2026-06-07T16:19:41.881
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=362 len=2 interval_ms=0.37 ts=2026-06-07T16:19:41.881
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=342 len=2 cumulative_len=135 interval_ms=0.37 ts=2026-06-07T16:19:41.881
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=363 len=3 interval_ms=54.62 ts=2026-06-07T16:19:41.936
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=343 len=3 cumulative_len=138 interval_ms=55.44 ts=2026-06-07T16:19:41.936
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=364 len=2 interval_ms=1.38 ts=2026-06-07T16:19:41.937
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=344 len=2 cumulative_len=140 interval_ms=0.56 ts=2026-06-07T16:19:41.937
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=365 len=1 interval_ms=0.41 ts=2026-06-07T16:19:41.937
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=345 len=1 cumulative_len=141 interval_ms=0.42 ts=2026-06-07T16:19:41.937
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=366 len=1 interval_ms=0.38 ts=2026-06-07T16:19:41.938
+INFO:app.agents.shopping_agent:[recommendation_text_delta] path=streaming source=llm request_id=turn_q001 section_id=2 section_index=3 seq=346 len=1 cumulative_len=142 interval_ms=0.39 ts=2026-06-07T16:19:41.938
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=367 len=2 interval_ms=39.33 ts=2026-06-07T16:19:41.978
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=368 len=3 interval_ms=0.92 ts=2026-06-07T16:19:41.978
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=369 len=3 interval_ms=0.36 ts=2026-06-07T16:19:41.978
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=370 len=5 interval_ms=0.16 ts=2026-06-07T16:19:41.979
+INFO:app.llm.doubao_client:[llm_stream_delta] path=doubao_stream chunk=371 len=2 interval_ms=36.78 ts=2026-06-07T16:19:42.016
+INFO:app.agents.shopping_agent:[recommendation_text_done] path=streaming request_id=turn_q001 section_id=2 section_index=3 seq=347 len=140 ts=2026-06-07T16:19:42.016

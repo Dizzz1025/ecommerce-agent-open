@@ -14,11 +14,17 @@ from app.agents.input_preprocessor import InputPreprocessor
 from app.agents.model_router import ModelRouter
 from app.agents.product_qa import ProductQAModule
 from app.agents.query_understanding import QueryUnderstandingModule
+from app.agents.recommendation_streaming import (
+    RecommendationPlan,
+    RecommendationPresentationParser,
+    build_recommendation_plan,
+)
 from app.agents.response_generator import ResponseGenerationModule
 from app.agents.scene_presentation_builder import ScenePresentationBuilder
 from app.agents.response_validator import ResponseValidator
 from app.agents.scenario_planner import ScenarioPlanner
 from app.agents.task_planner import TaskPlanner
+from app.core.logging import get_logger
 from app.memory.preference_manager import PreferenceManager
 from app.memory.cart_aware_personalization import CartAwarePersonalization
 from app.memory.personalization_service import PersonalizationService
@@ -42,7 +48,7 @@ from app.models.agent import (
     ToolExecutionResult,
     ValidationResult,
 )
-from app.models.domain import BehaviourRecord, IntentType, Product, ProductCard, SessionState
+from app.models.domain import BehaviourRecord, IntentType, Product, ProductCard, ProductPresentation, SessionState
 from app.models.events import SSEEvent
 from app.progress.progress_event_builder import ProgressEventBuilder
 from app.repositories.product_repository import ProductRepository
@@ -50,6 +56,9 @@ from app.retrieval.post_processor import ProductPostProcessor
 from app.tools.action_executor import ActionExecutor
 from app.tools.product_search_tool import ProductSearchTool
 from app.utils.runtime_timer import RuntimeTimer
+
+
+logger = get_logger(__name__)
 
 
 class ShoppingAgent:
@@ -433,6 +442,9 @@ class ShoppingAgent:
         cart_personalization_context: dict = {}
         fallback_result: FallbackResult | None = None
         comparison_data = None
+        recommendation_plan: RecommendationPlan | None = None
+        recommendation_stream_texts: dict[int, str] = {}
+        recommendation_stream_used = False
 
         try:
             with timer.measure("product_repository_load", "读取本地商品库"):
@@ -699,22 +711,42 @@ class ShoppingAgent:
                     candidates=context_candidates,
                     cart_personalization_context=cart_personalization_context,
                 )
-                yield self._generation_started_event(timer=timer, model_route=model_route)
-                trace.legacy_sse_events.append("generation_started")
-                response_text = self._generate_response_timed(
+                recommendation_stream_used = (
+                    self._should_stream_recommendation_sections(decision, cards)
+                    and qa_result is None
+                    and self._llm_supports_response_streaming()
+                )
+                recommendation_request_id = f"turn_{query_id}" if recommendation_stream_used else None
+                recommendation_sequence = 1 if recommendation_stream_used else None
+                yield self._generation_started_event(
                     timer=timer,
                     model_route=model_route,
-                    parsed_query=parsed_query,
-                    decision=decision,
-                    state=state,
-                    candidates=candidates,
-                    products=products,
-                    qa_result=qa_result,
-                    alternatives=alternatives,
-                    fallback_result=fallback_result,
-                    personalization_context=personalization_context,
-                    multimodal_context=multimodal_context,
+                    request_id=recommendation_request_id,
+                    sequence=recommendation_sequence,
                 )
+                trace.legacy_sse_events.append("generation_started")
+                if recommendation_stream_used:
+                    response_text = ""
+                    self.response_generator.last_llm_called = False
+                    self.response_generator.last_response_strategy = {
+                        "streaming_recommendation_presentation": True,
+                        "legacy_full_response_generation_skipped": True,
+                    }
+                else:
+                    response_text = self._generate_response_timed(
+                        timer=timer,
+                        model_route=model_route,
+                        parsed_query=parsed_query,
+                        decision=decision,
+                        state=state,
+                        candidates=candidates,
+                        products=products,
+                        qa_result=qa_result,
+                        alternatives=alternatives,
+                        fallback_result=fallback_result,
+                        personalization_context=personalization_context,
+                        multimodal_context=multimodal_context,
+                    )
                 if tool_prefix_messages:
                     response_text = "\n".join(tool_prefix_messages) + "\n\n" + response_text
             else:
@@ -734,7 +766,7 @@ class ShoppingAgent:
 
             validation_candidates = candidates if candidates else alternatives
             trace.llm_called = self.response_generator.last_llm_called
-            if decision.flow in {
+            if recommendation_stream_used or decision.flow in {
                 DialogueFlow.CART_ACTION,
                 DialogueFlow.CHECKOUT,
                 DialogueFlow.PREFERENCE_UPDATE,
@@ -758,7 +790,7 @@ class ShoppingAgent:
                         cards=cards,
                         products=products,
                         candidates=candidates,
-                        use_llm=model_route.need_llm,
+                        use_llm=model_route.need_llm and not recommendation_stream_used,
                     )
                 timer.mark_model_call(
                     module="scene_presentation_build",
@@ -775,7 +807,7 @@ class ShoppingAgent:
                 }
                 if decision.flow == DialogueFlow.COMPARISON:
                     response_text = self.scene_presentation_builder.comparison_intro(parsed_query, cards)
-                elif self.scene_presentation_builder.scene_type(decision.flow) == "recommendation":
+                elif self.scene_presentation_builder.scene_type(decision.flow) == "recommendation" and not recommendation_stream_used:
                     response_text = self.scene_presentation_builder.recommendation_intro(parsed_query, cards)
                 trace.llm_called = trace.llm_called or self.scene_presentation_builder.last_llm_called
             trace.validation_result = validation_result.model_dump()
@@ -796,6 +828,52 @@ class ShoppingAgent:
                 for item in candidates[:5]
             ]
             trace.product_enhancement = self._product_enhancement_trace(candidates if candidates else alternatives)
+            if recommendation_stream_used and cards:
+                recommendation_plan = build_recommendation_plan(
+                    request_id=f"turn_{query_id}",
+                    parsed_query=parsed_query,
+                    cards=cards,
+                    products=products,
+                    candidates=candidates,
+                )
+                trace.presentation["recommendation_plan"] = {
+                    "request_id": recommendation_plan.request_id,
+                    "item_count": len(recommendation_plan.items),
+                    "sku_ids": [item.sku_id for item in recommendation_plan.items],
+                    "core_constraints": recommendation_plan.core_constraints,
+                }
+                stream_state: dict = {}
+                with timer.measure("response_generation", "流式生成推荐方案正文"):
+                    async for section_event in self._stream_recommendation_presentation_events(
+                        timer=timer,
+                        plan=recommendation_plan,
+                        cards=cards,
+                        stream_state=stream_state,
+                        initial_sequence=recommendation_sequence or 0,
+                    ):
+                        yield section_event
+                        trace.legacy_sse_events.append(section_event.event)
+                timer.mark_model_call(
+                    module="response_generation",
+                    provider=self.response_generator.llm_client.__class__.__name__,
+                    purpose="stream_recommendation_presentation",
+                    duration_ms=timer.last_duration("response_generation"),
+                    called=self.response_generator.last_llm_called,
+                    call_debug=self._llm_call_debug(),
+                )
+                recommendation_stream_texts = dict(stream_state.get("texts") or {})
+                response_text = self._recommendation_response_text(recommendation_plan, recommendation_stream_texts)
+                if tool_prefix_messages and not response_text.startswith(tool_prefix_messages[0]):
+                    response_text = "\n".join(tool_prefix_messages) + "\n\n" + response_text
+                trace.llm_called = trace.llm_called or self.response_generator.last_llm_called
+                trace.response_strategy = self.response_generator.last_response_strategy
+                trace.presentation["recommendation_stream"] = {
+                    "enabled": True,
+                    "degraded": bool(stream_state.get("degraded")),
+                    "first_delta_ms": stream_state.get("first_delta_ms"),
+                    "completed_section_count": stream_state.get("completed_section_count"),
+                    "texts_by_section": recommendation_stream_texts,
+                }
             with timer.measure("memory_write_assistant_message", "写入系统回复到短期记忆"):
                 self.session_memory.append_message(session_id, role="assistant", content=response_text)
 
@@ -803,17 +881,19 @@ class ShoppingAgent:
                 yield SSEEvent(event="clarification", data={"question": response_text, "missing_slots": decision.missing_slots})
                 trace.legacy_sse_events.append("clarification")
 
-            yield self._response_completed_event(timer=timer, response_text=response_text)
-            trace.legacy_sse_events.append("response_completed")
+            if not recommendation_stream_used:
+                yield self._response_completed_event(timer=timer, response_text=response_text)
+                trace.legacy_sse_events.append("response_completed")
 
-            for chunk in self._chunk_text(response_text):
-                yield SSEEvent(event="token", data={"text": chunk, "content": chunk})
-                trace.legacy_sse_events.append("token")
-                await asyncio.sleep(0)
+                if not self._should_stream_recommendation_sections(decision, cards):
+                    for chunk in self._chunk_text(response_text):
+                        yield SSEEvent(event="token", data={"text": chunk, "content": chunk})
+                        trace.legacy_sse_events.append("token")
+                        await asyncio.sleep(0)
 
             if cards and decision.flow != DialogueFlow.PRODUCT_QA:
-                if self._should_stream_recommendation_sections(decision, cards):
-                    for section_event in self._recommendation_section_events(cards, query_id):
+                if self._should_stream_recommendation_sections(decision, cards) and not recommendation_stream_used:
+                    for section_event in self._recommendation_section_events(cards, query_id, timer=timer):
                         yield section_event
                         trace.legacy_sse_events.append(section_event.event)
                         await asyncio.sleep(0)
@@ -854,6 +934,16 @@ class ShoppingAgent:
                             comparison_dimensions=self._comparison_dimensions(parsed_query),
                             source_event_id=reference_resolution.get("source_event_id"),
                         )
+
+            if recommendation_stream_used:
+                yield self._response_completed_event(
+                    timer=timer,
+                    response_text=response_text,
+                    request_id=recommendation_plan.request_id if recommendation_plan else f"turn_{query_id}",
+                    sequence=int(stream_state.get("last_sequence") or 0) + 1,
+                    expose_text=False,
+                )
+                trace.legacy_sse_events.append("response_completed")
 
             if alternatives:
                 with timer.measure("alternative_card_build", "生成备选商品卡片"):
@@ -1399,7 +1489,10 @@ class ShoppingAgent:
         *,
         timer: RuntimeTimer,
         model_route: ModelRouteDecision,
+        request_id: str | None = None,
+        sequence: int | None = None,
     ) -> SSEEvent:
+        elapsed_ms = timer.elapsed_ms()
         return SSEEvent(
             event="generation_started",
             data={
@@ -1407,8 +1500,11 @@ class ShoppingAgent:
                 "stage_key": "response_composition",
                 "display_label": "生成推荐结论",
                 "message": "正在生成推荐结论",
-                "elapsed_ms": timer.elapsed_ms(),
+                "elapsed_ms": elapsed_ms,
+                "duration_ms": elapsed_ms,
                 "stream_supported": self._llm_supports_response_streaming(),
+                **({"request_id": request_id} if request_id else {}),
+                **({"sequence": sequence} if sequence is not None else {}),
             },
         )
 
@@ -1417,25 +1513,34 @@ class ShoppingAgent:
         *,
         timer: RuntimeTimer,
         response_text: str,
+        request_id: str | None = None,
+        sequence: int | None = None,
+        expose_text: bool = True,
     ) -> SSEEvent:
         response_duration_ms = timer.last_duration("response_generation")
+        total_duration_ms = timer.elapsed_ms()
         return SSEEvent(
             event="response_completed",
             data={
                 "stage_id": "response_generation",
                 "stage_key": "response_composition",
                 "display_label": "生成推荐结论",
-                "text": response_text,
-                "content": response_text,
+                "text": response_text if expose_text else "",
+                "content": response_text if expose_text else "",
                 "stage_duration_ms": response_duration_ms,
-                "total_duration_ms": timer.elapsed_ms(),
+                "total_duration_ms": total_duration_ms,
+                "duration_ms": total_duration_ms,
                 "stream_supported": self._llm_supports_response_streaming(),
+                **({"request_id": request_id} if request_id else {}),
+                **({"sequence": sequence} if sequence is not None else {}),
             },
         )
 
     def _llm_supports_response_streaming(self) -> bool:
-        stream_method = getattr(self.response_generator.llm_client, "stream_generate_response", None)
-        return callable(stream_method)
+        support_method = getattr(self.response_generator.llm_client, "supports_response_streaming", None)
+        if callable(support_method):
+            return bool(support_method())
+        return False
 
     def _refresh_local_model_status(self, model_route: ModelRouteDecision) -> tuple[ModelRouteDecision, dict]:
         if not self.model_router.local_models:
@@ -1458,70 +1563,387 @@ class ShoppingAgent:
             DialogueFlow.NO_RESULT,
         }
 
-    def _recommendation_section_events(self, cards: list[ProductCard], query_id: str) -> list[SSEEvent]:
-        events: list[SSEEvent] = []
-        turn_id = f"turn_{query_id}"
-        for index, card in enumerate(cards, start=1):
-            presentation = card.presentation
-            option_label = (
-                _clean_optional_text(presentation.option_label if presentation else None)
-                or self._option_label(index)
-            )
-            reason = ((presentation.reason if presentation else None) or card.reason or "").strip()
-            trade_off = _clean_optional_text(presentation.trade_off if presentation else None)
-            content_source = presentation.content_source if presentation else "fallback"
-            common = {
-                "turn_id": turn_id,
-                "section_index": index,
-                "sku_id": card.sku_id,
-                "option_label": option_label,
+    async def _stream_recommendation_presentation_events(
+        self,
+        *,
+        timer: RuntimeTimer,
+        plan: RecommendationPlan,
+        cards: list[ProductCard],
+        stream_state: dict,
+        initial_sequence: int = 0,
+    ) -> AsyncIterator[SSEEvent]:
+        parser = RecommendationPresentationParser()
+        item_by_section = {item.section_id: item for item in plan.items}
+        card_index_by_section = {item.section_id: item.rank - 1 for item in plan.items}
+        started_sections: set[int] = set()
+        completed_sections: set[int] = set()
+        text_by_section: dict[int, str] = {item.section_id: "" for item in plan.items}
+        source_by_section: dict[int, str] = {}
+        sequence = initial_sequence
+        first_delta_ms: float | None = None
+        last_delta_at: float | None = None
+
+        def next_sequence() -> int:
+            nonlocal sequence
+            sequence += 1
+            return sequence
+
+        def common_payload(section_id: int, seq: int) -> dict:
+            item = item_by_section[section_id]
+            card = cards[card_index_by_section[section_id]]
+            return {
+                "request_id": plan.request_id,
+                "turn_id": plan.request_id,
+                "section_id": section_id,
+                "section_index": item.rank,
+                "product_id": item.product_id,
+                "sku_id": item.sku_id,
+                "option_label": item.option_label,
+                "sequence": seq,
+                "duration_ms": timer.elapsed_ms(),
+                "product_name": card.name,
+                "brand": card.brand,
             }
+
+        def start_event(section_id: int) -> SSEEvent | None:
+            if section_id not in item_by_section or section_id in started_sections:
+                return None
+            started_sections.add(section_id)
+            seq = next_sequence()
+            return SSEEvent(
+                event="recommendation_section_start",
+                data={
+                    **common_payload(section_id, seq),
+                    "event_id": f"{plan.request_id}:{section_id}:start:{seq}",
+                },
+            )
+
+        def delta_event(section_id: int, delta: str, *, source: str) -> SSEEvent | None:
+            nonlocal first_delta_ms, last_delta_at
+            if section_id not in item_by_section or not delta:
+                return None
+            text_by_section[section_id] = text_by_section.get(section_id, "") + delta
+            source_by_section.setdefault(section_id, source)
+            if first_delta_ms is None:
+                first_delta_ms = timer.elapsed_ms()
+            seq = next_sequence()
+            now = perf_counter()
+            interval_ms = None if last_delta_at is None else round((now - last_delta_at) * 1000, 2)
+            last_delta_at = now
+            item = item_by_section[section_id]
+            logger.info(
+                "[recommendation_text_delta] path=streaming source=%s request_id=%s section_id=%s section_index=%s seq=%s len=%s cumulative_len=%s interval_ms=%s ts=%s",
+                source,
+                plan.request_id,
+                section_id,
+                item.rank,
+                seq,
+                len(delta),
+                len(text_by_section.get(section_id, "")),
+                interval_ms,
+                datetime.now().isoformat(timespec="milliseconds"),
+            )
+            return SSEEvent(
+                event="recommendation_text_delta",
+                data={
+                    **common_payload(section_id, seq),
+                    "event_id": f"{plan.request_id}:{section_id}:delta:{seq}",
+                    "delta": delta,
+                },
+            )
+
+        def finish_events(section_id: int) -> list[SSEEvent]:
+            if section_id not in item_by_section or section_id in completed_sections:
+                return []
+            item = item_by_section[section_id]
+            card_index = card_index_by_section[section_id]
+            reason = text_by_section.get(section_id, "").strip() or _fallback_plan_reason(item)
+            source = source_by_section.get(section_id, "fallback")
+            cards[card_index] = self._card_with_presentation_reason(cards[card_index], item, reason, source)
+            completed_sections.add(section_id)
+            text_by_section[section_id] = reason
+            text_done_seq = next_sequence()
+            product_seq = next_sequence()
+            section_done_seq = next_sequence()
+            logger.info(
+                "[recommendation_text_done] path=streaming request_id=%s section_id=%s section_index=%s seq=%s len=%s ts=%s",
+                plan.request_id,
+                section_id,
+                item.rank,
+                text_done_seq,
+                len(reason),
+                datetime.now().isoformat(timespec="milliseconds"),
+            )
+            return [
+                SSEEvent(
+                    event="recommendation_text_done",
+                    data={
+                        **common_payload(section_id, text_done_seq),
+                        "event_id": f"{plan.request_id}:{section_id}:text_done:{text_done_seq}",
+                        "reason": reason,
+                        "trade_off": item.fallback_trade_off,
+                        "content_source": source,
+                    },
+                ),
+                SSEEvent(
+                    event="product_card",
+                    data={
+                        **common_payload(section_id, product_seq),
+                        "event_id": f"{plan.request_id}:{section_id}:product_card:{product_seq}",
+                        "product": cards[card_index].model_dump(),
+                    },
+                ),
+                SSEEvent(
+                    event="recommendation_section_done",
+                    data={
+                        **common_payload(section_id, section_done_seq),
+                        "event_id": f"{plan.request_id}:{section_id}:section_done:{section_done_seq}",
+                    },
+                ),
+            ]
+
+        async def emit_parsed(parsed_event) -> AsyncIterator[SSEEvent]:
+            section_id = parsed_event.section_id
+            if section_id not in item_by_section:
+                return
+            if parsed_event.event_type == "section_start":
+                event = start_event(section_id)
+                if event is not None:
+                    yield event
+            elif parsed_event.event_type == "text_delta":
+                event = start_event(section_id)
+                if event is not None:
+                    yield event
+                delta = delta_event(section_id, parsed_event.text, source="llm")
+                if delta is not None:
+                    yield delta
+            elif parsed_event.event_type == "section_end":
+                for event in finish_events(section_id):
+                    yield event
+
+        def degraded_event(reason: str) -> SSEEvent:
+            seq = next_sequence()
+            return SSEEvent(
+                event="generation_degraded",
+                data={
+                    "request_id": plan.request_id,
+                    "sequence": seq,
+                    "duration_ms": timer.elapsed_ms(),
+                    "reason": reason,
+                    "message": "recommendation presentation stream degraded; falling back to existing card reasons",
+                },
+            )
+
+        async def emit_missing(reason: str) -> AsyncIterator[SSEEvent]:
+            if reason:
+                yield degraded_event(reason)
+            for item in plan.items:
+                section_id = item.section_id
+                if section_id in completed_sections:
+                    continue
+                event = start_event(section_id)
+                if event is not None:
+                    yield event
+                if not text_by_section.get(section_id):
+                    delta = delta_event(section_id, _fallback_plan_reason(item), source="fallback")
+                    if delta is not None:
+                        yield delta
+                for done_event in finish_events(section_id):
+                    yield done_event
+
+        stream_state.update({"texts": text_by_section, "degraded": False, "first_delta_ms": None})
+        try:
+            for delta in self.response_generator.stream_recommendation_presentation(plan):
+                for parsed_event in parser.feed(delta):
+                    async for event in emit_parsed(parsed_event):
+                        yield event
+                        await asyncio.sleep(0)
+            for parsed_event in parser.finish():
+                async for event in emit_parsed(parsed_event):
+                    yield event
+                    await asyncio.sleep(0)
+            missing = [item.section_id for item in plan.items if item.section_id not in completed_sections]
+            if missing:
+                stream_state["degraded"] = True
+                async for event in emit_missing("missing_sections"):
+                    yield event
+                    await asyncio.sleep(0)
+        except Exception as exc:
+            stream_state["degraded"] = True
+            stream_state["error"] = exc.__class__.__name__
+            async for event in emit_missing(f"stream_exception:{exc.__class__.__name__}"):
+                yield event
+                await asyncio.sleep(0)
+        finally:
+            stream_state["texts"] = dict(text_by_section)
+            stream_state["first_delta_ms"] = first_delta_ms
+            stream_state["completed_section_count"] = len(completed_sections)
+            stream_state["last_sequence"] = sequence
+
+    def _recommendation_section_events(
+        self,
+        cards: list[ProductCard],
+        query_id: str,
+        *,
+        timer: RuntimeTimer,
+    ) -> list[SSEEvent]:
+        request_id = f"turn_{query_id}"
+        sequence = 0
+        last_delta_at: float | None = None
+        events = [
+            SSEEvent(
+                event="generation_degraded",
+                data={
+                    "request_id": request_id,
+                    "sequence": sequence,
+                    "duration_ms": timer.elapsed_ms(),
+                    "reason": "response_streaming_not_supported",
+                    "message": "recommendation presentation stream unavailable; using existing card reasons",
+                },
+            )
+        ]
+        for index, card in enumerate(cards, start=1):
+            section_id = index - 1
+            presentation = card.presentation
+            reason = (
+                (presentation.reason if presentation else None)
+                or card.reason
+                or card.highlight_short
+                or ""
+            ).strip()
+            option_label = (presentation.option_label if presentation else None) or self._option_label(index)
+
+            def payload(seq: int) -> dict:
+                return {
+                    "request_id": request_id,
+                    "turn_id": request_id,
+                    "section_id": section_id,
+                    "section_index": index,
+                    "product_id": card.product_id,
+                    "sku_id": card.sku_id,
+                    "option_label": option_label,
+                    "sequence": seq,
+                    "duration_ms": timer.elapsed_ms(),
+                    "product_name": card.name,
+                    "brand": card.brand,
+                }
+
+            sequence += 1
             events.append(
                 SSEEvent(
                     event="recommendation_section_start",
                     data={
-                        **common,
-                        "event_id": f"{turn_id}:{index}:start",
-                        "product_name": card.name,
-                        "brand": card.brand,
+                        **payload(sequence),
+                        "event_id": f"{request_id}:{section_id}:fallback_start:{sequence}",
                     },
                 )
             )
             if reason:
-                for chunk_index, chunk in enumerate(self._chunk_text(reason, chunk_size=36), start=1):
-                    events.append(
-                        SSEEvent(
-                            event="recommendation_text_delta",
-                            data={
-                                **common,
-                                "event_id": f"{turn_id}:{index}:delta:{chunk_index}",
-                                "delta": chunk,
-                            },
-                        )
+                sequence += 1
+                now = perf_counter()
+                interval_ms = None if last_delta_at is None else round((now - last_delta_at) * 1000, 2)
+                last_delta_at = now
+                logger.info(
+                    "[recommendation_text_delta] path=fallback source=fallback request_id=%s section_id=%s section_index=%s seq=%s len=%s interval_ms=%s ts=%s",
+                    request_id,
+                    section_id,
+                    index,
+                    sequence,
+                    len(reason),
+                    interval_ms,
+                    datetime.now().isoformat(timespec="milliseconds"),
+                )
+                events.append(
+                    SSEEvent(
+                        event="recommendation_text_delta",
+                        data={
+                            **payload(sequence),
+                            "event_id": f"{request_id}:{section_id}:fallback_delta:{sequence}",
+                            "delta": reason,
+                        },
                     )
+                )
+            sequence += 1
+            logger.info(
+                "[recommendation_text_done] path=fallback request_id=%s section_id=%s section_index=%s seq=%s len=%s ts=%s",
+                request_id,
+                section_id,
+                index,
+                sequence,
+                len(reason),
+                datetime.now().isoformat(timespec="milliseconds"),
+            )
             events.append(
                 SSEEvent(
                     event="recommendation_text_done",
                     data={
-                        **common,
-                        "event_id": f"{turn_id}:{index}:text_done",
+                        **payload(sequence),
+                        "event_id": f"{request_id}:{section_id}:fallback_text_done:{sequence}",
                         "reason": reason,
-                        "trade_off": trade_off,
-                        "content_source": content_source,
+                        "trade_off": presentation.trade_off if presentation else None,
+                        "content_source": presentation.content_source if presentation else "fallback",
                     },
                 )
             )
+            sequence += 1
             events.append(
                 SSEEvent(
                     event="product_card",
                     data={
-                        **common,
-                        "event_id": f"{turn_id}:{index}:product_card",
+                        **payload(sequence),
+                        "event_id": f"{request_id}:{section_id}:fallback_product_card:{sequence}",
                         "product": card.model_dump(),
                     },
                 )
             )
+            sequence += 1
+            events.append(
+                SSEEvent(
+                    event="recommendation_section_done",
+                    data={
+                        **payload(sequence),
+                        "event_id": f"{request_id}:{section_id}:fallback_section_done:{sequence}",
+                    },
+                )
+            )
         return events
+
+    def _card_with_presentation_reason(
+        self,
+        card: ProductCard,
+        item,
+        reason: str,
+        content_source: str,
+    ) -> ProductCard:
+        current = card.presentation
+        presentation = (
+            current.model_copy(
+                update={
+                    "type": "recommendation",
+                    "option_label": item.option_label,
+                    "reason": reason,
+                    "content_source": content_source,
+                }
+            )
+            if current is not None
+            else ProductPresentation(
+                type="recommendation",
+                option_label=item.option_label,
+                reason=reason,
+                trade_off=item.fallback_trade_off,
+                content_source=content_source,
+            )
+        )
+        return card.model_copy(update={"presentation": presentation})
+
+    @staticmethod
+    def _recommendation_response_text(plan: RecommendationPlan, texts: dict[int, str]) -> str:
+        lines = []
+        for item in plan.items:
+            text = (texts.get(item.section_id) or item.fallback_reason or "").strip()
+            if text:
+                lines.append(f"{item.option_label} {item.name}: {text}")
+        return "\n".join(lines)
 
     @staticmethod
     def _option_label(index: int) -> str:
@@ -2244,6 +2666,15 @@ def _clean_optional_text(value: object) -> str | None:
     if not text or text.lower() == "null":
         return None
     return text
+
+
+def _fallback_plan_reason(item) -> str:
+    if item.fallback_reason:
+        return item.fallback_reason
+    points = "、".join(item.matching_points[:3])
+    if points:
+        return f"{item.name} 当前价格 ¥{item.price:g}，主要匹配点是{points}，可以先查看卡片细节。"
+    return f"{item.name} 当前价格 ¥{item.price:g}，和你当前想看的方向比较接近，可以作为{item.plan_type}查看。"
 
 
 def _minimal_error_turn_output(session_id: str, user_id: str, exc: Exception) -> dict:

@@ -166,11 +166,14 @@ data class BackendNavigationUiModel(
 
 data class RecommendationSectionUiModel(
     val eventId: String? = null,
+    val requestId: String? = null,
+    val sequence: Long? = null,
     val turnId: String,
     val sectionIndex: Int,
     val skuId: String,
     val optionLabel: String,
     val text: String = "",
+    val displayText: String = "",
     val reason: String? = null,
     val tradeOff: String? = null,
     val productName: String? = null,
@@ -212,6 +215,8 @@ data class SpecSelectionUiModel(
 
 data class ChatStreamEvent(
     val event: String,
+    val requestId: String? = null,
+    val sequence: Long? = null,
     val text: String? = null,
     val progressText: String? = null,
     val progressStageId: String? = null,

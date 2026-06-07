@@ -1,6 +1,7 @@
 import json
 import re
 from time import perf_counter
+from typing import Iterator
 
 from app.llm.base import BaseLLMClient
 from app.models.domain import IntentType
@@ -9,6 +10,9 @@ from app.models.domain import IntentType
 class MockLLMClient(BaseLLMClient):
     def __init__(self) -> None:
         self.last_call_debug: dict = {}
+
+    def supports_response_streaming(self) -> bool:
+        return True
 
     def generate_response(
         self,
@@ -39,6 +43,42 @@ class MockLLMClient(BaseLLMClient):
             "product_name_count": len(product_names),
         }
         return output
+
+    def stream_generate_response(
+        self,
+        intent: IntentType,
+        message: str,
+        context: str,
+        product_names: list[str],
+    ) -> Iterator[str]:
+        if "RECOMMENDATION_PRESENTATION_STREAM" in context:
+            output = _mock_recommendation_stream_response(context)
+        else:
+            output = self._generate_response_internal(
+                intent=intent,
+                message=message,
+                context=context,
+                product_names=product_names,
+            )
+        self.last_call_debug = {
+            "llm_provider": "mock",
+            "llm_is_mock": True,
+            "llm_call_attempted": True,
+            "http_request_sent": False,
+            "http_request_succeeded": False,
+            "http_status_code": None,
+            "raw_output_received": bool(output),
+            "raw_output_preview": output[:2000],
+            "fallback_triggered": False,
+            "fallback_reason": None,
+            "intent": intent.value,
+            "context_length": len(context),
+            "product_name_count": len(product_names),
+            "stream": True,
+            "duration_ms": 0,
+        }
+        for index in range(0, len(output), 17):
+            yield output[index:index + 17]
 
     def _generate_response_internal(
         self,
@@ -594,6 +634,35 @@ def _structured_presentation_response(intent: IntentType, context: str) -> str:
         },
         ensure_ascii=False,
     )
+
+
+def _mock_recommendation_stream_response(context: str) -> str:
+    marker = "RecommendationPlan JSON:\n"
+    if marker not in context:
+        return "[[SECTION:0]]\n我先按当前商品事实整理了一个可查看的方案，具体价格和参数以商品卡片为准。\n[[END_SECTION]]\n"
+    raw = context.split(marker, 1)[1].strip()
+    try:
+        plan = json.loads(raw)
+    except Exception:
+        return "[[SECTION:0]]\n我先按当前商品事实整理了一个可查看的方案，具体价格和参数以商品卡片为准。\n[[END_SECTION]]\n"
+    sections = []
+    for item in (plan.get("items") or [])[:5]:
+        section_id = int(item.get("section_id") or 0)
+        facts = item.get("facts") if isinstance(item.get("facts"), dict) else {}
+        points = item.get("matching_points") if isinstance(item.get("matching_points"), list) else []
+        cautions = item.get("cautions") if isinstance(item.get("cautions"), list) else []
+        name = item.get("name") or "这款商品"
+        price = item.get("price")
+        price_text = f"，当前价格¥{price:g}" if isinstance(price, (int, float)) else ""
+        point_text = "、".join(str(point) for point in points[:3] if str(point).strip())
+        if not point_text:
+            point_text = str(facts.get("highlight_short") or item.get("fallback_reason") or "和你的需求方向接近")
+        caution_text = ""
+        if cautions:
+            caution_text = f"需要注意的是{cautions[0]}，下单前可以再看一下卡片细节。"
+        text = f"{name}{price_text}，作为{item.get('plan_type') or '推荐方案'}，主要匹配点是{point_text}。{caution_text}"
+        sections.append(f"[[SECTION:{section_id}]]\n{text}\n[[END_SECTION]]")
+    return "\n".join(sections) + ("\n" if sections else "")
 
 
 def _mock_presentation_reason(item: dict) -> str:

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Iterator
 
 from app.models.domain import IntentType
 
@@ -26,3 +26,15 @@ class BaseLLMClient(ABC):
 
     def analyze_image(self, context: dict[str, Any]) -> dict[str, Any]:
         return {}
+
+    def supports_response_streaming(self) -> bool:
+        return False
+
+    def stream_generate_response(
+        self,
+        intent: IntentType,
+        message: str,
+        context: str,
+        product_names: list[str],
+    ) -> Iterator[str]:
+        raise NotImplementedError("This LLM client does not support response streaming.")

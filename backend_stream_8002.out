@@ -1,0 +1,12 @@
+INFO:     127.0.0.1:50991 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65279 - "GET /api/cart?session_id=android-demo-session-8f404dd6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60658 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58966 - "GET /api/cart?session_id=android-demo-session-8f404dd6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "POST /api/chat/stream HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52873 - "GET /static/dataset/2_%E9%8F%81%E6%89%AE%E7%88%9C%E9%90%A2%E9%9D%9B%E7%93%99/images/p_digital_016_live.jpg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "GET /api/cart?session_id=android-demo-session-8f404dd6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "GET /static/dataset/2_%E9%8F%81%E6%89%AE%E7%88%9C%E9%90%A2%E9%9D%9B%E7%93%99/images/p_digital_002_live.jpg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "GET /static/dataset/2_%E9%8F%81%E6%89%AE%E7%88%9C%E9%90%A2%E9%9D%9B%E7%93%99/images/p_digital_010_live.jpg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "GET /api/products/p_digital_010 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "POST /api/cart/add HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58615 - "GET /static/dataset/2_%E9%8F%81%E6%89%AE%E7%88%9C%E9%90%A2%E9%9D%9B%E7%93%99/images/p_digital_002_live.jpg HTTP/1.1" 200 OK

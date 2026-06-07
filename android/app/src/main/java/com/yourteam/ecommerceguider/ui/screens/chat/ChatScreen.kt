@@ -68,6 +68,7 @@ fun ChatScreen(
     val specSelections by viewModel.specSelections.collectAsState()
     val activeProductCardSpecSelection by viewModel.activeProductCardSpecSelection.collectAsState()
     val activeTurnId by viewModel.activeTurnId.collectAsState()
+    val activeTurnAllowsEmptyProducts by viewModel.activeTurnAllowsEmptyProducts.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -316,7 +317,13 @@ fun ChatScreen(
                                         }
                                     }
                                 }
-                            } else if (message.turnId == activeTurnId && !isStreaming && answer.isNotBlank()) {
+                            } else if (
+                                message.turnId == activeTurnId &&
+                                activeTurnAllowsEmptyProducts &&
+                                turnSpecSelections.isEmpty() &&
+                                !isStreaming &&
+                                answer.isNotBlank()
+                            ) {
                                 item(key = "empty-products-${message.turnId}") { EmptyProductsCard() }
                             }
                         }

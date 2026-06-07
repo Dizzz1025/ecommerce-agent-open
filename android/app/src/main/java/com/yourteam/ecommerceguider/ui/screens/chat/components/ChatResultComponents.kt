@@ -488,6 +488,10 @@ fun SpecSelectionCard(
     selection: SpecSelectionUiModel,
     onOptionClick: (SpecSelectionOptionUiModel) -> Unit,
 ) {
+    val completedText = selection.successText
+        ?.takeIf { it.isNotBlank() }
+        ?: if (selection.completed) "已加入购物车：${selection.productName}" else null
+    val errorText = selection.errorText?.takeIf { it.isNotBlank() }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -499,84 +503,102 @@ fun SpecSelectionCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = "请选择规格",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = selection.productName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SpatialTextSecondary,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                selection.options.forEach { option ->
-                    val chosen = selection.selectedSkuId == option.skuId
-                    val locked = selection.selectedSkuId != null
-                    val enabled = option.available && option.stock != 0 && !locked
-                    OutlinedButton(
-                        onClick = { onOptionClick(option) },
-                        enabled = enabled,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MediumShape,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (chosen) {
-                                SpatialAccent
-                            } else {
-                                SpatialGlassBorderColor
-                            },
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = if (chosen) {
-                                SpatialAccentMuted
-                            } else {
-                                SpatialGlassControl
-                            },
-                            contentColor = SpatialTextPrimary,
-                            disabledContainerColor = SpatialGlassControlMuted,
-                        ),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                        ) {
-                            Text(
-                                text = option.specText,
-                                style = MaterialTheme.typography.labelLarge,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (option.stock == 0) {
+            if (selection.completed && completedText != null) {
+                Text(
+                    text = completedText,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = SpatialAccent,
+                )
+            } else {
+                Text(
+                    text = "请选择规格",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = selection.productName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SpatialTextSecondary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                errorText?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (!selection.hideOptions) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        selection.options.forEach { option ->
+                            val chosen = selection.selectedSkuId == option.skuId
+                            val locked = selection.selectedSkuId != null
+                            val enabled = option.available && option.stock != 0 && !locked
+                            OutlinedButton(
+                                onClick = { onOptionClick(option) },
+                                enabled = enabled,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MediumShape,
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = if (chosen) {
+                                        SpatialAccent
+                                    } else {
+                                        SpatialGlassBorderColor
+                                    },
+                                ),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (chosen) {
+                                        SpatialAccentMuted
+                                    } else {
+                                        SpatialGlassControl
+                                    },
+                                    contentColor = SpatialTextPrimary,
+                                    disabledContainerColor = SpatialGlassControlMuted,
+                                ),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                                ) {
+                                    Text(
+                                        text = option.specText,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    if (option.stock == 0) {
+                                        Text(
+                                            text = "暂时无库存",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = SpatialTextSecondary,
+                                            maxLines = 1,
+                                        )
+                                    }
+                                }
                                 Text(
-                                    text = "暂时无库存",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = SpatialTextSecondary,
+                                    text = if (chosen) "已加入" else "¥${formatPrice(option.price)}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (chosen) {
+                                        SpatialAccent
+                                    } else {
+                                        SpatialTextPrimary
+                                    },
                                     maxLines = 1,
                                 )
                             }
                         }
-                        Text(
-                            text = if (chosen) "已加入" else "¥${formatPrice(option.price)}",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = if (chosen) {
-                                SpatialAccent
-                            } else {
-                                SpatialTextPrimary
-                            },
-                            maxLines = 1,
-                        )
                     }
+                    Text(
+                        text = "点击规格后将直接加入购物车",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SpatialTextSecondary,
+                    )
                 }
             }
-            Text(
-                text = "点击规格后将直接加入购物车",
-                style = MaterialTheme.typography.bodySmall,
-                color = SpatialTextSecondary,
-            )
         }
     }
 }

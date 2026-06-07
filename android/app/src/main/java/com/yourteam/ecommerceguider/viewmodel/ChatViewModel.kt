@@ -60,6 +60,9 @@ class ChatViewModel(
     private val _activeTurnId = MutableStateFlow<String?>(null)
     val activeTurnId: StateFlow<String?> = _activeTurnId.asStateFlow()
 
+    private val _activeTurnAllowsEmptyProducts = MutableStateFlow(false)
+    val activeTurnAllowsEmptyProducts: StateFlow<Boolean> = _activeTurnAllowsEmptyProducts.asStateFlow()
+
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
 
@@ -178,6 +181,7 @@ class ChatViewModel(
             _cartTip.tryEmit("规格信息缺失，请重新选择商品")
             return
         }
+        clearSpecSelectionError(selection)
         viewModelScope.launch {
             runCatching {
                 repository.addToCart(
@@ -198,12 +202,20 @@ class ChatViewModel(
                             _activeProductCardSpecSelection.value = null
                         }
                     } else {
-                        markSpecSelectionChosen(selection, option)
-                        appendSystemCartMessage(selection.turnId, "已加入购物车：${option.specText}")
+                        val successText = buildSpecSelectionSuccessText(selection, option)
+                        markSpecSelectionCompleted(selection, option, successText)
+                        _cartTip.tryEmit(successText)
+                        return@onSuccess
                     }
                     _cartTip.tryEmit("已加入购物车：${option.specText}")
                 }
-                .onFailure { _cartTip.tryEmit("加购失败，请稍后重试") }
+                .onFailure {
+                    val errorText = "加入购物车失败，请稍后重试"
+                    if (selection.source != "product_card") {
+                        markSpecSelectionError(selection, errorText)
+                    }
+                    _cartTip.tryEmit(errorText)
+                }
         }
     }
 
@@ -318,6 +330,7 @@ class ChatViewModel(
         currentRequestStartElapsedMs = startedElapsed
         responseCompletedForCurrentTurn = false
         _activeTurnId.value = turnId
+        _activeTurnAllowsEmptyProducts.value = shouldAllowEmptyProductsCard(userMessage)
         _products.value = emptyList()
         _answer.value = ""
         _errorMessage.value = null
@@ -535,6 +548,47 @@ class ChatViewModel(
             return _recommendationSections.value.isNotEmpty()
         }
         return _recommendationSections.value.any { section -> section.turnId == activeTurn }
+    }
+
+    private fun shouldAllowEmptyProductsCard(userMessage: String): Boolean {
+        val normalized = userMessage.lowercase()
+        val cartTerms = listOf(
+            "购物车",
+            "加入",
+            "加购",
+            "规格",
+            "下单",
+            "结算",
+            "付款",
+            "删除",
+            "移除",
+            "清空",
+            "保留",
+            "数量",
+            "checkout",
+            "cart",
+        )
+        if (cartTerms.any { term -> normalized.contains(term) }) {
+            return false
+        }
+        val recommendationTerms = listOf(
+            "推荐",
+            "帮我找",
+            "找一款",
+            "找一个",
+            "挑",
+            "筛",
+            "筛选",
+            "有没有",
+            "想买",
+            "预算",
+            "适合",
+            "换一款",
+            "换一批",
+            "recommend",
+            "find",
+        )
+        return recommendationTerms.any { term -> normalized.contains(term) }
     }
 
     private fun ensureAssistantMessage(): String {
@@ -1000,7 +1054,13 @@ class ChatViewModel(
         _specSelections.value = if (index >= 0) {
             current.mapIndexed { itemIndex, item ->
                 if (itemIndex == index) {
-                    selection.copy(selectedSkuId = item.selectedSkuId ?: selection.selectedSkuId)
+                    selection.copy(
+                        selectedSkuId = item.selectedSkuId ?: selection.selectedSkuId,
+                        completed = item.completed || selection.completed,
+                        successText = item.successText ?: selection.successText,
+                        errorText = selection.errorText ?: item.errorText,
+                        hideOptions = item.hideOptions || selection.hideOptions,
+                    )
                 } else {
                     item
                 }
@@ -1010,16 +1070,55 @@ class ChatViewModel(
         }
     }
 
-    private fun markSpecSelectionChosen(
+    private fun markSpecSelectionCompleted(
         selection: SpecSelectionUiModel,
         option: SpecSelectionOptionUiModel,
+        successText: String,
     ) {
         _specSelections.value = _specSelections.value.map { item ->
             if (item.stableKey == selection.stableKey) {
-                item.copy(selectedSkuId = option.skuId)
+                item.copy(
+                    selectedSkuId = option.skuId,
+                    completed = true,
+                    successText = successText,
+                    errorText = null,
+                    hideOptions = true,
+                )
             } else {
                 item
             }
+        }
+    }
+
+    private fun markSpecSelectionError(selection: SpecSelectionUiModel, errorText: String) {
+        _specSelections.value = _specSelections.value.map { item ->
+            if (item.stableKey == selection.stableKey) {
+                item.copy(errorText = errorText)
+            } else {
+                item
+            }
+        }
+    }
+
+    private fun clearSpecSelectionError(selection: SpecSelectionUiModel) {
+        _specSelections.value = _specSelections.value.map { item ->
+            if (item.stableKey == selection.stableKey && item.errorText != null) {
+                item.copy(errorText = null)
+            } else {
+                item
+            }
+        }
+    }
+
+    private fun buildSpecSelectionSuccessText(
+        selection: SpecSelectionUiModel,
+        option: SpecSelectionOptionUiModel,
+    ): String {
+        val specText = option.specText.trim()
+        return if (specText.isBlank()) {
+            "已加入购物车：${selection.productName}"
+        } else {
+            "已加入购物车：${selection.productName}，$specText"
         }
     }
 

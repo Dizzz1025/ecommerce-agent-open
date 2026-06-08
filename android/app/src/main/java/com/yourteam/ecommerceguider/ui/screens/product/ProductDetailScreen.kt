@@ -2,76 +2,220 @@
 
 package com.yourteam.ecommerceguider.ui.screens.product
 
+import android.app.Activity
+import android.content.Intent
+import android.util.Log
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.zIndex
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yourteam.ecommerceguider.R
 import com.yourteam.ecommerceguider.data.model.ProductReviewUiModel
 import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
+import com.yourteam.ecommerceguider.theme.AppColors
+import com.yourteam.ecommerceguider.theme.AppDimensions
+import com.yourteam.ecommerceguider.theme.AppElevation
+import com.yourteam.ecommerceguider.theme.AppMotion
+import com.yourteam.ecommerceguider.theme.AppRadius
+import com.yourteam.ecommerceguider.theme.AppSpacing
+import com.yourteam.ecommerceguider.theme.AppTypography
+import com.yourteam.ecommerceguider.ui.components.AppIconButton
+import com.yourteam.ecommerceguider.ui.components.AppIconButtonStyle
+import com.yourteam.ecommerceguider.ui.components.EmptyState
+import com.yourteam.ecommerceguider.ui.components.ErrorState
+import com.yourteam.ecommerceguider.ui.components.LoadingState
+import com.yourteam.ecommerceguider.ui.components.OriginalPriceText
+import com.yourteam.ecommerceguider.ui.components.PriceText
+import com.yourteam.ecommerceguider.ui.components.PriceTextLevel
 import com.yourteam.ecommerceguider.ui.components.ProductImage
+import com.yourteam.ecommerceguider.ui.components.ProductImagePager
+import com.yourteam.ecommerceguider.ui.components.ProductBottomActionBar
+import com.yourteam.ecommerceguider.ui.components.ResolvedImageSource
+import com.yourteam.ecommerceguider.ui.components.TagChip
+import com.yourteam.ecommerceguider.ui.components.TagChipTone
 import com.yourteam.ecommerceguider.ui.components.formatPrice
 import com.yourteam.ecommerceguider.viewmodel.ProductDetailViewModel
 import com.yourteam.ecommerceguider.viewmodel.simpleViewModelFactory
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+private const val PRODUCT_VARIANT_ITEM_INDEX = 1
+private const val PRODUCT_VARIANT_ITEM_KEY = "variant-anchor"
+private const val SHEET_FLING_THRESHOLD = 900f
+private const val DETAIL_SHEET_DEBUG_TAG = "ProductDetailSheet"
+private const val DETAIL_SHEET_DEBUG_LOGS = false
+private val HERO_TITLE_DELIMITERS = arrayOf(
+    "\uFF0C",
+    ",",
+    "\u3002",
+    "\uFF1B",
+    ";",
+    "\u3001",
+    "\uFF5C",
+    "|",
+    "\u2014\u2014",
+    "-",
+    "\uFF1A",
+    ":",
+)
+private val PRODUCT_HERO_CORE_KEYWORDS = listOf(
+    "\u9694\u79BB\u9732",
+    "\u9632\u62A4\u4E73",
+    "\u9632\u6652\u4E73",
+    "\u9632\u6652\u971C",
+    "\u9632\u6652",
+    "\u7CBE\u534E\u6DB2",
+    "\u7CBE\u534E",
+    "\u9762\u971C",
+    "\u4E73\u6DB2",
+    "\u6D01\u9762\u4E73",
+    "\u6D01\u9762",
+    "\u723D\u80A4\u6C34",
+    "\u5316\u5986\u6C34",
+    "\u9762\u819C",
+    "\u53E3\u7EA2",
+    "\u7C89\u5E95\u6DB2",
+    "\u624B\u673A",
+    "\u8033\u673A",
+    "\u80CC\u5305",
+    "\u8DD1\u978B",
+)
+
+private enum class DetailSheetAnchor {
+    Immersive,
+    HalfExpanded,
+    Expanded,
+}
+
+private enum class HeroImageMode {
+    Scene,
+    Packshot,
+}
+
+private enum class HeroImageResolution {
+    Pending,
+    Detail,
+    Original,
+    Failed,
+}
+
+private data class DetailSheetAnchors(
+    val immersiveTopPx: Float,
+    val halfExpandedTopPx: Float,
+    val expandedTopPx: Float,
+) {
+    fun position(anchor: DetailSheetAnchor): Float {
+        return when (anchor) {
+            DetailSheetAnchor.Immersive -> immersiveTopPx
+            DetailSheetAnchor.HalfExpanded -> halfExpandedTopPx
+            DetailSheetAnchor.Expanded -> expandedTopPx
+        }
+    }
+
+    fun nearest(positionPx: Float): DetailSheetAnchor {
+        return DetailSheetAnchor.entries.minBy { anchor ->
+            kotlin.math.abs(position(anchor) - positionPx)
+        }
+    }
+
+    fun nextUp(anchor: DetailSheetAnchor): DetailSheetAnchor {
+        return when (anchor) {
+            DetailSheetAnchor.Immersive -> DetailSheetAnchor.HalfExpanded
+            DetailSheetAnchor.HalfExpanded -> DetailSheetAnchor.Expanded
+            DetailSheetAnchor.Expanded -> DetailSheetAnchor.Expanded
+        }
+    }
+
+    fun nextDown(anchor: DetailSheetAnchor): DetailSheetAnchor {
+        return when (anchor) {
+            DetailSheetAnchor.Immersive -> DetailSheetAnchor.Immersive
+            DetailSheetAnchor.HalfExpanded -> DetailSheetAnchor.Immersive
+            DetailSheetAnchor.Expanded -> DetailSheetAnchor.HalfExpanded
+        }
+    }
+}
 
 @Composable
 fun ProductDetailScreen(
@@ -85,11 +229,18 @@ fun ProductDetailScreen(
     val product by viewModel.product.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val cartMessage by viewModel.cartMessage.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
+    val isAddingToCart by viewModel.isAddingToCart.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val screenScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     var selectedSkuId by rememberSaveable(skuId) { mutableStateOf<String?>(null) }
     var selectedReviewFilter by rememberSaveable(skuId) { mutableStateOf(ReviewFilter.All) }
+    var favorite by rememberSaveable(skuId) { mutableStateOf(false) }
+    var highlightSpecs by rememberSaveable(skuId) { mutableStateOf(false) }
+    val favoriteAddedMessage = stringResource(R.string.product_detail_favorite_added)
+    val favoriteRemovedMessage = stringResource(R.string.product_detail_favorite_removed)
 
     LaunchedEffect(skuId) {
         viewModel.loadProduct(skuId)
@@ -100,73 +251,567 @@ fun ProductDetailScreen(
         selectedSkuId = currentProduct.defaultSelectedSkuId(routeSkuId = skuId)
     }
 
-    LaunchedEffect(cartMessage) {
-        cartMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearCartMessage()
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is ProductDetailUiEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+            }
         }
     }
 
     val selectedSku = product?.selectedSku(selectedSkuId, routeSkuId = skuId)
     val displayPrice = selectedSku?.price ?: product?.price
+    val originalPrice = product?.basePrice?.takeIf { base -> displayPrice != null && base > displayPrice }
+    val canAttemptPurchase = product?.stock?.let { it > 0 } ?: false
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            DetailTopBar(
-                cartItemCount = cartItemCount,
-                onBack = onBack,
-                onCartClick = onCartClick,
-            )
+    LaunchedEffect(selectedSkuId) {
+        if (selectedSku != null) {
+            highlightSpecs = false
+        }
+    }
+
+    ProductDetailImmersiveScaffold(
+        skuId = skuId,
+        product = product,
+        isLoading = isLoading,
+        error = error,
+        selectedSku = selectedSku,
+        selectedSkuId = selectedSkuId,
+        onSkuSelected = {
+            selectedSkuId = it
+            highlightSpecs = false
         },
-        bottomBar = {
-            DetailBottomBar(
-                price = displayPrice,
-                inStock = product?.stock?.let { it > 0 } ?: false,
-                onAddToCart = {
-                    product?.let { viewModel.addToCart(it, selectedSku) }
-                },
-            )
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { innerPadding ->
-        when {
-            isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+        selectedReviewFilter = selectedReviewFilter,
+        onReviewFilterSelected = { selectedReviewFilter = it },
+        displayPrice = displayPrice,
+        originalPrice = originalPrice,
+        canAttemptPurchase = canAttemptPurchase,
+        cartItemCount = cartItemCount,
+        isAddingToCart = isAddingToCart,
+        favorite = favorite,
+        onFavoriteToggle = {
+            favorite = !favorite
+            screenScope.launch {
+                snackbarHostState.showSnackbar(if (favorite) favoriteAddedMessage else favoriteRemovedMessage)
             }
+        },
+        highlightSpecs = highlightSpecs,
+        onHighlightSpecsChange = { highlightSpecs = it },
+        snackbarHostState = snackbarHostState,
+        context = context,
+        screenScope = screenScope,
+        listState = listState,
+        onBack = onBack,
+        onCartClick = onCartClick,
+        onLoadProduct = { viewModel.loadProduct(skuId) },
+        onAddToCart = { currentProduct, currentSku -> viewModel.addToCart(currentProduct, currentSku) },
+    )
+    return
 
-            error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = error.orEmpty(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error,
+    fun promptForMissingSpecs(currentProduct: ProductUiModel) {
+        val message = currentProduct.missingSpecPrompt(selectedSku)
+        highlightSpecs = true
+        screenScope.launch {
+            listState.animateScrollToItem(index = PRODUCT_VARIANT_ITEM_INDEX)
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val heroHeight = (maxHeight * 0.68f).coerceIn(320.dp, 560.dp)
+
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            bottomBar = {
+                ProductBottomActionBar(
+                    price = displayPrice,
+                    originalPrice = originalPrice,
+                    cartItemCount = cartItemCount,
+                    inStock = canAttemptPurchase,
+                    addToCartLoading = isAddingToCart,
+                    onCartClick = onCartClick,
+                    onAddToCart = {
+                        val currentProduct = product ?: return@ProductBottomActionBar
+                        if (currentProduct.skus.isNotEmpty() && selectedSku == null) {
+                            promptForMissingSpecs(currentProduct)
+                        } else {
+                            viewModel.addToCart(currentProduct, selectedSku)
+                        }
+                    },
+                    onBuyNow = {
+                        val currentProduct = product ?: return@ProductBottomActionBar
+                        if (currentProduct.skus.isNotEmpty() && selectedSku == null) {
+                            promptForMissingSpecs(currentProduct)
+                        } else {
+                            screenScope.launch {
+                                snackbarHostState.showSnackbar("立即购买暂未接入商品详情直达流程")
+                            }
+                        }
+                    },
+                )
+            },
+            containerColor = AppColors.Background,
+        ) { innerPadding ->
+            when {
+                isLoading -> {
+                    LoadingState(
+                        modifier = Modifier.padding(innerPadding),
+                        message = "正在加载商品详情",
+                    )
+                }
+
+                error != null -> {
+                    ErrorState(
+                        title = "商品详情加载失败",
+                        message = error,
+                        actionLabel = "重试",
+                        onAction = { viewModel.loadProduct(skuId) },
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                }
+
+                product == null -> {
+                    EmptyState(
+                        title = "未找到该商品",
+                        message = "商品可能已下架或链接已失效。",
+                        actionLabel = "返回",
+                        onAction = onBack,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                }
+
+                else -> {
+                    ProductDetailContent(
+                        product = product!!,
+                        selectedSku = selectedSku,
+                        selectedSkuId = selectedSkuId,
+                        onSkuSelected = {
+                            selectedSkuId = it
+                            highlightSpecs = false
+                        },
+                        selectedReviewFilter = selectedReviewFilter,
+                        onReviewFilterSelected = { selectedReviewFilter = it },
+                        heroHeight = heroHeight,
+                        listState = listState,
+                        highlightSpecs = highlightSpecs,
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
             }
+        }
 
-            product != null -> {
-                ProductDetailContent(
-                    product = product!!,
+        product?.let { currentProduct ->
+            FloatingProductActions(
+                favorite = favorite,
+                onBack = onBack,
+                onFavoriteClick = {
+                    favorite = !favorite
+                    screenScope.launch {
+                        snackbarHostState.showSnackbar(if (favorite) "已收藏" else "已取消收藏")
+                    }
+                },
+                onShareClick = {
+                    val shareText = currentProduct.shareText(selectedSku)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                    }
+                    runCatching {
+                        context.startActivity(Intent.createChooser(intent, "分享商品"))
+                    }.onFailure {
+                        screenScope.launch { snackbarHostState.showSnackbar("分享失败，请稍后重试") }
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailImmersiveScaffold(
+    skuId: String,
+    product: ProductUiModel?,
+    isLoading: Boolean,
+    error: String?,
+    selectedSku: ProductSkuUiModel?,
+    selectedSkuId: String?,
+    onSkuSelected: (String) -> Unit,
+    selectedReviewFilter: ReviewFilter,
+    onReviewFilterSelected: (ReviewFilter) -> Unit,
+    displayPrice: Double?,
+    originalPrice: Double?,
+    canAttemptPurchase: Boolean,
+    cartItemCount: Int,
+    isAddingToCart: Boolean,
+    favorite: Boolean,
+    onFavoriteToggle: () -> Unit,
+    highlightSpecs: Boolean,
+    onHighlightSpecsChange: (Boolean) -> Unit,
+    snackbarHostState: SnackbarHostState,
+    context: android.content.Context,
+    screenScope: kotlinx.coroutines.CoroutineScope,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onBack: () -> Unit,
+    onCartClick: () -> Unit,
+    onLoadProduct: () -> Unit,
+    onAddToCart: (ProductUiModel, ProductSkuUiModel?) -> Unit,
+) {
+    ProductDetailEdgeToEdge()
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+    ) {
+        val density = LocalDensity.current
+        val screenHeightPx = with(density) { maxHeight.toPx() }
+        val expandedTopPx = WindowInsets.statusBars.getTop(density).toFloat() +
+            with(density) { AppSpacing.Md.toPx() }
+        val anchors = remember(screenHeightPx, expandedTopPx, density) {
+            DetailSheetAnchors(
+                immersiveTopPx = screenHeightPx - with(density) { 18.dp.toPx() },
+                halfExpandedTopPx = screenHeightPx * 0.54f,
+                expandedTopPx = expandedTopPx,
+            )
+        }
+        var sheetAnchor by rememberSaveable(skuId) { mutableStateOf(DetailSheetAnchor.Immersive) }
+        var sheetTopPx by remember(skuId) { mutableFloatStateOf(Float.NaN) }
+        val currentSheetTopPx = if (sheetTopPx.isNaN()) anchors.position(sheetAnchor) else sheetTopPx
+
+        fun logSheetDebug(message: String) {
+            if (DETAIL_SHEET_DEBUG_LOGS) {
+                Log.d(DETAIL_SHEET_DEBUG_TAG, message)
+            }
+        }
+
+        LaunchedEffect(anchors) {
+            sheetTopPx = if (sheetTopPx.isNaN()) {
+                anchors.position(sheetAnchor)
+            } else {
+                sheetTopPx.coerceIn(anchors.expandedTopPx, anchors.immersiveTopPx)
+            }
+            logSheetDebug(
+                "containerHeightPx=$screenHeightPx " +
+                    "immersiveAnchor=${anchors.immersiveTopPx} " +
+                    "halfExpandedAnchor=${anchors.halfExpandedTopPx} " +
+                    "expandedAnchor=${anchors.expandedTopPx} " +
+                    "currentSheetOffset=$sheetTopPx",
+            )
+        }
+
+        fun moveSheetBy(deltaY: Float, source: String): Float {
+            val old = if (sheetTopPx.isNaN()) anchors.position(sheetAnchor) else sheetTopPx
+            val new = (old + deltaY).coerceIn(anchors.expandedTopPx, anchors.immersiveTopPx)
+            sheetTopPx = new
+            val consumed = new - old
+            if (DETAIL_SHEET_DEBUG_LOGS && kotlin.math.abs(consumed) > 0.5f) {
+                logSheetDebug(
+                    "source=$source dragDelta=$deltaY consumed=$consumed currentSheetOffset=$sheetTopPx",
+                )
+            }
+            return consumed
+        }
+
+        fun dragSheetBy(source: String, deltaY: Float) {
+            moveSheetBy(deltaY, source)
+        }
+
+        suspend fun animateSheetTo(targetAnchor: DetailSheetAnchor) {
+            sheetAnchor = targetAnchor
+            val start = if (sheetTopPx.isNaN()) anchors.position(targetAnchor) else sheetTopPx
+            animate(
+                initialValue = start,
+                targetValue = anchors.position(targetAnchor),
+                animationSpec = tween(
+                    durationMillis = AppMotion.Slow,
+                    easing = AppMotion.StandardEasing,
+                ),
+            ) { value, _ ->
+                sheetTopPx = value
+            }
+        }
+
+        suspend fun settleSheet(velocityY: Float = 0f) {
+            val nearest = anchors.nearest(if (sheetTopPx.isNaN()) currentSheetTopPx else sheetTopPx)
+            val target = when {
+                velocityY < -SHEET_FLING_THRESHOLD -> anchors.nextUp(nearest)
+                velocityY > SHEET_FLING_THRESHOLD -> anchors.nextDown(nearest)
+                else -> nearest
+            }
+            logSheetDebug(
+                "settle velocityY=$velocityY currentSheetOffset=$currentSheetTopPx targetState=$target",
+            )
+            animateSheetTo(target)
+        }
+
+        fun handleBack() {
+            val current = anchors.nearest(currentSheetTopPx)
+            if (current == DetailSheetAnchor.Immersive) {
+                onBack()
+            } else {
+                screenScope.launch { animateSheetTo(anchors.nextDown(current)) }
+            }
+        }
+
+        BackHandler(enabled = true) {
+            handleBack()
+        }
+
+        when {
+            isLoading -> {
+                LoadingState(
+                    modifier = Modifier.fillMaxSize(),
+                    message = "正在加载商品详情",
+                )
+            }
+
+            error != null -> {
+                ErrorState(
+                    title = "商品详情加载失败",
+                    message = error,
+                    actionLabel = "重试",
+                    onAction = onLoadProduct,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            product == null -> {
+                EmptyState(
+                    title = "未找到该商品",
+                    message = "商品可能已下架或链接已失效。",
+                    actionLabel = "返回",
+                    onAction = onBack,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+
+            else -> {
+                val sheetProgress = ((anchors.immersiveTopPx - currentSheetTopPx) /
+                    (anchors.immersiveTopPx - anchors.halfExpandedTopPx)).coerceIn(0f, 1f)
+                val heroAlpha = (1f - sheetProgress).coerceIn(0f, 1f)
+                val bottomBarAlpha = sheetProgress
+                val heroImages = remember(product.skuId, product.imageUrl, product.detailImageUrl) {
+                    product.detailImages()
+                }
+                val heroFallbackImages = remember(product.skuId, product.imageUrl, product.detailImageUrl) {
+                    product.detailFallbackImages()
+                }
+                val heroPagerState = rememberPagerState(pageCount = { heroImages.size.coerceAtLeast(1) })
+                var heroImageResolution by remember(
+                    product.skuId,
+                    heroImages.firstOrNull(),
+                    heroFallbackImages.firstOrNull(),
+                ) {
+                    mutableStateOf(HeroImageResolution.Pending)
+                }
+                val hasDistinctDetailImage = product.detailImageUrl.cleanNullable() != null &&
+                    product.detailImageUrl.cleanNullable() != product.imageUrl.cleanNullable()
+                val heroImageMode = when (heroImageResolution) {
+                    HeroImageResolution.Detail -> {
+                        if (hasDistinctDetailImage) {
+                            HeroImageMode.Scene
+                        } else {
+                            HeroImageMode.Packshot
+                        }
+                    }
+                    HeroImageResolution.Pending -> {
+                        if (hasDistinctDetailImage) HeroImageMode.Scene else HeroImageMode.Packshot
+                    }
+                    HeroImageResolution.Original,
+                    HeroImageResolution.Failed -> HeroImageMode.Packshot
+                }
+                val listAtTop by remember {
+                    derivedStateOf {
+                        listState.firstVisibleItemIndex == 0 &&
+                            listState.firstVisibleItemScrollOffset == 0
+                    }
+                }
+
+                fun promptForMissingSpecs(currentProduct: ProductUiModel) {
+                    val message = currentProduct.missingSpecPrompt(selectedSku)
+                    onHighlightSpecsChange(true)
+                    screenScope.launch {
+                        animateSheetTo(DetailSheetAnchor.Expanded)
+                        listState.animateScrollToItem(index = PRODUCT_VARIANT_ITEM_INDEX)
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
+
+                val nestedScrollConnection = object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                        val deltaY = available.y
+                        val consumedY = when {
+                            deltaY < 0f && currentSheetTopPx > anchors.expandedTopPx -> moveSheetBy(deltaY, "nestedPreScroll")
+                            deltaY > 0f && listAtTop && currentSheetTopPx < anchors.immersiveTopPx -> moveSheetBy(deltaY, "nestedPreScroll")
+                            else -> 0f
+                        }
+                        return if (consumedY != 0f) Offset(0f, consumedY) else Offset.Zero
+                    }
+
+                    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                        if (currentSheetTopPx in anchors.expandedTopPx..anchors.immersiveTopPx) {
+                            settleSheet(available.y)
+                        }
+                        return Velocity.Zero
+                    }
+                }
+
+                val dragState = rememberDraggableState { deltaY ->
+                    dragSheetBy("rootDrag", deltaY)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .draggable(
+                            state = dragState,
+                            orientation = Orientation.Vertical,
+                            onDragStopped = { velocity -> screenScope.launch { settleSheet(velocity) } },
+                        )
+                        .zIndex(0f),
+                ) {
+                    HeroMedia(
+                        imageUrls = heroImages,
+                        fallbackImageUrls = heroFallbackImages,
+                        mode = heroImageMode,
+                        pagerState = heroPagerState,
+                        contentDescription = product.displayTitle,
+                        onResolvedImageSourceChange = { source ->
+                            heroImageResolution = when (source) {
+                                ResolvedImageSource.Detail -> HeroImageResolution.Detail
+                                ResolvedImageSource.Original -> HeroImageResolution.Original
+                                null -> HeroImageResolution.Failed
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationY = (anchors.immersiveTopPx - currentSheetTopPx).coerceAtLeast(0f) * -0.08f
+                                val scale = 1f - sheetProgress * 0.025f
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                    )
+                    TopScrim(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .graphicsLayer { alpha = heroAlpha },
+                    )
+                    BottomScrim(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .graphicsLayer { alpha = heroAlpha },
+                    )
+
+                    HeroTopOverlay(
+                        product = product,
+                        selectedSku = selectedSku,
+                        favorite = favorite,
+                        onBack = { handleBack() },
+                        onFavoriteClick = onFavoriteToggle,
+                        onShareClick = {
+                            val shareText = product.shareText(selectedSku)
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            runCatching {
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        intent,
+                                        context.getString(R.string.product_detail_share_chooser_title),
+                                    ),
+                                )
+                            }.onFailure {
+                                screenScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.product_detail_share_failed),
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .graphicsLayer { alpha = heroAlpha },
+                    )
+                    HeroBottomSummary(
+                        product = product,
+                        selectedSku = selectedSku,
+                        imageCount = heroImages.size,
+                        currentImageIndex = heroPagerState.currentPage,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(
+                                start = AppSpacing.Xl,
+                                end = AppSpacing.Xl,
+                                bottom = 46.dp,
+                            )
+                            .graphicsLayer { alpha = heroAlpha },
+                    )
+                    HeroSwipeHint(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = AppSpacing.Xxl)
+                            .graphicsLayer { alpha = heroAlpha },
+                    )
+                }
+
+                ProductDetailSheet(
+                    product = product,
                     selectedSku = selectedSku,
                     selectedSkuId = selectedSkuId,
-                    onSkuSelected = { selectedSkuId = it },
+                    onSkuSelected = onSkuSelected,
                     selectedReviewFilter = selectedReviewFilter,
-                    onReviewFilterSelected = { selectedReviewFilter = it },
-                    modifier = Modifier.padding(innerPadding),
+                    onReviewFilterSelected = onReviewFilterSelected,
+                    listState = listState,
+                    highlightSpecs = highlightSpecs,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset { IntOffset(x = 0, y = currentSheetTopPx.roundToInt()) }
+                        .nestedScroll(nestedScrollConnection)
+                        .zIndex(2f),
+                )
+
+                if (bottomBarAlpha > 0.01f) {
+                    ProductBottomActionBar(
+                        price = displayPrice,
+                        originalPrice = originalPrice,
+                        cartItemCount = cartItemCount,
+                        inStock = canAttemptPurchase,
+                        addToCartLoading = isAddingToCart,
+                        onCartClick = onCartClick,
+                        onAddToCart = {
+                            if (product.skus.isNotEmpty() && selectedSku == null) {
+                                promptForMissingSpecs(product)
+                            } else {
+                                onAddToCart(product, selectedSku)
+                            }
+                        },
+                        onBuyNow = {
+                            if (product.skus.isNotEmpty() && selectedSku == null) {
+                                promptForMissingSpecs(product)
+                            } else {
+                                screenScope.launch {
+                                    snackbarHostState.showSnackbar("立即购买暂未接入商品详情直达流程")
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .zIndex(3f)
+                            .graphicsLayer {
+                                alpha = bottomBarAlpha
+                                translationY = (1f - bottomBarAlpha) * 48.dp.toPx()
+                            },
+                    )
+                }
+
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = AppDimensions.BottomActionBarMinHeight + AppSpacing.Xxl)
+                        .zIndex(4f),
                 )
             }
         }
@@ -174,48 +819,475 @@ fun ProductDetailScreen(
 }
 
 @Composable
-private fun DetailTopBar(
-    cartItemCount: Int,
-    onBack: () -> Unit,
-    onCartClick: () -> Unit,
+private fun ProductDetailEdgeToEdge() {
+    val view = LocalView.current
+    SideEffect {
+        val window = (view.context as? Activity)?.window ?: return@SideEffect
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.Transparent.toArgb()
+        window.navigationBarColor = AppColors.Surface.toArgb()
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = true
+        }
+    }
+    DisposableEffect(view) {
+        val window = (view.context as? Activity)?.window
+        val previousStatusBarColor = window?.statusBarColor
+        val previousNavigationBarColor = window?.navigationBarColor
+        onDispose {
+            window ?: return@onDispose
+            WindowCompat.setDecorFitsSystemWindows(window, true)
+            previousStatusBarColor?.let { window.statusBarColor = it }
+            previousNavigationBarColor?.let { window.navigationBarColor = it }
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = true
+                isAppearanceLightNavigationBars = true
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailSheet(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    selectedSkuId: String?,
+    onSkuSelected: (String) -> Unit,
+    selectedReviewFilter: ReviewFilter,
+    onReviewFilterSelected: (ReviewFilter) -> Unit,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    highlightSpecs: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                text = "商品详情",
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(topStart = AppRadius.Panel, topEnd = AppRadius.Panel),
+        color = AppColors.Surface,
+        shadowElevation = AppElevation.Low,
+        border = BorderStroke(1.dp, AppColors.Border),
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            SheetDragHandle()
+            ProductDetailSheetContent(
+                product = product,
+                selectedSku = selectedSku,
+                selectedSkuId = selectedSkuId,
+                onSkuSelected = onSkuSelected,
+                selectedReviewFilter = selectedReviewFilter,
+                onReviewFilterSelected = onReviewFilterSelected,
+                listState = listState,
+                highlightSpecs = highlightSpecs,
+                modifier = Modifier.weight(1f),
             )
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_chevron_right_20),
-                    contentDescription = "返回",
-                    modifier = Modifier.rotate(180f),
+        }
+    }
+}
+
+@Composable
+private fun SheetDragHandle() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = AppSpacing.Sm, bottom = AppSpacing.Xs),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 40.dp, height = 4.dp)
+                .background(AppColors.BorderStrong, RoundedCornerShape(AppRadius.Pill)),
+        )
+    }
+}
+
+@Composable
+private fun HeroMedia(
+    imageUrls: List<String>,
+    fallbackImageUrls: List<String>,
+    mode: HeroImageMode,
+    pagerState: PagerState,
+    contentDescription: String?,
+    onResolvedImageSourceChange: (ResolvedImageSource?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val heroScale = 1.0f
+    Box(
+        modifier = modifier
+            .background(if (mode == HeroImageMode.Scene) AppColors.TextPrimary else AppColors.BackgroundElevated)
+            .clipToBounds(),
+        contentAlignment = Alignment.Center,
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+        ) { page ->
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                ProductImage(
+                    imageUrl = imageUrls.getOrNull(page).orEmpty(),
+                    fallbackImageUrl = fallbackImageUrls.getOrNull(page),
+                    contentDescription = contentDescription,
+                    modifier = if (mode == HeroImageMode.Scene) {
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = heroScale
+                                scaleY = heroScale
+                            }
+                    } else {
+                        Modifier
+                            .fillMaxWidth(0.88f)
+                            .fillMaxHeight(0.78f)
+                    },
+                    onResolvedImageSourceChange = if (page == pagerState.currentPage) {
+                        onResolvedImageSourceChange
+                    } else {
+                        {}
+                    },
+                    cornerRadius = AppSpacing.None,
+                    contentScale = if (mode == HeroImageMode.Scene) ContentScale.Crop else ContentScale.Fit,
+                    backgroundColor = Color.Transparent,
                 )
             }
-        },
-        actions = {
-            BadgedBox(
-                badge = {
-                    if (cartItemCount > 0) {
-                        Badge { Text(cartItemCount.coerceAtMost(99).toString()) }
-                    }
-                },
+        }
+    }
+}
+
+@Composable
+private fun TopScrim(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(150.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.34f),
+                        Color.Transparent,
+                    ),
+                ),
+            ),
+    )
+}
+
+@Composable
+private fun BottomScrim(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.20f),
+                        Color.Black.copy(alpha = 0.52f),
+                    ),
+                ),
+            ),
+    )
+}
+
+@Composable
+private fun ProductDetailSheetContent(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    selectedSkuId: String?,
+    onSkuSelected: (String) -> Unit,
+    selectedReviewFilter: ReviewFilter,
+    onReviewFilterSelected: (ReviewFilter) -> Unit,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    highlightSpecs: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        state = listState,
+        modifier = modifier
+            .fillMaxWidth()
+            .background(AppColors.Surface),
+        contentPadding = PaddingValues(bottom = AppDimensions.BottomActionBarMinHeight + AppSpacing.Huge),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xl),
+    ) {
+        item(key = "info") {
+            ProductInfoPanel(
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             ) {
-                IconButton(onClick = onCartClick) {
+                ProductBasicInfo(
+                    product = product,
+                    selectedSku = selectedSku,
+                )
+                AiRecommendationBlock(product = product)
+                ProductTagSection(product = product)
+                ProductVariantSelector(
+                    product = product,
+                    selectedSku = selectedSku,
+                    selectedSkuId = selectedSkuId,
+                    onSkuSelected = onSkuSelected,
+                    highlight = highlightSpecs,
+                )
+                SelectedSkuStatus(product = product, selectedSku = selectedSku)
+            }
+        }
+        item(key = PRODUCT_VARIANT_ITEM_KEY) {
+            Spacer(modifier = Modifier.height(AppSpacing.None))
+        }
+        item(key = "parameters") {
+            CoreParametersSection(
+                product = product,
+                selectedSku = selectedSku,
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
+            )
+        }
+        item(key = "reviews") {
+            UserReviewSection(
+                product = product,
+                selectedFilter = selectedReviewFilter,
+                onFilterSelected = onReviewFilterSelected,
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
+            )
+        }
+        item(key = "scenario-audience") {
+            ScenarioAudienceSection(
+                product = product,
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
+            )
+        }
+        item(key = "bottom-space") { Spacer(modifier = Modifier.height(AppSpacing.Xxl)) }
+    }
+}
+
+@Composable
+private fun HeroTopOverlay(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    favorite: Boolean,
+    onBack: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onShareClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val backLabel = stringResource(R.string.product_detail_back)
+    val favoriteLabel = stringResource(
+        if (favorite) {
+            R.string.product_detail_unfavorite
+        } else {
+            R.string.product_detail_favorite
+        },
+    )
+    val shareLabel = stringResource(R.string.product_detail_share)
+    val spec = selectedSku?.specSummary()?.takeIf { it.isNotBlank() }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Xs)
+            .heightIn(min = 44.dp),
+    ) {
+        AppIconButton(
+            onClick = onBack,
+            style = AppIconButtonStyle.Hero,
+            containerSize = 40.dp,
+            hitAreaSize = 44.dp,
+            iconSize = 20.dp,
+            modifier = Modifier.align(Alignment.CenterStart),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right_20),
+                contentDescription = backLabel,
+                modifier = Modifier.rotate(180f),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .padding(start = 60.dp, end = 108.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Xxs),
+        ) {
+            Text(
+                text = product.heroTitle(),
+                style = AppTypography.TitleSmall,
+                fontWeight = FontWeight.Medium,
+                color = AppColors.HeroText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            spec?.let {
+                Text(
+                    text = it,
+                    style = AppTypography.CaptionStrong,
+                    fontWeight = FontWeight.Normal,
+                    color = AppColors.HeroText.copy(alpha = 0.76f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppIconButton(
+                onClick = onFavoriteClick,
+                selected = favorite,
+                style = AppIconButtonStyle.Hero,
+                containerSize = 40.dp,
+                hitAreaSize = 44.dp,
+                iconSize = 20.dp,
+            ) {
+                Icon(
+                    painter = painterResource(if (favorite) R.drawable.ic_star_20 else R.drawable.ic_star_border_20),
+                    contentDescription = favoriteLabel,
+                )
+            }
+            AppIconButton(
+                onClick = onShareClick,
+                style = AppIconButtonStyle.Hero,
+                containerSize = 40.dp,
+                hitAreaSize = 44.dp,
+                iconSize = 20.dp,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_share_20),
+                    contentDescription = shareLabel,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroBottomSummary(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    imageCount: Int,
+    currentImageIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    val currentPrice = selectedSku?.price ?: product.price
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Lg),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        ) {
+            product.brand.cleanNullable()?.let {
+                Text(
+                    text = it,
+                    style = AppTypography.BodySmall,
+                    color = AppColors.HeroText.copy(alpha = 0.82f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+            ) {
+                Text(
+                    text = "\u00A5${formatPrice(currentPrice)}",
+                    style = AppTypography.HeroPrice,
+                    color = AppColors.HeroText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                product.basePrice
+                    ?.takeIf { it > currentPrice }
+                    ?.let {
+                        OriginalPriceText(
+                            price = it,
+                            color = AppColors.HeroText.copy(alpha = 0.62f),
+                        )
+                    }
+            }
+        }
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+        ) {
+            product.detailRating()?.let {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "%.1f/5".format(it),
+                        style = AppTypography.BodySmall,
+                        color = AppColors.HeroText.copy(alpha = 0.88f),
+                        maxLines = 1,
+                    )
                     Icon(
-                        painter = painterResource(R.drawable.ic_cart_24),
-                        contentDescription = "购物车",
+                        painter = painterResource(R.drawable.ic_star_20),
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = AppColors.HeroText.copy(alpha = 0.88f),
                     )
                 }
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-    )
+            HeroImageIndicators(
+                imageCount = imageCount,
+                currentImageIndex = currentImageIndex,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroImageIndicators(
+    imageCount: Int,
+    currentImageIndex: Int,
+    modifier: Modifier = Modifier,
+) {
+    if (imageCount <= 1) {
+        return
+    }
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(imageCount) { index ->
+            val selected = index == currentImageIndex
+            Box(
+                modifier = Modifier
+                    .size(if (selected) 7.dp else 6.dp)
+                    .background(
+                        color = AppColors.HeroText.copy(alpha = if (selected) 0.86f else 0.38f),
+                        shape = CircleShape,
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroSwipeHint(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.product_detail_swipe_up_hint),
+            style = AppTypography.Caption,
+            color = AppColors.HeroText.copy(alpha = 0.68f),
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
@@ -226,122 +1298,212 @@ private fun ProductDetailContent(
     onSkuSelected: (String) -> Unit,
     selectedReviewFilter: ReviewFilter,
     onReviewFilterSelected: (ReviewFilter) -> Unit,
+    heroHeight: androidx.compose.ui.unit.Dp,
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    highlightSpecs: Boolean,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 112.dp),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+        state = listState,
+        modifier = modifier
+            .fillMaxSize()
+            .background(AppColors.Background),
+        contentPadding = PaddingValues(bottom = AppDimensions.BottomActionBarMinHeight + AppSpacing.Huge),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xl),
     ) {
-        item { ProductImageCarousel(product = product) }
-        item {
-            ProductBasicInfo(
+        item(key = "hero") {
+            ProductHero(
                 product = product,
                 selectedSku = selectedSku,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                height = heroHeight,
             )
         }
-        item {
-            SmartGuideSection(
-                product = product,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+        item(key = "info") {
+            ProductInfoPanel(
+                modifier = Modifier
+                    .offset(y = (-AppSpacing.Xxl))
+                    .padding(horizontal = AppSpacing.Lg),
+            ) {
+                ProductBasicInfo(
+                    product = product,
+                    selectedSku = selectedSku,
+                )
+                AiRecommendationBlock(product = product)
+                ProductTagSection(product = product)
+                ProductVariantSelector(
+                    product = product,
+                    selectedSku = selectedSku,
+                    selectedSkuId = selectedSkuId,
+                    onSkuSelected = onSkuSelected,
+                    highlight = highlightSpecs,
+                )
+                SelectedSkuStatus(product = product, selectedSku = selectedSku)
+            }
         }
-        item {
-            SpecificationSection(
-                product = product,
-                selectedSku = selectedSku,
-                selectedSkuId = selectedSkuId,
-                onSkuSelected = onSkuSelected,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
+        item(key = PRODUCT_VARIANT_ITEM_KEY) {
+            Spacer(modifier = Modifier.height(AppSpacing.None))
         }
-        item {
+        item(key = "parameters") {
             CoreParametersSection(
                 product = product,
                 selectedSku = selectedSku,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             )
         }
-        item {
+        item(key = "reviews") {
             UserReviewSection(
                 product = product,
                 selectedFilter = selectedReviewFilter,
                 onFilterSelected = onReviewFilterSelected,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             )
         }
-        item {
+        item(key = "scenario-audience") {
             ScenarioAudienceSection(
                 product = product,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             )
         }
-        item { Spacer(modifier = Modifier.height(12.dp)) }
+        item(key = "bottom-space") { Spacer(modifier = Modifier.height(AppSpacing.Xxl)) }
     }
 }
 
 @Composable
-private fun ProductImageCarousel(product: ProductUiModel) {
-    val images = product.detailImages()
-    val listState = rememberLazyListState()
-    val currentIndex = listState.firstVisibleItemIndex.coerceIn(0, (images.size - 1).coerceAtLeast(0))
-
+private fun ProductHero(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    height: androidx.compose.ui.unit.Dp,
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(304.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            .height(height),
     ) {
-        if (images.isEmpty()) {
-            ProductImage(
-                imageUrl = "",
-                contentDescription = product.displayTitle,
-                modifier = Modifier.fillMaxSize(),
-                cornerRadius = 0.dp,
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            LazyRow(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                itemsIndexed(images, key = { index, url -> "$index-$url" }) { _, imageUrl ->
-                    ProductImage(
-                        imageUrl = imageUrl,
-                        contentDescription = product.displayTitle,
-                        modifier = Modifier
-                            .fillParentMaxWidth()
-                            .fillMaxSize(),
-                        cornerRadius = 0.dp,
-                        contentScale = ContentScale.Fit,
+        ProductImagePager(
+            imageUrls = product.detailImages(),
+            fallbackImageUrls = product.detailFallbackImages(),
+            contentDescription = product.displayTitle,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(horizontal = AppSpacing.Lg, vertical = AppSpacing.Xl)
+                .background(
+                    color = AppColors.HeroIconBackground.copy(alpha = 0.72f),
+                    shape = RoundedCornerShape(AppRadius.Large),
+                )
+                .padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs)) {
+                product.brand.cleanNullable()?.let {
+                    Text(
+                        text = it,
+                        style = AppTypography.BodySmall,
+                        color = AppColors.HeroIcon,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                }
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                ) {
+                    val currentPrice = selectedSku?.price ?: product.price
+                    PriceText(
+                        price = currentPrice,
+                        level = PriceTextLevel.Normal,
+                        color = AppColors.HeroIcon,
+                    )
+                    product.basePrice
+                        ?.takeIf { it > currentPrice }
+                        ?.let {
+                            OriginalPriceText(
+                                price = it,
+                                color = AppColors.TextSecondary,
+                            )
+                        }
+                    val rating = product.detailRating()
+                    rating?.let {
+                        Text(
+                            text = "%.1f/5".format(it),
+                            style = AppTypography.BodySmall,
+                            color = AppColors.HeroIcon,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
+    }
+}
 
-        if (images.size > 1) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                images.forEachIndexed { index, _ ->
-                    Box(
-                        modifier = Modifier
-                            .size(if (index == currentIndex) 8.dp else 6.dp)
-                            .background(
-                                color = if (index == currentIndex) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                                },
-                                shape = CircleShape,
-                            ),
-                    )
-                }
-            }
+@Composable
+private fun FloatingProductActions(
+    favorite: Boolean,
+    onBack: () -> Unit,
+    onFavoriteClick: () -> Unit,
+    onShareClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = AppSpacing.Lg, vertical = AppSpacing.Sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+    ) {
+        AppIconButton(
+            onClick = onBack,
+            style = AppIconButtonStyle.Hero,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right_20),
+                contentDescription = "返回",
+                modifier = Modifier.rotate(180f),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        AppIconButton(
+            onClick = onFavoriteClick,
+            selected = favorite,
+            style = AppIconButtonStyle.Hero,
+        ) {
+            Icon(
+                painter = painterResource(if (favorite) R.drawable.ic_star_20 else R.drawable.ic_star_border_20),
+                contentDescription = if (favorite) "取消收藏" else "收藏",
+            )
+        }
+        AppIconButton(
+            onClick = onShareClick,
+            style = AppIconButtonStyle.Hero,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_share_20),
+                contentDescription = "分享",
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductInfoPanel(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppRadius.Panel),
+        color = AppColors.Surface,
+        shadowElevation = AppElevation.None,
+        border = BorderStroke(1.dp, AppColors.Border),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+        ) {
+            content()
         }
     }
 }
@@ -352,35 +1514,34 @@ private fun ProductBasicInfo(
     selectedSku: ProductSkuUiModel?,
     modifier: Modifier = Modifier,
 ) {
+    val currentPrice = selectedSku?.price ?: product.price
+    val originalPrice = product.basePrice?.takeIf { it > currentPrice }
+    val discountText = originalPrice?.let { "%.1f折".format(currentPrice / it * 10) }
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
     ) {
         Text(
             text = product.displayTitle,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 3,
+            style = AppTypography.Title,
+            color = AppColors.TextPrimary,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(
-            text = "¥${formatPrice(selectedSku?.price ?: product.price)}",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        val tags = product.coreTags()
-        if (tags.isNotEmpty()) {
-            CompactTagRow(tags = tags, maxItems = 3)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        ) {
+            PriceText(
+                price = currentPrice,
+                level = PriceTextLevel.Large,
+            )
+            originalPrice?.let { OriginalPriceText(price = it) }
+            discountText?.let {
+                TagChip(text = it, tone = TagChipTone.Warm)
+            }
         }
-        val selectedText = selectedSku?.specSummary().orEmpty().ifBlank { "默认规格" }
-        Text(
-            text = "${if (product.stock > 0) "现货" else "暂无库存"} · 已选：$selectedText",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
         val meta = listOf(product.brand, product.subCategory ?: product.category)
             .filter { it.isNotBlank() }
             .distinct()
@@ -388,8 +1549,8 @@ private fun ProductBasicInfo(
         if (meta.isNotBlank()) {
             Text(
                 text = meta,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AppTypography.BodySmall,
+                color = AppColors.TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -398,7 +1559,7 @@ private fun ProductBasicInfo(
 }
 
 @Composable
-private fun SmartGuideSection(
+private fun AiRecommendationBlock(
     product: ProductUiModel,
     modifier: Modifier = Modifier,
 ) {
@@ -410,69 +1571,62 @@ private fun SmartGuideSection(
         return
     }
 
-    Card(
+    Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        shape = RoundedCornerShape(AppRadius.Large),
+        color = AppColors.AccentWarmSoft,
+        border = BorderStroke(1.dp, AppColors.Border),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(AppSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         ) {
-            Text(
-                text = "智能导购建议",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            TagChip(text = "AI 匹配推荐", tone = TagChipTone.Warm)
             if (reason.isNotBlank()) {
                 Text(
                     text = "为什么适合你",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = AppTypography.CaptionStrong,
+                    color = AppColors.AccentWarm,
                 )
                 if (reasonBullets.size >= 2) {
                     reasonBullets.take(3).forEach { item ->
                         Text(
                             text = "· $item",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            style = AppTypography.BodySmall,
+                            color = AppColors.TextPrimary,
                         )
                     }
                 } else {
                     Text(
                         text = reason,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = if (expanded) Int.MAX_VALUE else 4,
+                        style = AppTypography.BodySmall,
+                        color = AppColors.TextPrimary,
+                        maxLines = if (expanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                     if (reason.length > 80) {
                         Text(
                             text = if (expanded) "收起" else "展开全文",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            style = AppTypography.CaptionStrong,
+                            color = AppColors.AccentWarm,
                             modifier = Modifier
                                 .clickable { expanded = !expanded }
-                                .padding(top = 2.dp),
+                                .padding(top = AppSpacing.Xs),
                         )
                     }
                 }
             }
             tradeOff?.let {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                HorizontalDivider(color = AppColors.Border)
                 Text(
                     text = "需要注意",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = AppTypography.CaptionStrong,
+                    color = AppColors.AccentWarm,
                 )
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = AppTypography.BodySmall,
+                    color = AppColors.TextSecondary,
                 )
             }
         }
@@ -480,23 +1634,91 @@ private fun SmartGuideSection(
 }
 
 @Composable
-private fun SpecificationSection(
+private fun ProductTagSection(
+    product: ProductUiModel,
+    modifier: Modifier = Modifier,
+) {
+    val tags = product.productTags()
+    if (tags.isEmpty()) {
+        return
+    }
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+    ) {
+        Text(
+            text = "商品标签",
+            style = AppTypography.CaptionStrong,
+            color = AppColors.TextSecondary,
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        ) {
+            tags.forEachIndexed { index, tag ->
+                TagChip(
+                    text = tag,
+                    tone = if (index == 0 && tag in product.aiAccentTags()) {
+                        TagChipTone.Warm
+                    } else {
+                        TagChipTone.Neutral
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProductVariantSelector(
     product: ProductUiModel,
     selectedSku: ProductSkuUiModel?,
     selectedSkuId: String?,
     onSkuSelected: (String) -> Unit,
+    highlight: Boolean,
     modifier: Modifier = Modifier,
 ) {
     if (product.skus.isEmpty()) {
         return
     }
-    DetailSection(title = "规格选择", modifier = modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = if (highlight) AppColors.AccentWarmSoft else AppColors.Surface,
+                shape = RoundedCornerShape(AppRadius.Large),
+            )
+            .padding(if (highlight) AppSpacing.Md else AppSpacing.None),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        ) {
+            Text(
+                text = "规格选择",
+                style = AppTypography.BodyStrong,
+                color = AppColors.TextPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            selectedSku?.specSummary()?.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    text = it,
+                    style = AppTypography.CaptionStrong,
+                    color = AppColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         val optionKeys = product.skus.flatMap { it.properties.keys }.distinct()
         if (optionKeys.isEmpty()) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
             ) {
                 product.skus.forEach { sku ->
                     SpecOptionChip(
@@ -507,31 +1729,31 @@ private fun SpecificationSection(
                     )
                 }
             }
-            return@DetailSection
+            return@Column
         }
 
-        optionKeys.take(4).forEach { key ->
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        optionKeys.forEach { key ->
+            val selectedValue = selectedSku?.properties?.get(key).cleanNullable()
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
                 Text(
-                    text = "选择$key",
-                    style = MaterialTheme.typography.labelLarge,
+                    text = selectedValue?.let { "$key · $it" } ?: "选择$key",
+                    style = AppTypography.CaptionStrong,
                     fontWeight = FontWeight.SemiBold,
+                    color = AppColors.TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
                 ) {
                     val values = product.skus.mapNotNull { it.properties[key] }
                         .filter { it.isNotBlank() }
                         .distinct()
                     values.forEach { value ->
                         val selected = selectedSku?.properties?.get(key) == value
-                        val enabled = product.stock > 0 && product.findSkuForOption(
-                            currentSku = selectedSku,
-                            key = key,
-                            value = value,
-                        ) != null
+                        val enabled = product.stock > 0 && product.hasAnySkuForOption(key, value)
                         SpecOptionChip(
                             label = value,
                             selected = selected,
@@ -550,8 +1772,8 @@ private fun SpecificationSection(
         }
         Text(
             text = "价格会随已选规格更新",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = AppTypography.BodySmall,
+            color = AppColors.TextSecondary,
         )
     }
 }
@@ -565,35 +1787,71 @@ private fun SpecOptionChip(
 ) {
     Surface(
         modifier = Modifier
-            .heightIn(min = 38.dp)
+            .heightIn(min = 36.dp)
             .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(AppRadius.Medium),
         color = when {
-            selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
-            enabled -> MaterialTheme.colorScheme.surface
-            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f)
+            selected -> AppColors.Primary
+            enabled -> AppColors.Surface
+            else -> AppColors.SurfaceSoft
         },
         border = BorderStroke(
             width = 1.dp,
             color = when {
-                selected -> MaterialTheme.colorScheme.primary
-                enabled -> MaterialTheme.colorScheme.outlineVariant
-                else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                selected -> AppColors.Primary
+                enabled -> AppColors.BorderStrong
+                else -> AppColors.Border
             },
         ),
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
+            style = AppTypography.CaptionStrong,
             color = when {
-                !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
-                selected -> MaterialTheme.colorScheme.onPrimaryContainer
-                else -> MaterialTheme.colorScheme.onSurface
+                !enabled -> AppColors.TextDisabled
+                selected -> AppColors.OnPrimary
+                else -> AppColors.TextPrimary
             },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+@Composable
+private fun SelectedSkuStatus(
+    product: ProductUiModel,
+    selectedSku: ProductSkuUiModel?,
+    modifier: Modifier = Modifier,
+) {
+    val stockText = if (product.stock > 0) "库存 ${product.stock}" else "暂时缺货"
+    val specText = selectedSku?.specSummary()?.takeIf { it.isNotBlank() } ?: "未选择完整规格"
+    val statusColor = if (product.stock > 0) AppColors.TextSecondary else AppColors.Danger
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(AppRadius.Large),
+        color = if (product.stock > 0) AppColors.SurfaceSoft else AppColors.DangerSoft,
+        border = BorderStroke(1.dp, if (product.stock > 0) AppColors.Border else AppColors.DangerSoft),
+    ) {
+        Column(
+            modifier = Modifier.padding(AppSpacing.Md),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+        ) {
+            Text(
+                text = "$stockText · $specText",
+                style = AppTypography.BodySmall,
+                color = statusColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "加入购物车和购买会使用当前选中的真实 SKU",
+                style = AppTypography.Caption,
+                color = AppColors.TextTertiary,
+            )
+        }
     }
 }
 
@@ -610,9 +1868,9 @@ private fun CoreParametersSection(
     var expanded by remember(product.skuId, selectedSku?.skuId) { mutableStateOf(false) }
     DetailSection(title = "核心参数", modifier = modifier) {
         val display = if (expanded) coreParams else coreParams.take(6)
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
             display.chunked(2).forEach { rowItems ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
                     rowItems.forEach { (label, value) ->
                         ParameterCell(
                             label = label,
@@ -629,11 +1887,11 @@ private fun CoreParametersSection(
         if (coreParams.size > 6) {
             Text(
                 text = if (expanded) "收起参数" else "查看完整参数",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                style = AppTypography.CaptionStrong,
+                color = AppColors.TextPrimary,
                 modifier = Modifier
                     .clickable { expanded = !expanded }
-                    .padding(top = 2.dp),
+                    .padding(top = AppSpacing.Xs),
             )
         }
     }
@@ -648,22 +1906,23 @@ private fun ParameterCell(
     Column(
         modifier = modifier
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.36f),
-                shape = RoundedCornerShape(8.dp),
+                color = AppColors.SurfaceSoft,
+                shape = RoundedCornerShape(AppRadius.Medium),
             )
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(AppSpacing.Md),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = AppTypography.Caption,
+            color = AppColors.TextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = AppTypography.BodySmall,
+            color = AppColors.TextPrimary,
             fontWeight = FontWeight.SemiBold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
@@ -720,8 +1979,8 @@ private fun UserReviewSection(
                         ReviewListItem(review = item)
                         if (index != filteredReviews.lastIndex) {
                             HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 14.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                                modifier = Modifier.padding(vertical = AppSpacing.Md),
+                                color = AppColors.Divider,
                             )
                         }
                     }
@@ -745,16 +2004,16 @@ private fun ReviewViewAllAction(
     ) {
         Text(
             text = reviewCount?.let { "查看全部，共 $it 条" } ?: "查看全部",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = AppTypography.CaptionStrong,
+            color = AppColors.TextSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Icon(
             painter = painterResource(R.drawable.ic_chevron_right_20),
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(AppDimensions.IconSmall),
+            tint = AppColors.TextSecondary,
         )
     }
 }
@@ -771,9 +2030,9 @@ private fun ReviewRatingOverview(
     ) {
         Text(
             text = rating?.let { "%.1f / 5".format(it) } ?: "暂无评分",
-            style = MaterialTheme.typography.headlineSmall,
+            style = AppTypography.TitleLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = AppColors.TextPrimary,
             maxLines = 1,
         )
         rating?.let {
@@ -786,8 +2045,8 @@ private fun ReviewRatingOverview(
         reviewCount?.let {
             Text(
                 text = "共 $it 条评价",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AppTypography.BodySmall,
+                color = AppColors.TextSecondary,
                 maxLines = 1,
             )
         }
@@ -807,17 +2066,17 @@ private fun ReviewSummaryTags(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
-                shape = RoundedCornerShape(10.dp),
+                color = AppColors.SurfaceSoft,
+                shape = RoundedCornerShape(AppRadius.Large),
             )
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(AppSpacing.Md),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
     ) {
         Text(
             text = "评价总结",
-            style = MaterialTheme.typography.labelLarge,
+            style = AppTypography.CaptionStrong,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = AppColors.TextPrimary,
         )
         if (positives.isNotEmpty()) {
             ReviewTagGroup(
@@ -836,8 +2095,8 @@ private fun ReviewSummaryTags(
         reviewCount?.let {
             Text(
                 text = "基于 $it 条用户评价整理，仅供参考",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = AppTypography.Caption,
+                color = AppColors.TextTertiary,
             )
         }
     }
@@ -849,43 +2108,43 @@ private fun ReviewTagGroup(
     tags: List<String>,
     tone: ReviewTagTone,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium,
+            style = AppTypography.CaptionStrong,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = AppColors.TextSecondary,
         )
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         ) {
             tags.forEach { tag ->
                 val container = when (tone) {
-                    ReviewTagTone.Positive -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.52f)
-                    ReviewTagTone.Concern -> MaterialTheme.colorScheme.surface
+                    ReviewTagTone.Positive -> AppColors.SuccessSoft
+                    ReviewTagTone.Concern -> AppColors.Surface
                 }
                 val contentColor = when (tone) {
-                    ReviewTagTone.Positive -> MaterialTheme.colorScheme.onSecondaryContainer
-                    ReviewTagTone.Concern -> MaterialTheme.colorScheme.onSurfaceVariant
+                    ReviewTagTone.Positive -> AppColors.Success
+                    ReviewTagTone.Concern -> AppColors.TextSecondary
                 }
                 val border = when (tone) {
                     ReviewTagTone.Positive -> null
                     ReviewTagTone.Concern -> BorderStroke(
                         width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
+                        color = AppColors.BorderStrong,
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(999.dp),
+                    shape = RoundedCornerShape(AppRadius.Pill),
                     color = container,
                     border = border,
                 ) {
                     Text(
                         text = tag,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Xs),
+                        style = AppTypography.CaptionStrong,
                         color = contentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -904,7 +2163,7 @@ private fun ReviewFilterBar(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ReviewFilter.entries.forEach { filter ->
@@ -925,22 +2184,22 @@ private fun ReviewFilterChip(
 ) {
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(AppRadius.Pill),
         color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+            AppColors.Primary
         } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+            AppColors.SurfaceSoft
         },
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
+            style = AppTypography.CaptionStrong,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (selected) {
-                MaterialTheme.colorScheme.onPrimaryContainer
+                AppColors.OnPrimary
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
+                AppColors.TextSecondary
             },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -953,19 +2212,19 @@ private fun ReviewListItem(review: ProductReviewUiModel) {
     var expanded by rememberSaveable(review.content) { mutableStateOf(false) }
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(7.dp),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         ) {
             review.nickname.cleanNullable()?.let {
                 Text(
                     text = it,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.BodyStrong,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = AppColors.TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -979,14 +2238,14 @@ private fun ReviewListItem(review: ProductReviewUiModel) {
         if (meta.isNotEmpty()) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
             ) {
                 meta.forEach { item ->
                     Text(
                         text = item,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AppTypography.Caption,
+                        color = AppColors.TextTertiary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1008,11 +2267,11 @@ private fun ExpandableReviewBody(
     onToggle: () -> Unit,
 ) {
     var hasOverflow by remember(text) { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs)) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            style = AppTypography.Body,
+            color = AppColors.TextPrimary,
             maxLines = if (expanded) Int.MAX_VALUE else 4,
             overflow = TextOverflow.Ellipsis,
             onTextLayout = { layoutResult ->
@@ -1024,11 +2283,11 @@ private fun ExpandableReviewBody(
         if (hasOverflow || expanded) {
             Text(
                 text = if (expanded) "收起" else "展开全文",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
+                style = AppTypography.CaptionStrong,
+                color = AppColors.TextPrimary,
                 modifier = Modifier
                     .clickable(onClick = onToggle)
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = AppSpacing.Xs),
             )
         }
     }
@@ -1045,16 +2304,16 @@ private fun ReviewEmptyState(filter: ReviewFilter) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
-                shape = RoundedCornerShape(8.dp),
+                color = AppColors.SurfaceSoft,
+                shape = RoundedCornerShape(AppRadius.Medium),
             )
-            .padding(vertical = 18.dp),
+            .padding(vertical = AppSpacing.Xl),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = AppTypography.BodySmall,
+            color = AppColors.TextSecondary,
         )
     }
 }
@@ -1081,7 +2340,7 @@ private fun RatingStars(
                 painter = painterResource(iconRes),
                 contentDescription = null,
                 modifier = Modifier.size(iconSize.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = AppColors.AccentWarm,
             )
         }
     }
@@ -1104,7 +2363,8 @@ private fun ScenarioAudienceSection(
         if (scenarios.isNotEmpty()) {
             Text(
                 text = "适合场景",
-                style = MaterialTheme.typography.labelLarge,
+                style = AppTypography.CaptionStrong,
+                color = AppColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
             CompactTagRow(tags = scenarios, maxItems = 5)
@@ -1112,7 +2372,8 @@ private fun ScenarioAudienceSection(
         if (audiences.isNotEmpty()) {
             Text(
                 text = "适合人群",
-                style = MaterialTheme.typography.labelLarge,
+                style = AppTypography.CaptionStrong,
+                color = AppColors.TextPrimary,
                 fontWeight = FontWeight.SemiBold,
             )
             CompactTagRow(tags = audiences, maxItems = 5)
@@ -1129,36 +2390,14 @@ private fun CompactTagRow(
     val hasMore = tags.cleanDisplayTags().size > maxItems
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
     ) {
         displayTags.forEach { tag ->
-            Surface(
-                shape = RoundedCornerShape(999.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
-            ) {
-                Text(
-                    text = tag,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            TagChip(text = tag)
         }
         if (hasMore) {
-            Surface(
-                shape = RoundedCornerShape(999.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-            ) {
-                Text(
-                    text = "更多",
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            TagChip(text = "更多")
         }
     }
 }
@@ -1172,76 +2411,24 @@ private fun DetailSection(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.TitleSmall,
+                color = AppColors.TextPrimary,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
             trailing?.invoke()
         }
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+        HorizontalDivider(color = AppColors.Divider)
         content()
-    }
-}
-
-@Composable
-private fun DetailBottomBar(
-    price: Double?,
-    inStock: Boolean,
-    onAddToCart: () -> Unit,
-) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp,
-        modifier = Modifier.navigationBarsPadding(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = price?.let { "¥${formatPrice(it)}" } ?: "加载中",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
-                Text(
-                    text = "当前价格",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Button(
-                onClick = onAddToCart,
-                enabled = price != null && inStock,
-                modifier = Modifier
-                    .width(148.dp)
-                    .heightIn(min = 48.dp),
-                shape = RoundedCornerShape(999.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                ),
-            ) {
-                Text(
-                    text = "加入购物车",
-                    maxLines = 1,
-                    softWrap = false,
-                )
-            }
-        }
     }
 }
 
@@ -1278,10 +2465,95 @@ private enum class ReviewTagTone {
 }
 
 private fun ProductUiModel.detailImages(): List<String> {
-    return listOf(imageUrl)
+    val primaryImageUrl = detailImageUrl.cleanNullable() ?: imageUrl
+    return listOf(primaryImageUrl)
         .map { it.trim() }
         .filter { it.isNotBlank() }
         .distinct()
+}
+
+private fun ProductUiModel.detailFallbackImages(): List<String> {
+    val primaryImageUrl = detailImageUrl.cleanNullable()
+    val fallbackImageUrl = imageUrl.cleanNullable()
+    return when {
+        primaryImageUrl == null -> emptyList()
+        fallbackImageUrl == null -> emptyList()
+        primaryImageUrl == fallbackImageUrl -> emptyList()
+        else -> listOf(fallbackImageUrl)
+    }
+}
+
+private fun ProductUiModel.heroTitle(): String {
+    return listOfNotNull(
+        presentation?.shortTitle.heroTitleCandidate(),
+        shortTitle.heroTitleCandidate(),
+        highlightShort.heroTitleCandidate(),
+        brandCoreHeroTitle(),
+        displayTitle.cleanNullable(),
+    ).firstOrNull().orEmpty()
+        .ifBlank { displayTitle }
+}
+
+private fun String?.heroTitleCandidate(): String? {
+    val raw = cleanNullable() ?: return null
+    val candidate = raw
+        .split(*HERO_TITLE_DELIMITERS)
+        .firstOrNull()
+        ?.cleanNullable()
+        ?: raw
+    return candidate
+        .removeMarketingPrefix()
+        .cleanNullable()
+        ?.takeIf { it.length <= 24 }
+}
+
+private fun String.removeMarketingPrefix(): String {
+    return replace(
+        Regex(
+            """^(\u63A8\u8350\u7406\u7531|\u4EAE\u70B9|\u5356\u70B9|\u6838\u5FC3\u4F18\u52BF)\s*[:\uFF1A]\s*""",
+        ),
+        "",
+    )
+        .replace(Regex("""\s{2,}"""), " ")
+        .trim()
+}
+
+private fun ProductUiModel.brandCoreHeroTitle(): String? {
+    val brandValue = brand.cleanNullable()
+    val titleValue = displayTitleShort.cleanNullable() ?: displayTitle.cleanNullable() ?: return null
+    val normalized = titleValue
+        .replace(
+            Regex(
+                """\d+(?:\.\d+)?\s*(ml|mL|ML|g|G|kg|KG|L|l|\u7247|\u7C92|\u652F|\u74F6|\u888B|\u76D2|\u5305|GB|TB)""",
+            ),
+            "",
+        )
+        .replace(Regex("""SPF\s*\d+\+?\s*PA\+*""", RegexOption.IGNORE_CASE), "")
+        .replace(Regex("""\s{2,}"""), " ")
+        .trim()
+    val titleWithoutBrand = brandValue
+        ?.let { normalized.removePrefix(it).trim() }
+        ?: normalized
+    val coreName = PRODUCT_HERO_CORE_KEYWORDS
+        .firstNotNullOfOrNull { keyword ->
+            val endIndex = titleWithoutBrand.indexOf(keyword)
+                .takeIf { it >= 0 }
+                ?.plus(keyword.length)
+            endIndex
+                ?.let { titleWithoutBrand.take(it) }
+                ?.cleanNullable()
+        }
+    val candidate = when {
+        brandValue != null && coreName != null -> {
+            "$brandValue$coreName"
+        }
+        normalized.length <= 24 -> normalized
+        else -> null
+    }
+    return candidate
+        ?.replace(Regex("""(.{2,}?)\1+"""), "\$1")
+        ?.cleanNullable()
+        ?.takeIf { it.length <= 24 }
 }
 
 private fun ProductUiModel.defaultSelectedSkuId(routeSkuId: String): String? {
@@ -1322,10 +2594,25 @@ private fun ProductUiModel.findSkuForOption(
     } ?: skus.firstOrNull { it.properties[key] == value }
 }
 
+private fun ProductUiModel.hasAnySkuForOption(key: String, value: String): Boolean {
+    return skus.any { sku -> sku.properties[key] == value }
+}
+
 private fun ProductUiModel.coreTags(): List<String> {
     return (tags + spotlight.features + suitableScenarios + targetUserTags)
         .cleanDisplayTags()
         .take(3)
+}
+
+private fun ProductUiModel.productTags(): List<String> {
+    return (tags + spotlight.features + matchedReasons + suitableScenarios + targetUserTags)
+        .cleanDisplayTags()
+        .take(8)
+}
+
+private fun ProductUiModel.aiAccentTags(): List<String> {
+    return (matchedReasons + spotlight.features + presentation?.advantages.orEmpty())
+        .cleanDisplayTags()
 }
 
 private fun ProductUiModel.guideReason(): String {
@@ -1337,6 +2624,51 @@ private fun ProductUiModel.guideReason(): String {
         highlightShort.cleanNullable(),
         spotlight.description.cleanNullable(),
     ).firstOrNull().orEmpty()
+}
+
+private fun ProductUiModel.missingSpecPrompt(selectedSku: ProductSkuUiModel?): String {
+    val allKeys = skus
+        .flatMap { it.properties.keys }
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+    if (allKeys.isEmpty()) {
+        return "请选择商品规格"
+    }
+    val selectedKeys = selectedSku?.properties
+        ?.filter { it.key.isNotBlank() && it.value.isNotBlank() }
+        ?.keys
+        .orEmpty()
+    val missing = allKeys.filterNot { it in selectedKeys }.ifEmpty { allKeys.take(1) }
+    return "请选择${missing.joinToString("和")}"
+}
+
+private fun ProductUiModel.shareText(selectedSku: ProductSkuUiModel?): String {
+    val lines = buildList {
+        add(displayTitle)
+        brand.cleanNullable()?.let { add("品牌：$it") }
+        selectedSku?.specSummary()?.takeIf { it.isNotBlank() }?.let { add("规格：$it") }
+        add("价格：¥${formatPrice(selectedSku?.price ?: price)}")
+        reason.cleanNullable()?.let { add("推荐理由：$it") }
+    }
+    return lines.joinToString(separator = "\n")
+}
+
+private fun ProductUiModel.detailRating(): Double? {
+    val reviewAverage = reviews
+        .mapNotNull { it.rating }
+        .takeIf { it.isNotEmpty() }
+        ?.average()
+        ?.coerceIn(0.0, 5.0)
+    if (reviewAverage != null) {
+        return reviewAverage
+    }
+    return RATING_PATTERN.find(reviewsSummary)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toDoubleOrNull()
+        ?.coerceIn(0.0, 5.0)
+        ?: score?.takeIf { it in 0.0..5.0 }
 }
 
 private fun ProductUiModel.coreParameters(selectedSku: ProductSkuUiModel?): List<Pair<String, String>> {

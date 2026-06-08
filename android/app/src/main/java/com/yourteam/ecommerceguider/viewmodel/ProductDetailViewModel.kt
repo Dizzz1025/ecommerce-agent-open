@@ -5,7 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.repository.ShoppingRepository
+import com.yourteam.ecommerceguider.ui.screens.product.ProductDetailUiEffect
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -27,6 +31,12 @@ class ProductDetailViewModel(
 
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
+
+    private val _isAddingToCart = MutableStateFlow(false)
+    val isAddingToCart: StateFlow<Boolean> = _isAddingToCart.asStateFlow()
+
+    private val _effects = MutableSharedFlow<ProductDetailUiEffect>(extraBufferCapacity = 1)
+    val effects: SharedFlow<ProductDetailUiEffect> = _effects.asSharedFlow()
 
     private var loadedSkuId: String? = null
 
@@ -56,13 +66,21 @@ class ProductDetailViewModel(
     }
 
     fun addToCart(product: ProductUiModel, selectedSku: ProductSkuUiModel?) {
+        if (_isAddingToCart.value) {
+            return
+        }
+        if (product.stock <= 0) {
+            _effects.tryEmit(ProductDetailUiEffect.ShowMessage("暂时缺货"))
+            return
+        }
         if (product.skus.isNotEmpty() && selectedSku == null) {
-            _cartMessage.value = "请选择商品规格"
+            _effects.tryEmit(ProductDetailUiEffect.ShowMessage("请选择商品规格"))
             return
         }
         val selectedSpecs = selectedSku?.properties.orEmpty()
         val specSummary = selectedSpecs.toSpecSummary()
         viewModelScope.launch {
+            _isAddingToCart.value = true
             runCatching {
                 repository.addToCart(
                     skuId = product.skuId,
@@ -77,8 +95,13 @@ class ProductDetailViewModel(
                 .onSuccess { snapshot ->
                     _cartItemCount.value = snapshot.totalItems
                     _cartMessage.value = "已加入购物车"
+                    _effects.tryEmit(ProductDetailUiEffect.ShowMessage("已加入购物车"))
                 }
-                .onFailure { _cartMessage.value = "加购失败，请稍后重试" }
+                .onFailure {
+                    _cartMessage.value = "加购失败，请稍后重试"
+                    _effects.tryEmit(ProductDetailUiEffect.ShowMessage("加购失败，请稍后重试"))
+                }
+            _isAddingToCart.value = false
         }
     }
 

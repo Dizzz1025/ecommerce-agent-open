@@ -24,6 +24,7 @@ data class ProductReviewUiModel(
 
 data class ProductPresentationUiModel(
     val type: String = "",
+    val shortTitle: String? = null,
     val optionLabel: String? = null,
     val reason: String? = null,
     val tradeOff: String? = null,
@@ -39,12 +40,14 @@ data class ProductUiModel(
     val productId: String? = null,
     val name: String,
     val title: String? = null,
+    val shortTitle: String? = null,
     val category: String,
     val brand: String,
     val price: Double,
     val basePrice: Double? = null,
     val stock: Int,
     val imageUrl: String = "",
+    val detailImageUrl: String? = null,
     val imagePath: String? = null,
     val subCategory: String? = null,
     val reason: String? = null,
@@ -102,12 +105,44 @@ data class CartItemUiModel(
     val selectedSpecs: Map<String, String> = emptyMap(),
     val name: String,
     val price: Double,
+    val originalPrice: Double? = null,
     val quantity: Int,
     val imageUrl: String = "",
     val specSummary: String? = null,
+    val stock: Int? = null,
 ) {
     val lineTotal: Double
         get() = price * quantity
+}
+
+data class CartItemRestoreSnapshotUiModel(
+    val cartItemId: String,
+    val skuId: String,
+    val selectedSkuId: String? = null,
+    val selectedSpecs: Map<String, String> = emptyMap(),
+    val name: String,
+    val price: Double,
+    val originalPrice: Double? = null,
+    val quantity: Int,
+    val imageUrl: String = "",
+    val specSummary: String? = null,
+    val stock: Int? = null,
+)
+
+fun CartItemUiModel.toRestoreSnapshot(): CartItemRestoreSnapshotUiModel {
+    return CartItemRestoreSnapshotUiModel(
+        cartItemId = cartItemId,
+        skuId = skuId,
+        selectedSkuId = selectedSkuId,
+        selectedSpecs = selectedSpecs,
+        name = name,
+        price = price,
+        originalPrice = originalPrice,
+        quantity = quantity,
+        imageUrl = imageUrl,
+        specSummary = specSummary,
+        stock = stock,
+    )
 }
 
 data class CartSnapshotUiModel(

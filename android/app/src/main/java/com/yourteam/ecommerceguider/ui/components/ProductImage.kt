@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -35,51 +36,62 @@ private enum class ProductImageState {
     Failed,
 }
 
+enum class ResolvedImageSource {
+    Detail,
+    Original,
+}
+
 @Composable
 fun ProductImage(
     imageUrl: String,
     contentDescription: String?,
     modifier: Modifier = Modifier,
+    fallbackImageUrl: String? = null,
+    onResolvedImageSourceChange: (ResolvedImageSource?) -> Unit = {},
     cornerRadius: Dp = 20.dp,
     contentScale: ContentScale = ContentScale.Crop,
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
 ) {
-    var imageBitmap by remember(imageUrl) { mutableStateOf<ImageBitmap?>(null) }
-    var imageState by remember(imageUrl) { mutableStateOf(ProductImageState.Loading) }
+    val loadAttempts = remember(imageUrl, fallbackImageUrl) {
+        val primaryUrl = imageUrl.trim()
+        buildList {
+            primaryUrl.takeIf { it.isNotBlank() }?.let { add(ResolvedImageSource.Detail to it) }
+            fallbackImageUrl
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.takeIf { it != primaryUrl }
+                ?.let { add(ResolvedImageSource.Original to it) }
+        }.distinctBy { it.second }
+    }
+    var imageBitmap by remember(loadAttempts) { mutableStateOf<ImageBitmap?>(null) }
+    var imageState by remember(loadAttempts) { mutableStateOf(ProductImageState.Loading) }
 
-    LaunchedEffect(imageUrl) {
+    LaunchedEffect(loadAttempts) {
         imageBitmap = null
-        if (imageUrl.isBlank()) {
+        if (loadAttempts.isEmpty()) {
             imageState = ProductImageState.Empty
+            onResolvedImageSourceChange(null)
             return@LaunchedEffect
         }
         imageState = ProductImageState.Loading
-        val bitmap = runCatching {
-            withContext(Dispatchers.IO) {
-                val connection = URL(imageUrl).openConnection() as HttpURLConnection
-                connection.connectTimeout = 8_000
-                connection.readTimeout = 12_000
-                connection.instanceFollowRedirects = true
-                try {
-                    if (connection.responseCode !in 200..299) {
-                        null
-                    } else {
-                        connection.inputStream.use { stream ->
-                            BitmapFactory.decodeStream(stream)?.asImageBitmap()
-                        }
-                    }
-                } finally {
-                    connection.disconnect()
-                }
+        var bitmap: ImageBitmap? = null
+        var resolvedSource: ResolvedImageSource? = null
+        for ((source, url) in loadAttempts) {
+            bitmap = loadProductImageBitmap(url)
+            if (bitmap != null) {
+                resolvedSource = source
+                break
             }
-        }.getOrNull()
+        }
         imageBitmap = bitmap
         imageState = if (bitmap == null) ProductImageState.Failed else ProductImageState.Loaded
+        onResolvedImageSourceChange(resolvedSource)
     }
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+            .background(backgroundColor),
         contentAlignment = Alignment.Center,
     ) {
         val bitmap = imageBitmap
@@ -104,4 +116,26 @@ fun ProductImage(
             )
         }
     }
+}
+
+private suspend fun loadProductImageBitmap(imageUrl: String): ImageBitmap? {
+    return runCatching {
+        withContext(Dispatchers.IO) {
+            val connection = URL(imageUrl).openConnection() as HttpURLConnection
+            connection.connectTimeout = 8_000
+            connection.readTimeout = 12_000
+            connection.instanceFollowRedirects = true
+            try {
+                if (connection.responseCode !in 200..299) {
+                    null
+                } else {
+                    connection.inputStream.use { stream ->
+                        BitmapFactory.decodeStream(stream)?.asImageBitmap()
+                    }
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }
+    }.getOrNull()
 }

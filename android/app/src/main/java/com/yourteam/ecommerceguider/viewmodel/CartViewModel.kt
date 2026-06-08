@@ -2,11 +2,17 @@ package com.yourteam.ecommerceguider.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.yourteam.ecommerceguider.data.model.CartItemRestoreSnapshotUiModel
 import com.yourteam.ecommerceguider.data.model.CartItemUiModel
 import com.yourteam.ecommerceguider.data.model.CartSnapshotUiModel
+import com.yourteam.ecommerceguider.data.model.toRestoreSnapshot
 import com.yourteam.ecommerceguider.data.repository.ShoppingRepository
+import com.yourteam.ecommerceguider.ui.screens.cart.CartUiEffect
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -31,13 +37,18 @@ class CartViewModel(
     private val _updatingItemIds = MutableStateFlow<Set<String>>(emptySet())
     val updatingItemIds: StateFlow<Set<String>> = _updatingItemIds.asStateFlow()
 
+    private val _effects = MutableSharedFlow<CartUiEffect>(extraBufferCapacity = 1)
+    val effects: SharedFlow<CartUiEffect> = _effects.asSharedFlow()
+
+    private var lastRemovedSnapshot: CartItemRestoreSnapshotUiModel? = null
+
     fun loadCart() {
         viewModelScope.launch {
             _isLoading.value = true
             runCatching { repository.getCart() }
                 .onSuccess {
                     _cart.value = it
-                    _selectedItemIds.value = it.items.map { item -> item.cartItemId }.toSet()
+                    selectAllCurrentItems(it)
                     _errorMessage.value = null
                 }
                 .onFailure { _errorMessage.value = "购物车加载失败，请检查后端服务。" }
@@ -53,7 +64,7 @@ class CartViewModel(
     fun decrease(cartItemId: String) {
         val item = _cart.value.items.firstOrNull { it.cartItemId == cartItemId } ?: return
         if (item.quantity <= 1) {
-            _operationMessage.value = "至少保留 1 件，如需移除请点击删除"
+            _effects.tryEmit(CartUiEffect.ShowMessage("数量已是最小值，左滑可删除商品"))
         } else {
             updateQuantity(item, item.quantity - 1)
         }
@@ -74,11 +85,17 @@ class CartViewModel(
             }
                 .onSuccess {
                     _cart.value = it
-                    syncSelectionWithCart(it)
+                    selectAllCurrentItems(it)
                     _errorMessage.value = null
-                    _operationMessage.value = "数量已更新"
                 }
-                .onFailure { _errorMessage.value = "数量修改失败，请稍后重试。" }
+                .onFailure {
+                    _effects.tryEmit(
+                        CartUiEffect.ShowMessage(
+                            message = "数量修改失败，请稍后重试。",
+                            cartItemId = item.cartItemId,
+                        ),
+                    )
+                }
             markUpdating(item.cartItemId, updating = false)
         }
     }
@@ -88,16 +105,53 @@ class CartViewModel(
             return
         }
         viewModelScope.launch {
+            val restoreSnapshot = item.toRestoreSnapshot()
             markUpdating(item.cartItemId, updating = true)
             runCatching { repository.removeFromCart(skuId = item.skuId, cartItemId = item.cartItemId) }
                 .onSuccess {
                     _cart.value = it
-                    syncSelectionWithCart(it)
+                    selectAllCurrentItems(it)
+                    lastRemovedSnapshot = restoreSnapshot
                     _errorMessage.value = null
-                    _operationMessage.value = "商品已删除"
+                    _effects.tryEmit(CartUiEffect.ItemRemoved(item.cartItemId))
                 }
-                .onFailure { _errorMessage.value = "删除失败，请稍后重试。" }
+                .onFailure {
+                    _effects.tryEmit(
+                        CartUiEffect.ShowMessage(
+                            message = "删除失败，请稍后重试。",
+                            cartItemId = item.cartItemId,
+                        ),
+                    )
+                }
             markUpdating(item.cartItemId, updating = false)
+        }
+    }
+
+    fun undoLastRemove(cartItemId: String) {
+        val snapshot = lastRemovedSnapshot ?: return
+        if (snapshot.cartItemId != cartItemId || _updatingItemIds.value.contains(cartItemId)) {
+            return
+        }
+        viewModelScope.launch {
+            markUpdating(cartItemId, updating = true)
+            runCatching { repository.restoreCartItem(snapshot) }
+                .onSuccess {
+                    _cart.value = it
+                    selectAllCurrentItems(it)
+                    lastRemovedSnapshot = null
+                    _errorMessage.value = null
+                    _effects.tryEmit(CartUiEffect.ShowMessage("已恢复商品"))
+                }
+                .onFailure {
+                    _effects.tryEmit(CartUiEffect.ShowMessage("撤销失败，请稍后重试。"))
+                }
+            markUpdating(cartItemId, updating = false)
+        }
+    }
+
+    fun discardLastRemoved(cartItemId: String) {
+        if (lastRemovedSnapshot?.cartItemId == cartItemId) {
+            lastRemovedSnapshot = null
         }
     }
 
@@ -108,9 +162,11 @@ class CartViewModel(
                     _cart.value = it
                     _selectedItemIds.value = emptySet()
                     _errorMessage.value = null
-                    _operationMessage.value = "购物车已清空"
+                    _effects.tryEmit(CartUiEffect.ShowMessage("购物车已清空"))
                 }
-                .onFailure { _errorMessage.value = "清空失败，请稍后重试。" }
+                .onFailure {
+                    _effects.tryEmit(CartUiEffect.ShowMessage("清空失败，请稍后重试。"))
+                }
         }
     }
 
@@ -135,9 +191,8 @@ class CartViewModel(
         _operationMessage.value = null
     }
 
-    private fun syncSelectionWithCart(snapshot: CartSnapshotUiModel) {
-        val currentItemIds = snapshot.items.map { it.cartItemId }.toSet()
-        _selectedItemIds.value = _selectedItemIds.value.intersect(currentItemIds)
+    private fun selectAllCurrentItems(snapshot: CartSnapshotUiModel) {
+        _selectedItemIds.value = snapshot.items.map { it.cartItemId }.toSet()
     }
 
     private fun markUpdating(itemId: String, updating: Boolean) {

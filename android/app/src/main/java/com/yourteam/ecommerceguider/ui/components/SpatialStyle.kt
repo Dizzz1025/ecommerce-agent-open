@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/*
+ * Legacy spatial/glass visual system.
+ * Kept for existing screens during the neutral App token migration.
+ */
 val SpatialBackgroundBrush = Brush.verticalGradient(
     colors = listOf(
         Color(0xFFF7FAFF),

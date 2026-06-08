@@ -381,7 +381,7 @@ class ChatViewModel(
         when (event.event) {
             "progress", "process" -> handleProgressEvent(event)
             "generation_started" -> handleGenerationStarted(event)
-            "response_delta" -> appendResponsePreviewDelta(event.text.orEmpty(), event.totalDurationMs)
+            "response_delta" -> appendAnswerChunk(event.text.orEmpty())
             "response_completed" -> handleResponseCompleted(event)
             "token" -> {
                 if (!responseCompletedForCurrentTurn) {
@@ -399,6 +399,7 @@ class ChatViewModel(
             "recommendation_text_delta" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
+                    ensureAssistantMessage()
                     appendRecommendationSectionDelta(section)
                 }
                 collapseThinking()
@@ -406,6 +407,7 @@ class ChatViewModel(
             "recommendation_text_done" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
+                    ensureAssistantMessage()
                     finishRecommendationSection(section)
                 }
                 collapseThinking()
@@ -413,6 +415,7 @@ class ChatViewModel(
             "recommendation_section_done" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
+                    ensureAssistantMessage()
                     markRecommendationSectionDone(section)
                 }
                 collapseThinking()
@@ -423,12 +426,19 @@ class ChatViewModel(
             "product_card" -> {
                 event.recommendationSection?.let(::normalizeSectionTurnId)?.let { section ->
                     adoptTurnId(section.turnId)
+                    ensureAssistantMessage()
                     attachRecommendationProduct(section)
                 }
-                event.product?.let { _products.value = mergeProductsBySku(_products.value, listOf(it)) }
+                event.product?.let {
+                    ensureAssistantMessage()
+                    _products.value = mergeProductsBySku(_products.value, listOf(it))
+                }
                 collapseThinking()
             }
             "product_cards", "products", "alternatives" -> {
+                if (event.products.isNotEmpty()) {
+                    ensureAssistantMessage()
+                }
                 _products.value = mergeProductsBySku(_products.value, event.products)
                 mergeSectionProductSnapshots(event.products)
                 if (event.products.isNotEmpty()) {

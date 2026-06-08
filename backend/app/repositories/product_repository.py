@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse
 
 from app.models.domain import Product, ProductSpotlight
 from app.utils.json_loader import load_json_file
@@ -86,6 +86,7 @@ class ProductRepository:
         name = raw.get("name") or raw.get("title") or sku_id
         price = float(raw.get("price") or raw.get("base_price") or 0)
         image_url = raw.get("image_url") or raw.get("image_path") or ""
+        detail_image_url = raw.get("detail_image_url") or raw.get("detailImageUrl")
         spotlight = raw.get("spotlight") or {}
         searchable_text = self._build_searchable_text(
             title=name,
@@ -110,6 +111,8 @@ class ProductRepository:
             "stock": int(raw.get("stock") or 999),
             "image_url": image_url,
             "image_path": raw.get("image_path"),
+            "detail_image_url": detail_image_url,
+            "detail_image_path": raw.get("detail_image_path") or raw.get("detailImagePath"),
             "skus": raw.get("skus", []),
             "spotlight": spotlight,
             "reviews_summary": raw.get("reviews_summary") or self._summarize_reviews(raw.get("rag_knowledge", {})),
@@ -127,6 +130,8 @@ class ProductRepository:
         min_price = min(sku_prices) if sku_prices else float(raw.get("base_price", 0))
         image_path = self._resolve_dataset_image_path(raw.get("image_path", ""))
         image_url = f"/static/dataset/{quote(image_path, safe='/')}" if image_path else ""
+        detail_image_path = self._resolve_detail_dataset_image_path(image_path)
+        detail_image_url = f"/static/dataset/{quote(detail_image_path, safe='/')}" if detail_image_path else None
         rag_knowledge = raw.get("rag_knowledge", {})
         searchable_text = self._build_searchable_text(
             title=title,
@@ -158,6 +163,8 @@ class ProductRepository:
             "stock": 999,
             "image_url": image_url,
             "image_path": image_path,
+            "detail_image_url": detail_image_url,
+            "detail_image_path": detail_image_path,
             "skus": skus,
             "spotlight": spotlight.model_dump(),
             "reviews_summary": self._summarize_reviews(rag_knowledge),
@@ -265,6 +272,76 @@ class ProductRepository:
                 return candidate.relative_to(self.dataset_dir).as_posix()
 
         return normalized
+
+    def _resolve_detail_dataset_image_path(self, image_path: str) -> str | None:
+        """Return a product-detail image path from a sibling images_android dir.
+
+        The ordinary image_path keeps its existing meaning. This helper only
+        creates an optional detail-specific path when a safe file exists under
+        the same product image directory.
+        """
+        if not image_path or not self.dataset_dir:
+            return None
+
+        normalized = image_path.replace("\\", "/")
+        parsed_path = urlparse(normalized).path if "://" in normalized else normalized
+        decoded_path = unquote(parsed_path).replace("\\", "/").strip("/")
+        filename = Path(decoded_path).name
+        if not self._safe_image_filename(filename):
+            return None
+
+        parent = Path(decoded_path).parent.as_posix()
+        detail_dirs = [f"{parent}/images_android" if parent and parent != "." else "images_android"]
+        if parent.endswith("/images"):
+            detail_dirs.append(f"{parent.removesuffix('/images')}/images_android")
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix.lower()
+        candidates: list[str] = []
+        for detail_dir in detail_dirs:
+            candidates.append(f"{detail_dir}/{filename}")
+            for extension in [".jpg", ".jpeg", ".png", ".webp"]:
+                if extension != suffix:
+                    candidates.append(f"{detail_dir}/{stem}{extension}")
+
+        dataset_root = self.dataset_dir.resolve()
+        for candidate in candidates:
+            candidate_path = (self.dataset_dir / candidate).resolve()
+            if not self._is_relative_to(candidate_path, dataset_root):
+                continue
+            if candidate_path.is_file() and not candidate_path.name.startswith("._"):
+                return candidate_path.relative_to(dataset_root).as_posix()
+
+        for detail_dir_path in self.dataset_dir.glob("*/images_android"):
+            candidate = detail_dir_path / filename
+            candidate_path = candidate.resolve()
+            if self._is_relative_to(candidate_path, dataset_root) and candidate.is_file() and not candidate.name.startswith("._"):
+                return candidate.relative_to(dataset_root).as_posix()
+
+            for extension in [".jpg", ".jpeg", ".png", ".webp"]:
+                if extension == suffix:
+                    continue
+                candidate = detail_dir_path / f"{stem}{extension}"
+                candidate_path = candidate.resolve()
+                if self._is_relative_to(candidate_path, dataset_root) and candidate.is_file() and not candidate.name.startswith("._"):
+                    return candidate.relative_to(dataset_root).as_posix()
+
+        return None
+
+    @staticmethod
+    def _safe_image_filename(filename: str) -> bool:
+        if not filename or filename in {".", ".."}:
+            return False
+        if "/" in filename or "\\" in filename:
+            return False
+        return ".." not in Path(filename).parts
+
+    @staticmethod
+    def _is_relative_to(path: Path, root: Path) -> bool:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            return False
 
 
 

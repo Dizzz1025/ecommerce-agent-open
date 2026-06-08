@@ -1,6 +1,7 @@
 package com.yourteam.ecommerceguider.ui.screens.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,40 +11,39 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yourteam.ecommerceguider.theme.AppColors
+import com.yourteam.ecommerceguider.theme.AppDimensions
+import com.yourteam.ecommerceguider.theme.AppRadius
+import com.yourteam.ecommerceguider.theme.AppSpacing
+import com.yourteam.ecommerceguider.theme.AppTypography
 import com.yourteam.ecommerceguider.ui.components.ChatBubble
 import com.yourteam.ecommerceguider.ui.components.ChatInputBar
-import com.yourteam.ecommerceguider.ui.components.SpatialAmbientBlue
-import com.yourteam.ecommerceguider.ui.components.SpatialAmbientSilver
-import com.yourteam.ecommerceguider.ui.components.SpatialAmbientViolet
-import com.yourteam.ecommerceguider.ui.components.SpatialBackgroundBrush
 import com.yourteam.ecommerceguider.ui.screens.chat.components.AssistantAnswerIntroCard
-import com.yourteam.ecommerceguider.ui.screens.chat.components.CartCheckoutBar
 import com.yourteam.ecommerceguider.ui.screens.chat.components.EmptyProductsCard
-import com.yourteam.ecommerceguider.ui.screens.chat.components.FinalComparisonSummary
-import com.yourteam.ecommerceguider.ui.screens.chat.components.FollowUpSuggestionChips
 import com.yourteam.ecommerceguider.ui.screens.chat.components.GuideTopBar
 import com.yourteam.ecommerceguider.ui.screens.chat.components.HistoryRequestsDialog
-import com.yourteam.ecommerceguider.ui.screens.chat.components.ProductCompareCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.RecommendationSection
 import com.yourteam.ecommerceguider.ui.screens.chat.components.SpecSelectionCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.WelcomeCard
@@ -74,6 +74,7 @@ fun ChatScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     val activeRecommendationSections = remember(recommendationSections, activeTurnId) {
         recommendationSections.filter { section -> section.turnId == activeTurnId }
     }
@@ -99,8 +100,19 @@ fun ChatScreen(
         !errorMessage.isNullOrBlank()
     val showWelcome = messages.isEmpty() && !hasResultMode
     var showHistory by remember { mutableStateOf(false) }
-    var showCompare by remember { mutableStateOf(false) }
     var thinkingExpanded by remember { mutableStateOf(false) }
+    val isNearBottom by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val total = layout.totalItemsCount
+            if (total == 0) {
+                true
+            } else {
+                val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+                lastVisible >= total - 3
+            }
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.navigation.collect { navigation ->
@@ -121,7 +133,6 @@ fun ChatScreen(
     }
 
     LaunchedEffect(visibleProducts) {
-        showCompare = false
         if (visibleProducts.isNotEmpty()) {
             thinkingExpanded = false
         }
@@ -136,6 +147,22 @@ fun ChatScreen(
     LaunchedEffect(isStreaming) {
         if (isStreaming && products.isEmpty() && answer.isBlank()) {
             thinkingExpanded = true
+        }
+    }
+
+    LaunchedEffect(
+        messages.size,
+        recommendationSections.size,
+        products.size,
+        specSelections.size,
+        answer.length / 120,
+        isStreaming,
+    ) {
+        if (isNearBottom) {
+            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+            if (lastIndex >= 0) {
+                listState.scrollToItem(lastIndex)
+            }
         }
     }
 
@@ -154,26 +181,8 @@ fun ChatScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(SpatialBackgroundBrush),
+            .background(AppColors.Background),
     ) {
-        Box(
-            modifier = Modifier
-                .size(500.dp)
-                .offset(x = (-190).dp, y = (-34).dp)
-                .background(SpatialAmbientBlue),
-        )
-        Box(
-            modifier = Modifier
-                .size(480.dp)
-                .offset(x = 118.dp, y = 126.dp)
-                .background(SpatialAmbientViolet),
-        )
-        Box(
-            modifier = Modifier
-                .size(380.dp)
-                .offset(x = (-18).dp, y = 474.dp)
-                .background(SpatialAmbientSilver),
-        )
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
@@ -182,7 +191,6 @@ fun ChatScreen(
                     historyCount = messages.count { it.isUser },
                     onHistoryClick = { showHistory = true },
                     onCartClick = onCartClick,
-                    onAddressClick = onAddressClick,
                 )
             },
             bottomBar = {
@@ -191,13 +199,9 @@ fun ChatScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .imePadding()
-                        .padding(horizontal = 14.dp, vertical = 14.dp),
+                        .background(AppColors.Background)
+                        .padding(horizontal = AppSpacing.Lg, vertical = AppSpacing.Sm),
                 ) {
-                    CartCheckoutBar(
-                        cartItemCount = cartItemCount,
-                        onCartClick = onCartClick,
-                        onCheckoutClick = onCheckoutClick,
-                    )
                     ChatInputBar(
                         onSend = viewModel::sendMessage,
                         onStop = viewModel::stopStreaming,
@@ -207,15 +211,16 @@ fun ChatScreen(
                     )
                 }
             },
-            containerColor = Color.Transparent,
+            containerColor = AppColors.Background,
         ) { innerPadding ->
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 18.dp, bottom = 28.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
+                    .padding(horizontal = AppSpacing.Lg),
+                contentPadding = PaddingValues(top = AppSpacing.Md, bottom = AppSpacing.Xl),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
             ) {
                 if (showWelcome) {
                     item { WelcomeCard() }
@@ -253,6 +258,8 @@ fun ChatScreen(
                                 }
                             }
                             val turnSections = sectionsByTurn[message.turnId].orEmpty()
+                            val turnHasValidRecommendation = turnSections.any { it.product != null } ||
+                                (message.turnId == activeTurnId && products.isNotEmpty())
                             if (turnSections.isNotEmpty()) {
                                 turnSections.forEach { section ->
                                     item(key = section.stableKey) {
@@ -264,26 +271,6 @@ fun ChatScreen(
                                             activeSpecSelection = activeProductCardSpecSelection,
                                             onSpecOptionClick = viewModel::addSelectedSpecToCart,
                                         )
-                                    }
-                                }
-                                val turnProducts = turnSections.mapNotNull { it.product }
-                                if (message.turnId == activeTurnId && turnProducts.isNotEmpty()) {
-                                    item(key = "summary-${message.turnId}") {
-                                        FinalComparisonSummary(products = turnProducts)
-                                    }
-                                    if (turnProducts.size >= 2) {
-                                        item(key = "followups-${message.turnId}") {
-                                            FollowUpSuggestionChips(
-                                                products = turnProducts,
-                                                onSend = viewModel::sendMessage,
-                                                onCompare = { showCompare = !showCompare },
-                                            )
-                                        }
-                                        if (showCompare) {
-                                            item(key = "compare-${message.turnId}") {
-                                                ProductCompareCard(products = turnProducts)
-                                            }
-                                        }
                                     }
                                 }
                             } else if (message.turnId == activeTurnId && products.isNotEmpty()) {
@@ -300,26 +287,11 @@ fun ChatScreen(
                                         )
                                     }
                                 }
-                                item(key = "summary-${message.turnId}") {
-                                    FinalComparisonSummary(products = products)
-                                }
-                                if (products.size >= 2) {
-                                    item(key = "followups-${message.turnId}") {
-                                        FollowUpSuggestionChips(
-                                            products = products,
-                                            onSend = viewModel::sendMessage,
-                                            onCompare = { showCompare = !showCompare },
-                                        )
-                                    }
-                                    if (showCompare) {
-                                        item(key = "compare-${message.turnId}") {
-                                            ProductCompareCard(products = products)
-                                        }
-                                    }
-                                }
                             } else if (
                                 message.turnId == activeTurnId &&
                                 activeTurnAllowsEmptyProducts &&
+                                !turnHasValidRecommendation &&
+                                activeProductCardSpecSelection == null &&
                                 turnSpecSelections.isEmpty() &&
                                 !isStreaming &&
                                 answer.isNotBlank()
@@ -357,6 +329,31 @@ fun ChatScreen(
                     }
                 }
                 item { Spacer(modifier = Modifier.size(12.dp)) }
+            }
+        }
+        if (!showWelcome && !isNearBottom) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = AppDimensions.ChatInputMinHeight + AppSpacing.Xxl)
+                    .clickable {
+                        scope.launch {
+                            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+                            if (lastIndex >= 0) {
+                                listState.animateScrollToItem(lastIndex)
+                            }
+                        }
+                    },
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.Pill),
+                color = AppColors.Surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Border),
+            ) {
+                Text(
+                    text = "回到底部",
+                    modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
+                    style = AppTypography.CaptionStrong,
+                    color = AppColors.TextPrimary,
+                )
             }
         }
     }

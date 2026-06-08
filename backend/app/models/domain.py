@@ -52,6 +52,8 @@ class Product(BaseModel):
     stock: int
     image_url: str
     image_path: str | None = None
+    detail_image_url: str | None = None
+    detail_image_path: str | None = None
     skus: list[ProductSku] = Field(default_factory=list)
     spotlight: ProductSpotlight = Field(default_factory=ProductSpotlight)
     reviews_summary: str

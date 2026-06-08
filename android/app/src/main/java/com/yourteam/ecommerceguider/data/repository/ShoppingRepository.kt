@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import com.yourteam.ecommerceguider.BuildConfig
 import com.yourteam.ecommerceguider.data.model.BackendNavigationUiModel
+import com.yourteam.ecommerceguider.data.model.CartItemRestoreSnapshotUiModel
 import com.yourteam.ecommerceguider.data.model.CartItemUiModel
 import com.yourteam.ecommerceguider.data.model.CartSnapshotUiModel
 import com.yourteam.ecommerceguider.data.model.ChatStreamEvent
@@ -196,6 +197,19 @@ class ShoppingRepository(
         } finally {
             connection.disconnect()
         }
+    }
+
+    suspend fun restoreCartItem(snapshot: CartItemRestoreSnapshotUiModel): CartSnapshotUiModel {
+        return addToCart(
+            skuId = snapshot.skuId,
+            quantity = snapshot.quantity,
+            selectedSkuId = snapshot.selectedSkuId,
+            selectedSpecs = snapshot.selectedSpecs,
+            unitPrice = snapshot.price,
+            productName = snapshot.name,
+            imageUrl = snapshot.imageUrl,
+            specSummary = snapshot.specSummary,
+        )
     }
 
     suspend fun updateCartQuantity(
@@ -694,17 +708,23 @@ class ShoppingRepository(
     }
 
     private fun JSONObject.toProduct(): ProductUiModel {
+        val imageUrl = absolutizeUrl(optString("image_url").ifBlank { optString("imageUrl") })
+        val detailImageUrl = (optNullableString("detail_image_url") ?: optNullableString("detailImageUrl"))
+            ?.let(::absolutizeUrl)
+            ?.takeIf { it.isNotBlank() }
         return ProductUiModel(
             skuId = optString("sku_id"),
             productId = optNullableString("product_id"),
             name = optString("name").ifBlank { optString("title") },
             title = optNullableString("title"),
+            shortTitle = optNullableString("short_title") ?: optNullableString("shortTitle"),
             category = optString("category"),
             brand = optString("brand"),
             price = optNumber("price"),
             basePrice = optNullableNumber("base_price"),
             stock = optInt("stock"),
-            imageUrl = absolutizeUrl(optString("image_url")),
+            imageUrl = imageUrl,
+            detailImageUrl = detailImageUrl,
             imagePath = optNullableString("image_path"),
             subCategory = optNullableString("sub_category"),
             reason = optNullableString("reason") ?: optNullableString("highlight_short"),
@@ -736,6 +756,7 @@ class ShoppingRepository(
         }
         return ProductPresentationUiModel(
             type = type,
+            shortTitle = optNullableString("short_title") ?: optNullableString("shortTitle"),
             optionLabel = optNullableString("option_label"),
             reason = optNullableString("reason"),
             tradeOff = optNullableString("trade_off"),
@@ -841,6 +862,10 @@ class ShoppingRepository(
                         selectedSpecs = item.optJSONObject("selected_specs").toStringMap(),
                         name = item.optString("name"),
                         price = item.optNumber("price"),
+                        originalPrice = item.optNullableNumber("original_price")
+                            ?: item.optNullableNumber("base_price")
+                            ?: item.optNullableNumber("originalPrice")
+                            ?: item.optNullableNumber("basePrice"),
                         quantity = item.optInt("quantity"),
                         imageUrl = absolutizeUrl(item.optString("image_url")),
                         specSummary = item.optNullableString("spec_summary")
@@ -848,6 +873,7 @@ class ShoppingRepository(
                             ?: item.optNullableString("spec")
                             ?: item.optJSONObject("selected_specs").toSpecSummary()
                             ?: item.optJSONObject("properties").toSpecSummary(),
+                        stock = item.optNullableInt("stock"),
                     )
                 )
             }

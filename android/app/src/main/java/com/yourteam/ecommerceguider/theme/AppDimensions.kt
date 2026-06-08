@@ -22,6 +22,9 @@ object AppDimensions {
 
     val RecommendationImageHeight = 104.dp
     val CartImageSize = 92.dp
+    val QuantityStepperCompactButton = 36.dp
+    val QuantityStepperCompactIndicator = 16.dp
+    val QuantityStepperCompactValueMinWidth = 26.dp
 
     val SwipeDeleteActionWidth = 56.dp
     val SwipeDeleteIconSize = 19.dp

@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -71,6 +71,7 @@ import com.yourteam.ecommerceguider.ui.components.PriceText
 import com.yourteam.ecommerceguider.ui.components.ProductImage
 import com.yourteam.ecommerceguider.ui.components.PriceTextLevel
 import com.yourteam.ecommerceguider.ui.components.QuantityStepper
+import com.yourteam.ecommerceguider.ui.components.QuantityStepperSize
 import com.yourteam.ecommerceguider.ui.components.SwipeToDeleteCartItem
 import com.yourteam.ecommerceguider.viewmodel.CartViewModel
 import com.yourteam.ecommerceguider.viewmodel.simpleViewModelFactory
@@ -215,9 +216,6 @@ fun CartScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
                 ) {
-                    item(key = "cart-summary") {
-                        CartListSummary(totalQuantity = visibleQuantity)
-                    }
                     items(
                         items = cart.items,
                         key = { it.cartItemId },
@@ -271,13 +269,15 @@ private fun CartTopBar(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding()
-            .height(AppDimensions.TopBarHeight + AppSpacing.Lg)
+            .height(AppDimensions.TopBarHeight + AppSpacing.Sm)
             .padding(horizontal = AppSpacing.Lg),
     ) {
         AppIconButton(
             onClick = onBack,
             style = AppIconButtonStyle.Surface,
+            containerSize = AppDimensions.IconButtonSmall,
+            hitAreaSize = AppDimensions.IconButton,
+            iconSize = AppDimensions.IconSmall,
             modifier = Modifier.align(Alignment.CenterStart),
         ) {
             Icon(
@@ -289,11 +289,11 @@ private fun CartTopBar(
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.Xxs),
         ) {
             Text(
                 text = "购物车",
-                style = AppTypography.TitleSmall,
+                style = AppTypography.Title,
                 color = AppColors.TextPrimary,
                 maxLines = 1,
             )
@@ -305,17 +305,6 @@ private fun CartTopBar(
             )
         }
     }
-}
-
-@Composable
-private fun CartListSummary(totalQuantity: Int) {
-    Text(
-        text = "共 $totalQuantity 件商品",
-        style = AppTypography.BodySmall,
-        color = AppColors.TextSecondary,
-        modifier = Modifier.padding(horizontal = AppSpacing.Xs),
-        maxLines = 1,
-    )
 }
 
 @Composable
@@ -344,7 +333,9 @@ private fun CartItemCard(
             enabled = !isUpdating,
         ) {
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 132.dp),
                 shape = RoundedCornerShape(AppRadius.Card),
                 colors = CardDefaults.cardColors(containerColor = AppColors.Surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = AppElevation.None),
@@ -368,11 +359,11 @@ private fun CartItemCard(
                     )
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
                     ) {
                         Text(
                             text = item.name,
-                            style = AppTypography.TitleSmall,
+                            style = AppTypography.BodyStrong,
                             color = AppColors.TextPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
@@ -383,7 +374,7 @@ private fun CartItemCard(
                                 text = spec,
                                 style = AppTypography.BodySmall,
                                 color = AppColors.TextSecondary,
-                                maxLines = 2,
+                                maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
@@ -394,7 +385,7 @@ private fun CartItemCard(
                         ) {
                             PriceText(
                                 price = item.price,
-                                level = PriceTextLevel.Highlight,
+                                level = PriceTextLevel.Normal,
                                 modifier = Modifier.weight(1f, fill = false),
                             )
                             item.originalPrice
@@ -416,6 +407,7 @@ private fun CartItemCard(
                                 maximum = item.stock?.takeIf { it > 0 },
                                 onIncrease = onIncrease,
                                 onDecrease = onDecrease,
+                                size = QuantityStepperSize.Compact,
                             )
                         }
                     }

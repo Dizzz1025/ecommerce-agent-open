@@ -9,8 +9,8 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,10 +78,12 @@ fun SwipeToDeleteCartItem(
     }
 
     Box(
-        modifier = modifier,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.matchParentSize(),
             contentAlignment = Alignment.CenterEnd,
         ) {
             CompactDeleteAction(
@@ -90,12 +92,12 @@ fun SwipeToDeleteCartItem(
                 modifier = Modifier
                     .width(AppDimensions.SwipeDeleteActionWidth)
                     .fillMaxHeight(),
-                shape = shape,
             )
         }
 
         Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .zIndex(1f)
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .draggable(
@@ -142,24 +144,28 @@ fun CompactDeleteAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    shape: Shape = RoundedCornerShape(AppRadius.Card),
 ) {
     Box(
         modifier = modifier
-            .clip(shape)
-            .background(AppColors.DangerSoft)
-            .clickable(
-                enabled = enabled,
-                role = Role.Button,
-                onClick = onClick,
-            ),
+            .background(AppColors.DangerSoft),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_trash_20),
-            contentDescription = "删除商品",
-            tint = AppColors.Danger,
-            modifier = Modifier.size(AppDimensions.SwipeDeleteIconSize),
-        )
+        Box(
+            modifier = Modifier
+                .size(AppDimensions.MinimumTouchTarget)
+                .clickable(
+                    enabled = enabled,
+                    role = Role.Button,
+                    onClick = onClick,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_trash_20),
+                contentDescription = "删除商品",
+                tint = AppColors.Danger,
+                modifier = Modifier.size(AppDimensions.SwipeDeleteIconSize),
+            )
+        }
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -121,7 +122,7 @@ import com.yourteam.ecommerceguider.viewmodel.simpleViewModelFactory
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-private const val PRODUCT_VARIANT_ITEM_INDEX = 1
+private const val PRODUCT_VARIANT_ITEM_INDEX = 2
 private const val PRODUCT_VARIANT_ITEM_KEY = "variant-anchor"
 private const val SHEET_FLING_THRESHOLD = 900f
 private const val DETAIL_SHEET_DEBUG_TAG = "ProductDetailSheet"
@@ -203,8 +204,8 @@ private data class DetailSheetAnchors(
     fun nextUp(anchor: DetailSheetAnchor): DetailSheetAnchor {
         return when (anchor) {
             DetailSheetAnchor.Immersive -> DetailSheetAnchor.HalfExpanded
-            DetailSheetAnchor.HalfExpanded -> DetailSheetAnchor.Expanded
-            DetailSheetAnchor.Expanded -> DetailSheetAnchor.Expanded
+            DetailSheetAnchor.HalfExpanded -> DetailSheetAnchor.HalfExpanded
+            DetailSheetAnchor.Expanded -> DetailSheetAnchor.HalfExpanded
         }
     }
 
@@ -212,7 +213,7 @@ private data class DetailSheetAnchors(
         return when (anchor) {
             DetailSheetAnchor.Immersive -> DetailSheetAnchor.Immersive
             DetailSheetAnchor.HalfExpanded -> DetailSheetAnchor.Immersive
-            DetailSheetAnchor.Expanded -> DetailSheetAnchor.HalfExpanded
+            DetailSheetAnchor.Expanded -> DetailSheetAnchor.Immersive
         }
     }
 }
@@ -237,6 +238,7 @@ fun ProductDetailScreen(
     val listState = rememberLazyListState()
     var selectedSkuId by rememberSaveable(skuId) { mutableStateOf<String?>(null) }
     var selectedReviewFilter by rememberSaveable(skuId) { mutableStateOf(ReviewFilter.All) }
+    var showAllReviews by rememberSaveable(skuId) { mutableStateOf(false) }
     var favorite by rememberSaveable(skuId) { mutableStateOf(false) }
     var highlightSpecs by rememberSaveable(skuId) { mutableStateOf(false) }
     val favoriteAddedMessage = stringResource(R.string.product_detail_favorite_added)
@@ -283,6 +285,8 @@ fun ProductDetailScreen(
         },
         selectedReviewFilter = selectedReviewFilter,
         onReviewFilterSelected = { selectedReviewFilter = it },
+        showAllReviews = showAllReviews,
+        onShowAllReviewsChange = { showAllReviews = it },
         displayPrice = displayPrice,
         originalPrice = originalPrice,
         canAttemptPurchase = canAttemptPurchase,
@@ -438,6 +442,8 @@ private fun ProductDetailImmersiveScaffold(
     onSkuSelected: (String) -> Unit,
     selectedReviewFilter: ReviewFilter,
     onReviewFilterSelected: (ReviewFilter) -> Unit,
+    showAllReviews: Boolean,
+    onShowAllReviewsChange: (Boolean) -> Unit,
     displayPrice: Double?,
     originalPrice: Double?,
     canAttemptPurchase: Boolean,
@@ -465,13 +471,12 @@ private fun ProductDetailImmersiveScaffold(
     ) {
         val density = LocalDensity.current
         val screenHeightPx = with(density) { maxHeight.toPx() }
-        val expandedTopPx = WindowInsets.statusBars.getTop(density).toFloat() +
-            with(density) { AppSpacing.Md.toPx() }
-        val anchors = remember(screenHeightPx, expandedTopPx, density) {
+        val detailTopPx = screenHeightPx * 0.38f
+        val anchors = remember(screenHeightPx, detailTopPx, density) {
             DetailSheetAnchors(
                 immersiveTopPx = screenHeightPx - with(density) { 18.dp.toPx() },
-                halfExpandedTopPx = screenHeightPx * 0.54f,
-                expandedTopPx = expandedTopPx,
+                halfExpandedTopPx = detailTopPx,
+                expandedTopPx = detailTopPx,
             )
         }
         var sheetAnchor by rememberSaveable(skuId) { mutableStateOf(DetailSheetAnchor.Immersive) }
@@ -488,7 +493,7 @@ private fun ProductDetailImmersiveScaffold(
             sheetTopPx = if (sheetTopPx.isNaN()) {
                 anchors.position(sheetAnchor)
             } else {
-                sheetTopPx.coerceIn(anchors.expandedTopPx, anchors.immersiveTopPx)
+                sheetTopPx.coerceIn(anchors.halfExpandedTopPx, anchors.immersiveTopPx)
             }
             logSheetDebug(
                 "containerHeightPx=$screenHeightPx " +
@@ -501,7 +506,7 @@ private fun ProductDetailImmersiveScaffold(
 
         fun moveSheetBy(deltaY: Float, source: String): Float {
             val old = if (sheetTopPx.isNaN()) anchors.position(sheetAnchor) else sheetTopPx
-            val new = (old + deltaY).coerceIn(anchors.expandedTopPx, anchors.immersiveTopPx)
+            val new = (old + deltaY).coerceIn(anchors.halfExpandedTopPx, anchors.immersiveTopPx)
             sheetTopPx = new
             val consumed = new - old
             if (DETAIL_SHEET_DEBUG_LOGS && kotlin.math.abs(consumed) > 0.5f) {
@@ -554,7 +559,11 @@ private fun ProductDetailImmersiveScaffold(
         }
 
         BackHandler(enabled = true) {
-            handleBack()
+            if (showAllReviews) {
+                onShowAllReviewsChange(false)
+            } else {
+                handleBack()
+            }
         }
 
         when {
@@ -586,10 +595,17 @@ private fun ProductDetailImmersiveScaffold(
             }
 
             else -> {
-                val sheetProgress = ((anchors.immersiveTopPx - currentSheetTopPx) /
+                val detailProgress = ((anchors.immersiveTopPx - currentSheetTopPx) /
                     (anchors.immersiveTopPx - anchors.halfExpandedTopPx)).coerceIn(0f, 1f)
-                val heroAlpha = (1f - sheetProgress).coerceIn(0f, 1f)
-                val bottomBarAlpha = sheetProgress
+                val sheetHeight = with(density) {
+                    (screenHeightPx - currentSheetTopPx).coerceAtLeast(0f).toDp()
+                }
+                val heroTopAlpha = (1f - detailProgress * 0.18f).coerceIn(0f, 1f)
+                val heroBottomAlpha = (1f - detailProgress).coerceIn(0f, 1f)
+                val swipeHintAlpha = (1f - detailProgress * 2f).coerceIn(0f, 1f)
+                val bottomBarAlpha = detailProgress
+                val heroImageScale = 1f - detailProgress * 0.18f
+                val heroImageTranslationY = -screenHeightPx * 0.07f * detailProgress
                 val heroImages = remember(product.skuId, product.imageUrl, product.detailImageUrl) {
                     product.detailImages()
                 }
@@ -631,7 +647,7 @@ private fun ProductDetailImmersiveScaffold(
                     val message = currentProduct.missingSpecPrompt(selectedSku)
                     onHighlightSpecsChange(true)
                     screenScope.launch {
-                        animateSheetTo(DetailSheetAnchor.Expanded)
+                        animateSheetTo(DetailSheetAnchor.HalfExpanded)
                         listState.animateScrollToItem(index = PRODUCT_VARIANT_ITEM_INDEX)
                         snackbarHostState.showSnackbar(message)
                     }
@@ -641,7 +657,7 @@ private fun ProductDetailImmersiveScaffold(
                     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                         val deltaY = available.y
                         val consumedY = when {
-                            deltaY < 0f && currentSheetTopPx > anchors.expandedTopPx -> moveSheetBy(deltaY, "nestedPreScroll")
+                            deltaY < 0f && currentSheetTopPx > anchors.halfExpandedTopPx -> moveSheetBy(deltaY, "nestedPreScroll")
                             deltaY > 0f && listAtTop && currentSheetTopPx < anchors.immersiveTopPx -> moveSheetBy(deltaY, "nestedPreScroll")
                             else -> 0f
                         }
@@ -649,7 +665,7 @@ private fun ProductDetailImmersiveScaffold(
                     }
 
                     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                        if (currentSheetTopPx in anchors.expandedTopPx..anchors.immersiveTopPx) {
+                        if (currentSheetTopPx in anchors.halfExpandedTopPx..anchors.immersiveTopPx) {
                             settleSheet(available.y)
                         }
                         return Velocity.Zero
@@ -666,6 +682,7 @@ private fun ProductDetailImmersiveScaffold(
                         .draggable(
                             state = dragState,
                             orientation = Orientation.Vertical,
+                            enabled = currentSheetTopPx > anchors.halfExpandedTopPx + 0.5f,
                             onDragStopped = { velocity -> screenScope.launch { settleSheet(velocity) } },
                         )
                         .zIndex(0f),
@@ -676,6 +693,8 @@ private fun ProductDetailImmersiveScaffold(
                         mode = heroImageMode,
                         pagerState = heroPagerState,
                         contentDescription = product.displayTitle,
+                        imageScale = heroImageScale,
+                        imageTranslationY = heroImageTranslationY,
                         onResolvedImageSourceChange = { source ->
                             heroImageResolution = when (source) {
                                 ResolvedImageSource.Detail -> HeroImageResolution.Detail
@@ -683,24 +702,17 @@ private fun ProductDetailImmersiveScaffold(
                                 null -> HeroImageResolution.Failed
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                translationY = (anchors.immersiveTopPx - currentSheetTopPx).coerceAtLeast(0f) * -0.08f
-                                val scale = 1f - sheetProgress * 0.025f
-                                scaleX = scale
-                                scaleY = scale
-                            },
+                        modifier = Modifier.fillMaxSize(),
                     )
                     TopScrim(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .graphicsLayer { alpha = heroAlpha },
+                            .graphicsLayer { alpha = heroTopAlpha },
                     )
                     BottomScrim(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .graphicsLayer { alpha = heroAlpha },
+                            .graphicsLayer { alpha = heroBottomAlpha },
                     )
 
                     HeroTopOverlay(
@@ -732,7 +744,7 @@ private fun ProductDetailImmersiveScaffold(
                         },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .graphicsLayer { alpha = heroAlpha },
+                            .graphicsLayer { alpha = heroTopAlpha },
                     )
                     HeroBottomSummary(
                         product = product,
@@ -746,13 +758,13 @@ private fun ProductDetailImmersiveScaffold(
                                 end = AppSpacing.Xl,
                                 bottom = 46.dp,
                             )
-                            .graphicsLayer { alpha = heroAlpha },
+                            .graphicsLayer { alpha = heroBottomAlpha },
                     )
                     HeroSwipeHint(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = AppSpacing.Xxl)
-                            .graphicsLayer { alpha = heroAlpha },
+                            .graphicsLayer { alpha = swipeHintAlpha },
                     )
                 }
 
@@ -761,12 +773,12 @@ private fun ProductDetailImmersiveScaffold(
                     selectedSku = selectedSku,
                     selectedSkuId = selectedSkuId,
                     onSkuSelected = onSkuSelected,
-                    selectedReviewFilter = selectedReviewFilter,
-                    onReviewFilterSelected = onReviewFilterSelected,
+                    onViewAllReviews = { onShowAllReviewsChange(true) },
                     listState = listState,
                     highlightSpecs = highlightSpecs,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .height(sheetHeight)
                         .offset { IntOffset(x = 0, y = currentSheetTopPx.roundToInt()) }
                         .nestedScroll(nestedScrollConnection)
                         .zIndex(2f),
@@ -813,6 +825,18 @@ private fun ProductDetailImmersiveScaffold(
                         .padding(bottom = AppDimensions.BottomActionBarMinHeight + AppSpacing.Xxl)
                         .zIndex(4f),
                 )
+
+                if (showAllReviews) {
+                    ProductReviewsOverlay(
+                        product = product,
+                        initialFilter = selectedReviewFilter,
+                        onFilterSelected = onReviewFilterSelected,
+                        onBack = { onShowAllReviewsChange(false) },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(5f),
+                    )
+                }
             }
         }
     }
@@ -854,8 +878,7 @@ private fun ProductDetailSheet(
     selectedSku: ProductSkuUiModel?,
     selectedSkuId: String?,
     onSkuSelected: (String) -> Unit,
-    selectedReviewFilter: ReviewFilter,
-    onReviewFilterSelected: (ReviewFilter) -> Unit,
+    onViewAllReviews: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState,
     highlightSpecs: Boolean,
     modifier: Modifier = Modifier,
@@ -874,8 +897,7 @@ private fun ProductDetailSheet(
                 selectedSku = selectedSku,
                 selectedSkuId = selectedSkuId,
                 onSkuSelected = onSkuSelected,
-                selectedReviewFilter = selectedReviewFilter,
-                onReviewFilterSelected = onReviewFilterSelected,
+                onViewAllReviews = onViewAllReviews,
                 listState = listState,
                 highlightSpecs = highlightSpecs,
                 modifier = Modifier.weight(1f),
@@ -907,10 +929,12 @@ private fun HeroMedia(
     mode: HeroImageMode,
     pagerState: PagerState,
     contentDescription: String?,
+    imageScale: Float,
+    imageTranslationY: Float,
     onResolvedImageSourceChange: (ResolvedImageSource?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val heroScale = 1.0f
+    val heroScale = imageScale.coerceIn(0.82f, 1f)
     Box(
         modifier = modifier
             .background(if (mode == HeroImageMode.Scene) AppColors.TextPrimary else AppColors.BackgroundElevated)
@@ -935,11 +959,17 @@ private fun HeroMedia(
                             .graphicsLayer {
                                 scaleX = heroScale
                                 scaleY = heroScale
+                                translationY = imageTranslationY
                             }
                     } else {
                         Modifier
                             .fillMaxWidth(0.88f)
                             .fillMaxHeight(0.78f)
+                            .graphicsLayer {
+                                scaleX = heroScale
+                                scaleY = heroScale
+                                translationY = imageTranslationY
+                            }
                     },
                     onResolvedImageSourceChange = if (page == pagerState.currentPage) {
                         onResolvedImageSourceChange
@@ -1000,21 +1030,28 @@ private fun ProductDetailSheetContent(
     selectedSku: ProductSkuUiModel?,
     selectedSkuId: String?,
     onSkuSelected: (String) -> Unit,
-    selectedReviewFilter: ReviewFilter,
-    onReviewFilterSelected: (ReviewFilter) -> Unit,
+    onViewAllReviews: () -> Unit,
     listState: androidx.compose.foundation.lazy.LazyListState,
     highlightSpecs: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val density = LocalDensity.current
+    val navigationBottomPadding = with(density) {
+        WindowInsets.navigationBars.getBottom(this).toDp()
+    }
     LazyColumn(
         state = listState,
         modifier = modifier
             .fillMaxWidth()
             .background(AppColors.Surface),
-        contentPadding = PaddingValues(bottom = AppDimensions.BottomActionBarMinHeight + AppSpacing.Huge),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xl),
+        contentPadding = PaddingValues(
+            bottom = AppDimensions.BottomActionBarMinHeight +
+                navigationBottomPadding +
+                AppSpacing.Xxl,
+        ),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Lg),
     ) {
-        item(key = "info") {
+        item(key = "basic-info") {
             ProductInfoPanel(
                 modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             ) {
@@ -1022,8 +1059,20 @@ private fun ProductDetailSheetContent(
                     product = product,
                     selectedSku = selectedSku,
                 )
-                AiRecommendationBlock(product = product)
-                ProductTagSection(product = product)
+            }
+        }
+
+        item(key = "ai-recommendation") {
+            AiRecommendationBlock(
+                product = product,
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
+            )
+        }
+
+        item(key = PRODUCT_VARIANT_ITEM_KEY) {
+            ProductInfoPanel(
+                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
+            ) {
                 ProductVariantSelector(
                     product = product,
                     selectedSku = selectedSku,
@@ -1031,30 +1080,13 @@ private fun ProductDetailSheetContent(
                     onSkuSelected = onSkuSelected,
                     highlight = highlightSpecs,
                 )
-                SelectedSkuStatus(product = product, selectedSku = selectedSku)
             }
         }
-        item(key = PRODUCT_VARIANT_ITEM_KEY) {
-            Spacer(modifier = Modifier.height(AppSpacing.None))
-        }
-        item(key = "parameters") {
-            CoreParametersSection(
-                product = product,
-                selectedSku = selectedSku,
-                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
-            )
-        }
+
         item(key = "reviews") {
-            UserReviewSection(
+            ReviewSummaryCard(
                 product = product,
-                selectedFilter = selectedReviewFilter,
-                onFilterSelected = onReviewFilterSelected,
-                modifier = Modifier.padding(horizontal = AppSpacing.Lg),
-            )
-        }
-        item(key = "scenario-audience") {
-            ScenarioAudienceSection(
-                product = product,
+                onViewAll = onViewAllReviews,
                 modifier = Modifier.padding(horizontal = AppSpacing.Lg),
             )
         }
@@ -1953,6 +1985,7 @@ private fun UserReviewSection(
             ReviewViewAllAction(
                 reviewCount = review.reviewCount,
                 onClick = { onFilterSelected(ReviewFilter.All) },
+                enabled = true,
             )
         },
     ) {
@@ -1991,6 +2024,226 @@ private fun UserReviewSection(
 }
 
 @Composable
+private fun ReviewSummaryCard(
+    product: ProductUiModel,
+    onViewAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val review = remember(product.reviewsSummary, product.reviews) {
+        parseReviewSummary(product.reviewsSummary, product)
+    }
+    ProductInfoPanel(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        ) {
+            Text(
+                text = "\u7528\u6237\u8BC4\u4EF7",
+                style = AppTypography.TitleSmall,
+                color = AppColors.TextPrimary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            ReviewViewAllAction(
+                reviewCount = review?.reviewCount,
+                onClick = onViewAll,
+                enabled = true,
+            )
+        }
+        HorizontalDivider(color = AppColors.Divider)
+        if (review == null) {
+            ReviewEmptyState(filter = ReviewFilter.All)
+            return@ProductInfoPanel
+        }
+        CompactReviewSummaryTags(
+            positives = review.positives,
+            concerns = review.concerns,
+            reviewCount = review.reviewCount,
+        )
+    }
+}
+
+@Composable
+private fun CompactReviewSummaryTags(
+    positives: List<String>,
+    concerns: List<String>,
+    reviewCount: Int?,
+) {
+    if (positives.isEmpty() && concerns.isEmpty()) {
+        return
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+    ) {
+        if (positives.isNotEmpty()) {
+            ReviewTagGroup(
+                title = "\u597D\u8BC4\u53CD\u9988",
+                tags = positives.take(5),
+                tone = ReviewTagTone.Positive,
+            )
+        }
+        if (concerns.isNotEmpty()) {
+            ReviewTagGroup(
+                title = "\u9700\u8981\u5173\u6CE8",
+                tags = concerns.take(5),
+                tone = ReviewTagTone.Concern,
+            )
+        }
+        reviewCount?.let {
+            Text(
+                text = "\u57FA\u4E8E $it \u6761\u7528\u6237\u8BC4\u4EF7\u6574\u7406\uFF0C\u4EC5\u4F9B\u53C2\u8003",
+                style = AppTypography.Caption,
+                color = AppColors.TextTertiary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductReviewsOverlay(
+    product: ProductUiModel,
+    initialFilter: ReviewFilter,
+    onFilterSelected: (ReviewFilter) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val review = remember(product.reviewsSummary, product.reviews) {
+        parseReviewSummary(product.reviewsSummary, product)
+    }
+    var selectedFilter by rememberSaveable(product.skuId) { mutableStateOf(initialFilter) }
+    LaunchedEffect(selectedFilter) {
+        onFilterSelected(selectedFilter)
+    }
+    Surface(
+        modifier = modifier,
+        color = AppColors.Background,
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            ReviewsTopBar(
+                reviewCount = review?.reviewCount,
+                onBack = onBack,
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = AppSpacing.Lg,
+                    end = AppSpacing.Lg,
+                    bottom = AppSpacing.Xxl,
+                ),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Lg),
+            ) {
+                if (review == null) {
+                    item(key = "empty") {
+                        ReviewEmptyState(filter = ReviewFilter.All)
+                    }
+                } else {
+                    item(key = "filters") {
+                        ReviewFilterBar(
+                            selectedFilter = selectedFilter,
+                            counts = review.filterCounts,
+                            onFilterSelected = { selectedFilter = it },
+                        )
+                    }
+                    val filteredReviews = review.reviews.filterBy(selectedFilter)
+                    if (filteredReviews.isEmpty()) {
+                        item(key = "filtered-empty") {
+                            ReviewEmptyState(filter = selectedFilter)
+                        }
+                    } else {
+                        filteredReviews.forEach { item ->
+                            item(
+                                key = "${item.nickname.orEmpty()}-${item.createdAt.orEmpty()}-${item.content.hashCode()}",
+                            ) {
+                                ProductInfoPanel {
+                                    ReviewListItem(review = item)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReviewsTopBar(
+    reviewCount: Int?,
+    onBack: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm)
+            .heightIn(min = AppDimensions.TopBarHeight),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+    ) {
+        AppIconButton(
+            onClick = onBack,
+            style = AppIconButtonStyle.Surface,
+            containerSize = 40.dp,
+            hitAreaSize = 44.dp,
+            iconSize = 20.dp,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right_20),
+                contentDescription = "\u8FD4\u56DE",
+                modifier = Modifier.rotate(180f),
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "\u7528\u6237\u8BC4\u4EF7",
+                style = AppTypography.Title,
+                color = AppColors.TextPrimary,
+                maxLines = 1,
+            )
+            Text(
+                text = reviewCount?.let { "\u5171 $it \u6761" } ?: "\u6682\u65E0\u8BC4\u4EF7",
+                style = AppTypography.BodySmall,
+                color = AppColors.TextSecondary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReviewViewAllAction(
+    reviewCount: Int?,
+    onClick: () -> Unit,
+    enabled: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = reviewCount?.let { "\u67E5\u770B\u5168\u90E8\uFF0C\u5171 $it \u6761" }
+                ?: "\u67E5\u770B\u5168\u90E8",
+            style = AppTypography.CaptionStrong,
+            color = if (enabled) AppColors.TextSecondary else AppColors.TextDisabled,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_right_20),
+            contentDescription = null,
+            modifier = Modifier.size(AppDimensions.IconSmall),
+            tint = if (enabled) AppColors.TextSecondary else AppColors.TextDisabled,
+        )
+    }
+}
+
+/*
+@Composable
 private fun ReviewViewAllAction(
     reviewCount: Int?,
     onClick: () -> Unit,
@@ -2017,6 +2270,7 @@ private fun ReviewViewAllAction(
         )
     }
 }
+*/
 
 @Composable
 private fun ReviewRatingOverview(
@@ -2435,6 +2689,7 @@ private fun DetailSection(
 private data class ReviewDisplay(
     val rating: Double?,
     val reviewCount: Int?,
+    val summary: String,
     val positives: List<String>,
     val concerns: List<String>,
     val reviews: List<ProductReviewUiModel>,
@@ -2726,6 +2981,7 @@ private fun parseReviewSummary(text: String, product: ProductUiModel): ReviewDis
         return ReviewDisplay(
             rating = rating,
             reviewCount = realReviews.size,
+            summary = summary.cleanReviewText(),
             positives = positives,
             concerns = concerns,
             reviews = realReviews,
@@ -2756,6 +3012,7 @@ private fun parseReviewSummary(text: String, product: ProductUiModel): ReviewDis
     return ReviewDisplay(
         rating = rating,
         reviewCount = null,
+        summary = summary.cleanReviewText(),
         positives = positives,
         concerns = concerns,
         reviews = emptyList(),

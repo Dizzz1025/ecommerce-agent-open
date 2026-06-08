@@ -53,7 +53,7 @@ fun CartSummaryBar(
                     .padding(
                         PaddingValues(
                             horizontal = AppSpacing.Lg,
-                            vertical = AppSpacing.Sm,
+                            vertical = AppSpacing.Md,
                         ),
                     ),
                 verticalAlignment = Alignment.CenterVertically,
@@ -76,14 +76,9 @@ fun CartSummaryBar(
                     ) {
                         PriceText(
                             price = totalPrice,
-                            level = PriceTextLevel.Highlight,
+                            level = PriceTextLevel.Large,
                             modifier = Modifier.weight(1f, fill = false),
                         )
-                        originalTotalPrice
-                            ?.takeIf { it > totalPrice }
-                            ?.let { original ->
-                                OriginalPriceText(price = original)
-                            }
                     }
                 }
                 PrimaryButton(
@@ -91,7 +86,7 @@ fun CartSummaryBar(
                     onClick = onCheckoutClick,
                     enabled = enabled && totalQuantity > 0,
                     height = AppDimensions.ButtonHeight,
-                    modifier = Modifier.widthIn(min = 112.dp),
+                    modifier = Modifier.widthIn(min = 104.dp, max = 132.dp),
                 )
             }
         }

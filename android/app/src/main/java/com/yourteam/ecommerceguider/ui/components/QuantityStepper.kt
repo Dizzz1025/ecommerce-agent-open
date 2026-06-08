@@ -16,11 +16,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.yourteam.ecommerceguider.theme.AppColors
 import com.yourteam.ecommerceguider.theme.AppDimensions
 import com.yourteam.ecommerceguider.theme.AppSpacing
 import com.yourteam.ecommerceguider.theme.AppTypography
+
+enum class QuantityStepperSize(
+    val buttonSize: Dp,
+    val indicatorSize: Dp,
+    val quantityMinWidth: Dp,
+) {
+    Normal(
+        buttonSize = AppDimensions.IconButtonSmall,
+        indicatorSize = AppDimensions.IconSmall,
+        quantityMinWidth = AppDimensions.IconButtonSmall,
+    ),
+    Compact(
+        buttonSize = AppDimensions.QuantityStepperCompactButton,
+        indicatorSize = AppDimensions.QuantityStepperCompactIndicator,
+        quantityMinWidth = AppDimensions.QuantityStepperCompactValueMinWidth,
+    ),
+}
 
 @Composable
 fun QuantityStepper(
@@ -32,6 +50,7 @@ fun QuantityStepper(
     maximum: Int? = null,
     enabled: Boolean = true,
     loading: Boolean = false,
+    size: QuantityStepperSize = QuantityStepperSize.Normal,
 ) {
     val canDecrease = enabled && !loading && quantity > minimum
     val canIncrease = enabled && !loading && maximum?.let { quantity < it } != false
@@ -45,14 +64,15 @@ fun QuantityStepper(
             text = "-",
             enabled = canDecrease,
             onClick = onDecrease,
+            size = size.buttonSize,
         )
         Box(
-            modifier = Modifier.widthIn(min = AppDimensions.IconButtonSmall),
+            modifier = Modifier.widthIn(min = size.quantityMinWidth),
             contentAlignment = Alignment.Center,
         ) {
             if (loading) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(AppDimensions.IconSmall),
+                    modifier = Modifier.size(size.indicatorSize),
                     strokeWidth = 2.dp,
                     color = AppColors.Primary,
                 )
@@ -70,6 +90,7 @@ fun QuantityStepper(
             text = "+",
             enabled = canIncrease,
             onClick = onIncrease,
+            size = size.buttonSize,
         )
     }
 }
@@ -79,13 +100,14 @@ private fun StepperControl(
     text: String,
     enabled: Boolean,
     onClick: () -> Unit,
+    size: Dp,
 ) {
     val containerColor = if (enabled) AppColors.SurfaceSoft else AppColors.SurfacePressed
     val textColor = if (enabled) AppColors.TextPrimary else AppColors.TextDisabled
 
     Box(
         modifier = Modifier
-            .size(AppDimensions.IconButtonSmall)
+            .size(size)
             .clip(CircleShape)
             .background(containerColor)
             .clickable(

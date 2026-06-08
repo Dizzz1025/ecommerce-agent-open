@@ -42,17 +42,20 @@ object ShoppingSession {
     val sessionId: String by lazy {
         "${BuildConfig.DEFAULT_SESSION_ID}-${UUID.randomUUID().toString().take(8)}"
     }
+    var userId: String? = null
 }
 
 class ShoppingRepository(
     private val baseUrl: String = BuildConfig.API_BASE_URL.removeSuffix("/"),
     private val sessionId: String = ShoppingSession.sessionId,
+    private val userId: String? = ShoppingSession.userId,
 ) {
     fun streamChat(message: String): Flow<ChatStreamEvent> = flow {
         val payload = JSONObject()
             .put("session_id", sessionId)
             .put("message", message)
             .put("input_type", "text")
+        userId?.let { payload.put("user_id", it) }
 
         val connection = openJsonConnection(path = "/api/chat/stream", method = "POST")
 
@@ -90,6 +93,7 @@ class ShoppingRepository(
         try {
             BufferedOutputStream(connection.outputStream).use { output ->
                 writeMultipartField(output, boundary, "session_id", sessionId)
+                userId?.let { writeMultipartField(output, boundary, "user_id", it) }
                 writeMultipartField(output, boundary, "input_type", "image_text")
                 message.trim().takeIf { it.isNotBlank() }?.let {
                     writeMultipartField(output, boundary, "message", it)

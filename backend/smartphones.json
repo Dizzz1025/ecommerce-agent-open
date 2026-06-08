@@ -1,0 +1,72 @@
+[
+  {
+    "pid": "p_digital_016",
+    "brand": "OPPO",
+    "name": "OPPO Reno 16 Pro 轻薄人像摄影高刷屏快充5G智能手机12+256GB",
+    "min_price": 3299.0,
+    "max_price": 3699.0
+  },
+  {
+    "pid": "p_digital_009",
+    "brand": "小米",
+    "name": "小米 17 Max 大屏长续航高性能影音游戏5G智能手机12+256GB",
+    "min_price": 6499.0,
+    "max_price": 7099.0
+  },
+  {
+    "pid": "p_digital_002",
+    "brand": "华为",
+    "name": "华为HUAWEI Pura 90 Pro 超感光影像曲面屏轻薄旗舰手机12+256GB",
+    "min_price": 6999.0,
+    "max_price": 7699.0
+  },
+  {
+    "pid": "p_digital_015",
+    "brand": "OPPO",
+    "name": "OPPO Find X9 Ultra 超大底影像旗舰2K高刷屏长续航5G智能手机",
+    "min_price": 6999.0,
+    "max_price": 7799.0
+  },
+  {
+    "pid": "p_digital_017",
+    "brand": "vivo",
+    "name": "vivo X300 Ultra 旗舰影像2K护眼屏长续航高性能5G智能手机",
+    "min_price": 6999.0,
+    "max_price": 7799.0
+  },
+  {
+    "pid": "p_digital_008",
+    "brand": "小米",
+    "name": "小米 17 Ultra 2K高刷屏潜望长焦澎湃芯片影像旗舰5G手机12+256GB",
+    "min_price": 7499.0,
+    "max_price": 9299.0
+  },
+  {
+    "pid": "p_digital_001",
+    "brand": "Apple 苹果",
+    "name": "Apple iPhone 17 Pro 6.3英寸 A19 Pro 256GB 全网通旗舰手机",
+    "min_price": 8999.0,
+    "max_price": 12499.0
+  },
+  {
+    "pid": "p_digital_014",
+    "brand": "OPPO",
+    "name": "OPPO Find N6 内折柔性大屏旗舰折叠屏手机多任务办公影音体验",
+    "min_price": 9699.0,
+    "max_price": 11299.0
+  },
+  {
+    "pid": "p_digital_003",
+    "brand": "Apple 苹果",
+    "name": "Apple iPhone 17 Pro Max 6.9英寸 A19 Pro 256GB 大屏旗舰手机",
+    "min_price": 9999.0,
+    "max_price": 13499.0
+  },
+  {
+    "pid": "p_digital_010",
+    "brand": "小米",
+    "name": "小米 MIX Fold 5 内折大屏旗舰折叠屏手机多任务办公影音利器",
+    "min_price": 9999.0,
+    "max_price": 11299.0
+  }
+]

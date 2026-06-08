@@ -20,6 +20,7 @@ android {
         versionName = "0.1.0"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
         buildConfigField("String", "DEFAULT_SESSION_ID", "\"android-demo-session\"")
+        buildConfigField("String", "DEFAULT_USER_ID", "\"lily_beauty_pro\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

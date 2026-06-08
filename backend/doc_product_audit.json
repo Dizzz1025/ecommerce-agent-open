@@ -1,0 +1,266 @@
+[
+  {
+    "pid": "p_beauty_001",
+    "actual_brand": "雅诗兰黛",
+    "actual_name": "雅诗兰黛特润修护肌活精华露淡纹紧致保湿夜间修护抗初老精华30ml",
+    "actual_sub": "精华",
+    "actual_price": 720.0,
+    "actual_skus": 3
+  },
+  {
+    "pid": "p_beauty_003",
+    "actual_brand": "SK-II",
+    "actual_name": "SK-II护肤精华露神仙水晶透保湿调理角质收缩毛孔230ml",
+    "actual_sub": "化妆水",
+    "actual_price": 620.0,
+    "actual_skus": 3
+  },
+  {
+    "pid": "p_beauty_006",
+    "actual_brand": "巴黎欧莱雅",
+    "actual_name": "巴黎欧莱雅新多重防护隔离露水感轻薄高倍防晒修护提亮30ml",
+    "actual_sub": "防晒",
+    "actual_price": 170.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_beauty_010",
+    "actual_brand": "安热沙",
+    "actual_name": "安热沙金灿倍护防晒乳高倍防水防汗清爽户外面部身体防晒60ml",
+    "actual_sub": "防晒",
+    "actual_price": 118.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_beauty_011",
+    "actual_brand": "珊珂",
+    "actual_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+    "actual_sub": "洁面",
+    "actual_price": 52.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_beauty_023",
+    "actual_brand": "理肤泉",
+    "actual_name": "理肤泉特护清盈防晒乳高倍防晒清爽控油易敏肌适用面部防晒50ml",
+    "actual_sub": "防晒",
+    "actual_price": 268.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_beauty_031",
+    "actual_brand": "适乐肤",
+    "actual_name": "适乐肤修护保湿身体乳神经酰胺敏感肌可用473ml",
+    "actual_sub": "身体乳",
+    "actual_price": 88.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_beauty_035",
+    "actual_brand": "碧欧泉",
+    "actual_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+    "actual_sub": "男士洁面",
+    "actual_price": 250.0,
+    "actual_skus": 1
+  },
+  {
+    "pid": "p_clothes_001",
+    "actual_brand": "优衣库",
+    "actual_name": "优衣库 U AIRism 棉质宽松圆领短袖T恤 男装 基础纯色上衣",
+    "actual_sub": "短袖T恤",
+    "actual_price": 99.0,
+    "actual_skus": 9
+  },
+  {
+    "pid": "p_clothes_007",
+    "actual_brand": "耐克",
+    "actual_name": "Nike Air Zoom Pegasus 41 男子缓震跑步鞋日常训练公路跑鞋",
+    "actual_sub": "跑步鞋",
+    "actual_price": 899.0,
+    "actual_skus": 22
+  },
+  {
+    "pid": "p_clothes_008",
+    "actual_brand": "阿迪达斯",
+    "actual_name": "adidas Ultraboost 5 男子缓震跑步鞋针织鞋面日常慢跑训练鞋",
+    "actual_sub": "跑步鞋",
+    "actual_price": 1399.0,
+    "actual_skus": 11
+  },
+  {
+    "pid": "p_clothes_009",
+    "actual_brand": "HOKA",
+    "actual_name": "HOKA Clifton 9 男子缓震公路跑鞋厚底回弹日常长距离训练鞋",
+    "actual_sub": "跑步鞋",
+    "actual_price": 1099.0,
+    "actual_skus": 18
+  },
+  {
+    "pid": "p_clothes_010",
+    "actual_brand": "特步",
+    "actual_name": "特步 160X 6.0 PRO 碳板竞速跑鞋马拉松训练比赛轻量跑步鞋",
+    "actual_sub": "跑步鞋",
+    "actual_price": 999.0,
+    "actual_skus": 7
+  },
+  {
+    "pid": "p_clothes_014",
+    "actual_brand": "萨洛蒙",
+    "actual_name": "SALOMON X ULTRA 4 GORE-TEX 男子防水徒步鞋轻量抓地登山越野鞋",
+    "actual_sub": "徒步鞋",
+    "actual_price": 1198.0,
+    "actual_skus": 6
+  },
+  {
+    "pid": "p_clothes_017",
+    "actual_brand": "始祖鸟",
+    "actual_name": "Arc'teryx Gamma Pant 男子软壳长裤耐磨弹力户外徒步攀爬长裤",
+    "actual_sub": "户外裤",
+    "actual_price": 1290.0,
+    "actual_skus": 5
+  },
+  {
+    "pid": "p_clothes_024",
+    "actual_brand": "北面",
+    "actual_name": "The North Face Horizon 轻量速干运动鸭舌帽防晒透气户外遮阳帽",
+    "actual_sub": "帽子",
+    "actual_price": 199.0,
+    "actual_skus": 5
+  },
+  {
+    "pid": "p_clothes_025",
+    "actual_brand": "Osprey",
+    "actual_name": "Osprey DAYLITE PLUS 日光+ 20L 户外多功能双肩背包轻量通勤包",
+    "actual_sub": "背包",
+    "actual_price": 699.0,
+    "actual_skus": 4
+  },
+  {
+    "pid": "p_clothes_026",
+    "actual_brand": "始祖鸟",
+    "actual_name": "始祖鸟Beta AR Jacket GORE-TEX Pro冲锋衣防水透气全天候硬壳夹克",
+    "actual_sub": "冲锋衣",
+    "actual_price": 5200.0,
+    "actual_skus": 12
+  },
+  {
+    "pid": "p_digital_005",
+    "actual_brand": "华为",
+    "actual_name": "华为HUAWEI MatePad Pro Max 12.6英寸高刷屏多任务办公平板电脑",
+    "actual_sub": "平板电脑",
+    "actual_price": 4999.0,
+    "actual_skus": 8
+  },
+  {
+    "pid": "p_digital_007",
+    "actual_brand": "华为",
+    "actual_name": "华为HUAWEI FreeBuds Pro 5 主动降噪真无线蓝牙耳机高解析音质",
+    "actual_sub": "真无线耳机",
+    "actual_price": 1499.0,
+    "actual_skus": 6
+  },
+  {
+    "pid": "p_digital_013",
+    "actual_brand": "苹果",
+    "actual_name": "Apple iPad Pro 13英寸 (M5) Liquid视网膜 XDR 显示屏 256GB Wi‑Fi 平板电脑",
+    "actual_sub": "平板电脑",
+    "actual_price": 8999.0,
+    "actual_skus": 8
+  },
+  {
+    "pid": "p_digital_016",
+    "actual_brand": "OPPO",
+    "actual_name": "OPPO Reno 16 Pro 轻薄人像摄影高刷屏快充5G智能手机12+256GB",
+    "actual_sub": "智能手机",
+    "actual_price": 3299.0,
+    "actual_skus": 4
+  },
+  {
+    "pid": "p_digital_018",
+    "actual_brand": "Apple 苹果",
+    "actual_name": "Apple AirPods Pro 3 主动降噪真无线蓝牙耳机 心率监测版",
+    "actual_sub": "真无线耳机",
+    "actual_price": 1799.0,
+    "actual_skus": 8
+  },
+  {
+    "pid": "p_digital_020",
+    "actual_brand": "Apple 苹果",
+    "actual_name": "Apple MacBook Air 13英寸 M5 芯片 16GB 512GB 轻薄便携笔记本电脑",
+    "actual_sub": "笔记本电脑",
+    "actual_price": 8499.0,
+    "actual_skus": 12
+  },
+  {
+    "pid": "p_digital_025",
+    "actual_brand": "Apple 苹果",
+    "actual_name": "Apple iPad Air 11英寸 2026款 M4 芯片 128GB Wi‑Fi 轻薄学习娱乐平板电脑",
+    "actual_sub": "平板电脑",
+    "actual_price": 4799.0,
+    "actual_skus": 12
+  },
+  {
+    "pid": "p_digital_028",
+    "actual_brand": "罗技",
+    "actual_name": "罗技G Pro X Superlight 2 无线游戏鼠标 轻量化63g HERO 2传感器 双模",
+    "actual_sub": "游戏鼠标",
+    "actual_price": 1199.0,
+    "actual_skus": 3
+  },
+  {
+    "pid": "p_digital_033",
+    "actual_brand": "华为",
+    "actual_name": "华为手环9 NFC版 1.47英寸AMOLED智能运动手环 心率血氧监测 14天续航",
+    "actual_sub": "智能手环",
+    "actual_price": 299.0,
+    "actual_skus": 3
+  },
+  {
+    "pid": "p_digital_034",
+    "actual_brand": "索尼",
+    "actual_name": "索尼PS5 DualSense Edge 无线控制器 精英手柄 可更换摇杆 背部拨片 专业定制",
+    "actual_sub": "游戏手柄",
+    "actual_price": 1399.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_food_003",
+    "actual_brand": "东方树叶",
+    "actual_name": "农夫山泉 东方树叶 无糖乌龙茶饮料500ml 瓶装茶饮低糖替代方案",
+    "actual_sub": "茶饮",
+    "actual_price": 4.0,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_food_004",
+    "actual_brand": "元气森林",
+    "actual_name": "元气森林 0糖0脂0卡 白桃味气泡水480ml 碳酸饮料即饮苏打型饮品",
+    "actual_sub": "碳酸饮料",
+    "actual_price": 4.5,
+    "actual_skus": 2
+  },
+  {
+    "pid": "p_food_005",
+    "actual_brand": "东鹏",
+    "actual_name": "东鹏特饮 维生素功能饮料500ml 经典瓶装补充能量含牛磺酸咖啡因",
+    "actual_sub": "功能饮料",
+    "actual_price": 5.0,
+    "actual_skus": 3
+  },
+  {
+    "pid": "p_food_009",
+    "actual_brand": "三只松鼠",
+    "actual_name": "三只松鼠 每日坚果750g/30袋 混合坚果仁干果礼盒独立小包装",
+    "actual_sub": "坚果/零食",
+    "actual_price": 59.0,
+    "actual_skus": 4
+  },
+  {
+    "pid": "p_food_017",
+    "actual_brand": "伊利",
+    "actual_name": "伊利 安慕希 希腊风味常温酸奶 原味 205g×10 盒装",
+    "actual_sub": "酸奶",
+    "actual_price": 62.0,
+    "actual_skus": 4
+  }
+]

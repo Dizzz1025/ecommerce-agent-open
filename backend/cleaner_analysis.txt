@@ -1,7 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 32, in <module>
-UnicodeEncodeError: 'gbk' codec can't encode character '\xa5' in position 53: illegal multibyte sequence
-Brands matching CeraVe/  ¿÷∑Ù: ['  ¿÷∑Ù']
-
-=== ALL BEAUTY SUB-CATEGORIES ===
-BBÀ™: 1 items

@@ -1,5 +1,9 @@
 package com.yourteam.ecommerceguider.ui.screens.chat
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +25,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -28,16 +33,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yourteam.ecommerceguider.theme.AppColors
+import com.yourteam.ecommerceguider.data.model.VoiceInputState
 import com.yourteam.ecommerceguider.theme.AppDimensions
 import com.yourteam.ecommerceguider.theme.AppRadius
 import com.yourteam.ecommerceguider.theme.AppSpacing
 import com.yourteam.ecommerceguider.theme.AppTypography
+import com.yourteam.ecommerceguider.theme.ChatColors
 import com.yourteam.ecommerceguider.ui.components.ChatBubble
 import com.yourteam.ecommerceguider.ui.components.ChatInputBar
 import com.yourteam.ecommerceguider.ui.screens.chat.components.AssistantAnswerIntroCard
@@ -70,10 +82,14 @@ fun ChatScreen(
     val activeTurnId by viewModel.activeTurnId.collectAsState()
     val activeTurnAllowsEmptyProducts by viewModel.activeTurnAllowsEmptyProducts.collectAsState()
     val cartItemCount by viewModel.cartItemCount.collectAsState()
+    val displayName by viewModel.displayName.collectAsState()
     val isStreaming by viewModel.isStreaming.collectAsState()
+    val voiceInputState by viewModel.voiceInputState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val listState = rememberLazyListState()
     val activeRecommendationSections = remember(recommendationSections, activeTurnId) {
         recommendationSections.filter { section -> section.turnId == activeTurnId }
@@ -100,7 +116,36 @@ fun ChatScreen(
         !errorMessage.isNullOrBlank()
     val showWelcome = messages.isEmpty() && !hasResultMode
     var showHistory by remember { mutableStateOf(false) }
-    var thinkingExpanded by remember { mutableStateOf(false) }
+    var thinkingExpanded by rememberSaveable { mutableStateOf(false) }
+    var autoCollapsedThinkingTurnId by rememberSaveable { mutableStateOf<String?>(null) }
+    val hasFormalAssistantOutput = answer.isNotBlank() || visibleProducts.isNotEmpty()
+    val onToggleThinking = {
+        thinkingExpanded = !thinkingExpanded
+    }
+    val voicePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            viewModel.toggleVoiceRecording(context.cacheDir)
+        } else {
+            scope.launch { snackbarHostState.showSnackbar("需要麦克风权限才能语音输入") }
+        }
+    }
+    val onVoiceClick = {
+        if (voiceInputState is VoiceInputState.Recording) {
+            viewModel.toggleVoiceRecording(context.cacheDir)
+        } else {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                viewModel.toggleVoiceRecording(context.cacheDir)
+            } else {
+                voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
     val isNearBottom by remember {
         derivedStateOf {
             val layout = listState.layoutInfo
@@ -132,21 +177,29 @@ fun ChatScreen(
         errorMessage?.let { snackbarHostState.showSnackbar(it) }
     }
 
-    LaunchedEffect(visibleProducts) {
-        if (visibleProducts.isNotEmpty()) {
-            thinkingExpanded = false
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                viewModel.cancelVoiceInput()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    LaunchedEffect(answer) {
-        if (answer.isNotBlank()) {
-            thinkingExpanded = false
-        }
-    }
-
-    LaunchedEffect(isStreaming) {
-        if (isStreaming && products.isEmpty() && answer.isBlank()) {
+    LaunchedEffect(activeTurnId, isStreaming, hasFormalAssistantOutput) {
+        if (isStreaming && !hasFormalAssistantOutput) {
             thinkingExpanded = true
+            autoCollapsedThinkingTurnId = null
+        } else if (
+            hasFormalAssistantOutput &&
+            activeTurnId != null &&
+            autoCollapsedThinkingTurnId != activeTurnId
+        ) {
+            thinkingExpanded = false
+            autoCollapsedThinkingTurnId = activeTurnId
         }
     }
 
@@ -181,14 +234,14 @@ fun ChatScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppColors.Background),
+            .background(ChatColors.Background),
     ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 GuideTopBar(
                     cartItemCount = cartItemCount,
-                    historyCount = messages.count { it.isUser },
+                    displayName = displayName,
                     onHistoryClick = { showHistory = true },
                     onCartClick = onCartClick,
                 )
@@ -199,19 +252,20 @@ fun ChatScreen(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .imePadding()
-                        .background(AppColors.Background)
-                        .padding(horizontal = AppSpacing.Lg, vertical = AppSpacing.Sm),
+                        .background(ChatColors.Background)
+                        .padding(horizontal = AppSpacing.Lg, vertical = 3.dp),
                 ) {
                     ChatInputBar(
                         onSend = viewModel::sendMessage,
                         onStop = viewModel::stopStreaming,
                         onImageClick = onImageSearchClick,
-                        onVoiceClick = { scope.launch { snackbarHostState.showSnackbar("语音输入暂未接入") } },
+                        onVoiceClick = onVoiceClick,
                         isStreaming = isStreaming,
+                        voiceInputState = voiceInputState,
                     )
                 }
             },
-            containerColor = AppColors.Background,
+            containerColor = ChatColors.Background,
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
@@ -242,7 +296,7 @@ fun ChatScreen(
                                         errorMessage = errorMessage,
                                         products = visibleProducts,
                                         thinkingExpanded = thinkingExpanded,
-                                        onToggleThinking = { thinkingExpanded = !thinkingExpanded },
+                                        onToggleThinking = onToggleThinking,
                                     )
                                 }
                             }
@@ -310,7 +364,7 @@ fun ChatScreen(
                             errorMessage = errorMessage,
                             products = visibleProducts,
                             thinkingExpanded = thinkingExpanded,
-                            onToggleThinking = { thinkingExpanded = !thinkingExpanded },
+                            onToggleThinking = onToggleThinking,
                         )
                     }
                     if (activeRecommendationSections.isNotEmpty()) {
@@ -335,7 +389,7 @@ fun ChatScreen(
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = AppDimensions.ChatInputMinHeight + AppSpacing.Xxl)
+                    .padding(bottom = AppDimensions.ChatInputMinHeight + AppSpacing.Xl)
                     .clickable {
                         scope.launch {
                             val lastIndex = listState.layoutInfo.totalItemsCount - 1
@@ -345,14 +399,14 @@ fun ChatScreen(
                         }
                     },
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(AppRadius.Pill),
-                color = AppColors.Surface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, AppColors.Border),
+                color = ChatColors.Surface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ChatColors.Border),
             ) {
                 Text(
                     text = "回到底部",
                     modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
                     style = AppTypography.CaptionStrong,
-                    color = AppColors.TextPrimary,
+                    color = ChatColors.TextPrimary,
                 )
             }
         }

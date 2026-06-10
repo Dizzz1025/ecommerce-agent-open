@@ -34,6 +34,15 @@ class Settings(BaseModel):
     enable_multimodal: bool = True
     vision_model: str | None = None
     upload_image_dir: Path = STORAGE_DIR / "uploads"
+    enable_speech: bool = True
+    speech_upload_dir: Path = STORAGE_DIR / "voice_uploads"
+    tts_output_dir: Path = STORAGE_DIR / "tts"
+    asr_backend: str = "auto"
+    asr_model_name: str = "base"
+    tts_backend: str = "auto"
+    tts_voice: str = "zh-CN-XiaoxiaoNeural"
+    macos_tts_voice: str = "Ting-Ting"
+    speech_max_audio_mb: int = 20
 
 
 def _load_dotenv() -> None:
@@ -117,6 +126,15 @@ def get_settings() -> Settings:
         enable_multimodal=_read_bool("ENABLE_MULTIMODAL", True),
         vision_model=os.getenv("VISION_MODEL") or os.getenv("DOUBAO_VISION_MODEL"),
         upload_image_dir=_read_path("UPLOAD_IMAGE_DIR", STORAGE_DIR / "uploads"),
+        enable_speech=_read_bool("ENABLE_SPEECH", True),
+        speech_upload_dir=_read_path("SPEECH_UPLOAD_DIR", STORAGE_DIR / "voice_uploads"),
+        tts_output_dir=_read_path("TTS_OUTPUT_DIR", STORAGE_DIR / "tts"),
+        asr_backend=os.getenv("ASR_BACKEND", "auto"),
+        asr_model_name=os.getenv("ASR_MODEL_NAME", "base"),
+        tts_backend=os.getenv("TTS_BACKEND", "auto"),
+        tts_voice=os.getenv("TTS_VOICE", "zh-CN-XiaoxiaoNeural"),
+        macos_tts_voice=os.getenv("MACOS_TTS_VOICE", "Ting-Ting"),
+        speech_max_audio_mb=int(os.getenv("SPEECH_MAX_AUDIO_MB", "20")),
     )
 
 

@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -88,6 +89,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -1605,34 +1607,39 @@ private fun AiRecommendationBlock(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AppRadius.Large),
-        color = AppColors.AccentWarmSoft,
-        border = BorderStroke(1.dp, AppColors.Border),
+        shape = RoundedCornerShape(AppRadius.Card),
+        color = AppColors.Surface,
+        border = BorderStroke(1.dp, AppColors.Border.copy(alpha = 0.72f)),
     ) {
         Column(
-            modifier = Modifier.padding(AppSpacing.Md),
+            modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
             verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
         ) {
-            TagChip(text = "AI 匹配推荐", tone = TagChipTone.Warm)
-            if (reason.isNotBlank()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+            ) {
+                AiRecommendationIcon()
                 Text(
-                    text = "为什么适合你",
+                    text = "AI 匹配推荐",
                     style = AppTypography.CaptionStrong,
-                    color = AppColors.AccentWarm,
+                    color = AppColors.TextPrimary,
                 )
+            }
+            if (reason.isNotBlank()) {
                 if (reasonBullets.size >= 2) {
                     reasonBullets.take(3).forEach { item ->
                         Text(
-                            text = "· $item",
+                            text = item,
                             style = AppTypography.BodySmall,
-                            color = AppColors.TextPrimary,
+                            color = AppColors.TextSecondary,
                         )
                     }
                 } else {
                     Text(
                         text = reason,
                         style = AppTypography.BodySmall,
-                        color = AppColors.TextPrimary,
+                        color = AppColors.TextSecondary,
                         maxLines = if (expanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1649,16 +1656,52 @@ private fun AiRecommendationBlock(
                 }
             }
             tradeOff?.let {
-                HorizontalDivider(color = AppColors.Border)
+                HorizontalDivider(color = AppColors.Divider)
                 Text(
                     text = "需要注意",
                     style = AppTypography.CaptionStrong,
-                    color = AppColors.AccentWarm,
+                    color = AppColors.TextPrimary,
                 )
                 Text(
                     text = it,
                     style = AppTypography.BodySmall,
                     color = AppColors.TextSecondary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiRecommendationIcon(
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.size(18.dp),
+        shape = CircleShape,
+        color = AppColors.AccentWarmSoft.copy(alpha = 0.52f),
+        border = BorderStroke(1.dp, AppColors.AccentWarm.copy(alpha = 0.18f)),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Canvas(modifier = Modifier.size(9.dp)) {
+                val stroke = 1.15.dp.toPx()
+                val center = Offset(size.width / 2f, size.height / 2f)
+                drawLine(
+                    color = AppColors.AccentWarm,
+                    start = Offset(center.x, 0f),
+                    end = Offset(center.x, size.height),
+                    strokeWidth = stroke,
+                )
+                drawLine(
+                    color = AppColors.AccentWarm,
+                    start = Offset(0f, center.y),
+                    end = Offset(size.width, center.y),
+                    strokeWidth = stroke,
+                )
+                drawCircle(
+                    color = AppColors.AccentWarm.copy(alpha = 0.84f),
+                    radius = 1.2.dp.toPx(),
+                    center = Offset(size.width * 0.82f, size.height * 0.18f),
                 )
             }
         }
@@ -1767,14 +1810,19 @@ private fun ProductVariantSelector(
         optionKeys.forEach { key ->
             val selectedValue = selectedSku?.properties?.get(key).cleanNullable()
             Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
-                Text(
-                    text = selectedValue?.let { "$key · $it" } ?: "选择$key",
-                    style = AppTypography.CaptionStrong,
-                    fontWeight = FontWeight.SemiBold,
-                    color = AppColors.TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = selectedValue?.let { "$key · $it" } ?: "选择$key",
+                        style = AppTypography.CaptionStrong,
+                        fontWeight = FontWeight.SemiBold,
+                        color = AppColors.TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
@@ -1819,7 +1867,7 @@ private fun SpecOptionChip(
 ) {
     Surface(
         modifier = Modifier
-            .heightIn(min = 36.dp)
+            .height(44.dp)
             .clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(AppRadius.Medium),
         color = when {
@@ -1836,18 +1884,27 @@ private fun SpecOptionChip(
             },
         ),
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
-            style = AppTypography.CaptionStrong,
-            color = when {
-                !enabled -> AppColors.TextDisabled
-                selected -> AppColors.OnPrimary
-                else -> AppColors.TextPrimary
-            },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Box(
+            modifier = Modifier
+                .height(44.dp)
+                .padding(horizontal = AppSpacing.Md),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = AppTypography.CaptionStrong.copy(
+                    fontSize = 14.sp,
+                    lineHeight = 16.sp,
+                ),
+                color = when {
+                    !enabled -> AppColors.TextDisabled
+                    selected -> AppColors.OnPrimary
+                    else -> AppColors.TextPrimary
+                },
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

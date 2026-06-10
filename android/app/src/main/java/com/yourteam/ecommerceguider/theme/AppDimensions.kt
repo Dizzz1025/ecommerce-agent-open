@@ -17,7 +17,7 @@ object AppDimensions {
     val ButtonHeight = 48.dp
     val PrimaryButtonHeight = 52.dp
 
-    val ChatInputMinHeight = 48.dp
+    val ChatInputMinHeight = 42.dp
     val ChatInputMaxHeight = 120.dp
 
     val RecommendationImageHeight = 104.dp

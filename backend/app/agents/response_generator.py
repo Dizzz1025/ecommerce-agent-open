@@ -87,7 +87,7 @@ class ResponseGenerationModule:
                     "\n如果用户指定了维度，只回答该维度及与之最接近的数据库事实。"
                     "\n必须自然地说明价格、核心亮点和一条需要注意的地方；没有事实依据就不要编造。"
                     "\n如果某个具体参数不存在，不要用消极开头；先介绍已有亮点，再简短说明该参数商品库未提供。"
-                    "\n回复 2-4 句即可，重点交给商品详情卡片。"
+                    "\n回复尽量写成 3 句左右：第一句给商品定位和价格，第二句讲 1-2 个最相关亮点，第三句讲适合谁/什么场景或注意点。"
                     f"\n本地事实提取草稿：{local_text}"
                     f"\n商品事实证据：\n{evidence}\n"
                 )
@@ -107,27 +107,6 @@ class ResponseGenerationModule:
                 multimodal_context=multimodal_context,
                 fallback_result=fallback_result,
             )
-            if model_route and model_route.need_llm and alternatives:
-                context = self.rag_pipeline.build_context(
-                    message=parsed_query.raw_message,
-                    products=products,
-                    candidates=alternatives,
-                    state=state,
-                    personalization_context=personalization_context,
-                    multimodal_context=multimodal_context,
-                ) + (
-                    f"\nDraft response: {local_text}\n"
-                    "\n当前是 alternative/fallback 推荐：请用积极导购语气，第一句必须类似「我先为你挑了几款更接近需求的选择」。"
-                    "\n不要以「抱歉、没有找到、没有符合」开头；简短说明哪些条件略有差异即可。"
-                )
-                self.last_llm_called = True
-                generated = self.llm_client.generate_response(
-                    intent=IntentType.RECOMMEND,
-                    message=parsed_query.raw_message,
-                    context=context,
-                    product_names=[item.name for item in alternatives[:3]],
-                )
-                return generated or local_text
             return local_text
 
         if decision.flow == DialogueFlow.COMPARISON:
@@ -172,8 +151,18 @@ class ResponseGenerationModule:
             )
             return generated or local_text
 
+        if decision.flow in {
+            DialogueFlow.RECOMMENDATION,
+            DialogueFlow.FILTERING,
+            DialogueFlow.REFINEMENT,
+            DialogueFlow.EXCLUSION,
+        }:
+            self.last_response_strategy["推荐回复生成方式"] = "local_grounded_template"
+            self.last_response_strategy["跳过Doubao原因"] = "前端会展示商品卡片，普通推荐只需要简短导购结论。"
+            return self._recommendation_template(parsed_query, candidates, personalization_context)
+
         if model_route and not model_route.need_llm:
-            return self._recommendation_template(parsed_query, candidates)
+            return self._recommendation_template(parsed_query, candidates, personalization_context)
 
         context = self.rag_pipeline.build_context(
             message=parsed_query.raw_message,
@@ -190,7 +179,7 @@ class ResponseGenerationModule:
             message=parsed_query.raw_message,
             context=context,
             product_names=product_names,
-        ) or self._recommendation_template(parsed_query, candidates)
+        ) or self._recommendation_template(parsed_query, candidates, personalization_context)
 
     def stream_recommendation_presentation(self, plan: RecommendationPlan) -> Iterator[str]:
         self.last_llm_called = True
@@ -366,16 +355,22 @@ class ResponseGenerationModule:
         return "\n".join(lines)
 
     @staticmethod
-    def _recommendation_template(parsed_query: ParsedQuery, candidates: list[CandidateProduct]) -> str:
+    def _recommendation_template(
+        parsed_query: ParsedQuery,
+        candidates: list[CandidateProduct],
+        personalization_context: dict | None = None,
+    ) -> str:
         if not candidates:
             return "这个需求我需要再缩小一点范围。你可以补充预算、品牌或使用场景，我马上继续帮你挑。"
         best = candidates[0]
         other_names = "、".join(item.name for item in candidates[1:3])
-        prefix = f"我为你挑了 {len(candidates[:3])} 款，优先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
+        personalization_phrase = _visible_personalization_phrase(personalization_context)
+        opening = f"{personalization_phrase}我为你挑了 {len(candidates[:3])} 款"
+        prefix = f"{opening}，优先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
         if parsed_query.target_user == "小朋友" or "小朋友" in parsed_query.raw_message or "儿童" in parsed_query.positive_constraints:
-            prefix = f"考虑到是小朋友来买，我优先看少糖、小包装、更日常的选择；先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
+            prefix = f"{personalization_phrase}考虑到是小朋友来买，我优先看少糖、小包装、更日常的选择；先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
         elif parsed_query.target_user in {"女性", "女生", "职场新人"} or "职场新人" in parsed_query.raw_message:
-            prefix = f"我按你的使用场景筛到了几款更稳妥的选择，优先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
+            prefix = f"{personalization_phrase}我按你的使用场景筛到了几款更稳妥的选择，优先看 {best.name}，¥{best.price:g}。{_human_reason(best)}"
         if parsed_query.brands_exclude or parsed_query.negative_constraints:
             excluded = "、".join([*parsed_query.brands_exclude, *parsed_query.negative_constraints])
             prefix += f" 我已按你的要求避开：{excluded}。"
@@ -484,6 +479,68 @@ def _human_reason(item: CandidateProduct) -> str:
     if reasons:
         return f"它比较符合你对{'、'.join(reasons)}的需求，整体匹配度更高。"
     return "它和当前需求比较接近，适合先点开看看详情。"
+
+
+def _visible_personalization_phrase(context: dict | None) -> str:
+    """Return a short user-facing personalization cue when there is concrete evidence.
+
+    The phrase intentionally avoids developer terms such as 用户画像、memory、RAG.
+    It is only used as a soft opening; current explicit requirements remain the
+    hard constraints for retrieval and ranking.
+    """
+    if not context:
+        return ""
+    privacy = context.get("隐私设置") or {}
+    if privacy.get("personalization_mode") == "off" or privacy.get("personalization_enabled") is False:
+        return ""
+
+    cart_context = context.get("购物车商品侧个性化") or {}
+    cart_items = cart_context.get("参考购物车商品") or []
+    if cart_context and cart_items:
+        brands = [str(item.get("brand")) for item in cart_items if item.get("brand")]
+        categories = [str(item.get("sub_category") or item.get("category")) for item in cart_items if item.get("sub_category") or item.get("category")]
+        brand_text = "、".join(list(dict.fromkeys(brands))[:2])
+        category_text = "、".join(list(dict.fromkeys(categories))[:2])
+        if brand_text and category_text:
+            return f"基于你购物车里偏好的{brand_text}和{category_text}选择，"
+        if category_text:
+            return f"基于你购物车里的{category_text}选择，"
+        return "基于你购物车里的同类商品选择，"
+
+    evidence = context.get("本轮相关历史证据") or []
+    if evidence:
+        text_parts: list[str] = []
+        for item in evidence[:2]:
+            if isinstance(item, dict):
+                for key in ("user_input", "summary", "偏好", "需求", "category", "sub_category"):
+                    value = item.get(key)
+                    if isinstance(value, str) and value and not value.startswith("[已按隐私设置隐藏"):
+                        text_parts.append(value)
+                        break
+        joined = " ".join(text_parts)
+        for term in ["性价比", "通勤", "旅行", "油皮", "干皮", "保湿", "清爽", "拍照", "续航", "降噪", "低糖", "无糖", "高端", "轻量"]:
+            if term in joined:
+                return f"根据你之前更关注{term}的偏好，"
+        return "结合你之前的历史选择，"
+
+    structured = context.get("结构化用户画像") or {}
+    focus = _first_profile_focus(structured)
+    if focus:
+        return f"根据你平时更关注{focus}的偏好，"
+
+    if context.get("用户画像摘要"):
+        return "结合你之前的选择习惯，"
+    return ""
+
+
+def _first_profile_focus(profile: dict) -> str | None:
+    for key in ("信息关注点", "功能偏好", "商品类别偏好", "价格偏好", "决策风格"):
+        value = profile.get(key)
+        if isinstance(value, list) and value:
+            return str(value[0])
+        if isinstance(value, str) and value:
+            return value[:16]
+    return None
 
 
 def _clean_reason(reason: str) -> str:

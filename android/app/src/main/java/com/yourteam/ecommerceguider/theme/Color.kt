@@ -3,38 +3,38 @@ package com.yourteam.ecommerceguider.theme
 import androidx.compose.ui.graphics.Color
 
 object AppColors {
-    val Background = Color(0xFFF7F7F5)
-    val BackgroundElevated = Color(0xFFFAFAF8)
+    val Background = Color(0xFFFAF7F1)
+    val BackgroundElevated = Color(0xFFFCFAF6)
 
     val Surface = Color(0xFFFFFFFF)
-    val SurfaceSoft = Color(0xFFF4F4F1)
-    val SurfacePressed = Color(0xFFEEEEEA)
+    val SurfaceSoft = Color(0xFFF6F1E9)
+    val SurfacePressed = Color(0xFFF0EAE1)
 
     val TextPrimary = Color(0xFF151515)
-    val TextSecondary = Color(0xFF6F6F6B)
-    val TextTertiary = Color(0xFFA0A09B)
-    val TextDisabled = Color(0xFFC3C3BE)
+    val TextSecondary = Color(0xFF746F67)
+    val TextTertiary = Color(0xFFA9A196)
+    val TextDisabled = Color(0xFFC8C0B6)
     val TextInverse = Color(0xFFFFFFFF)
 
-    val Border = Color(0xFFE8E8E4)
-    val BorderStrong = Color(0xFFD8D8D3)
-    val Divider = Color(0xFFF0F0EC)
+    val Border = Color(0xFFEEE7DC)
+    val BorderStrong = Color(0xFFE0D7CB)
+    val Divider = Color(0xFFF4EEE5)
 
     val Primary = Color(0xFF151515)
     val PrimaryPressed = Color(0xFF30302E)
     val OnPrimary = Color(0xFFFFFFFF)
 
     val SecondaryButton = Color(0xFFFFFFFF)
-    val SecondaryButtonPressed = Color(0xFFF2F2EF)
+    val SecondaryButtonPressed = Color(0xFFF4EFE7)
 
-    val AccentWarm = Color(0xFFB7835F)
-    val AccentWarmSoft = Color(0xFFF6EEE8)
+    val AccentWarm = Color(0xFFA77A5D)
+    val AccentWarmSoft = Color(0xFFF7EFE6)
 
     val Danger = Color(0xFFB65A50)
     val DangerSoft = Color(0xFFF8EFED)
 
-    val Success = Color(0xFF4F7A5D)
-    val SuccessSoft = Color(0xFFEDF4EF)
+    val Success = Color(0xFF6F8A73)
+    val SuccessSoft = Color(0xFFF0F5EF)
 
     val OverlayLight = Color(0x26000000)
     val OverlayMedium = Color(0x52000000)
@@ -43,6 +43,21 @@ object AppColors {
     val HeroText = Color(0xFFFFFFFF)
     val HeroIconBackground = Color(0xCCFFFFFF)
     val HeroIcon = Color(0xFF1A1A1A)
+}
+
+object ChatColors {
+    val Background = Color(0xFFFAF8F4)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSubtle = Color(0xFFF6F2EB)
+    val Border = Color(0xFFE8E2D8)
+    val TextPrimary = Color(0xFF171717)
+    val TextSecondary = Color(0xFF777168)
+    val TextTertiary = Color(0xFFA09A91)
+    val WarmAccent = Color(0xFFB88763)
+    val Success = Color(0xFF6F9476)
+    val SuccessSoft = Color(0xFFEAF1EB)
+    val TagBackground = Color(0xFFF5F1EA)
+    val TagText = Color(0xFF6D675F)
 }
 
 @Deprecated("Use AppColors.Background instead.", ReplaceWith("AppColors.Background"))

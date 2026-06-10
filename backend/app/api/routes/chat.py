@@ -1,12 +1,14 @@
+import asyncio
 import base64
 
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.agents.shopping_agent import ShoppingAgent
-from app.core.dependencies import get_shopping_agent
+from app.core.dependencies import get_shopping_agent, get_speech_service
 from app.models.events import SSEEvent
 from app.models.schemas import ChatRequest
+from app.services.speech_service import SpeechService
 from app.utils.sse import format_sse
 
 router = APIRouter()
@@ -41,6 +43,7 @@ async def stream_chat(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     )
 
@@ -121,6 +124,7 @@ async def stream_chat_with_image(
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     )
 
@@ -131,3 +135,108 @@ def _error_response(message: str, code: str) -> StreamingResponse:
         yield format_sse(SSEEvent(event="done", data={"finish_reason": "error"}))
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@router.post("/stream/voice")
+async def stream_chat_with_voice(
+    session_id: str = Form(...),
+    user_id: str | None = Form(default=None),
+    resume: bool = Form(default=False),
+    resume_session_id: str | None = Form(default=None),
+    new_session: bool = Form(default=False),
+    language: str = Form(default="zh"),
+    tts_response: bool = Form(default=False),
+    audio: UploadFile = File(...),
+    shopping_agent: ShoppingAgent = Depends(get_shopping_agent),
+    speech_service: SpeechService = Depends(get_speech_service),
+) -> StreamingResponse:
+    """Voice input endpoint: ASR -> existing agent stream -> optional TTS."""
+
+    async def event_stream():
+        yield format_sse(
+            SSEEvent(
+                event="progress",
+                data={
+                    "event_type": "progress_message",
+                    "中文说明": "语音输入已收到，正在先转成文字。",
+                    "step": 1,
+                    "stage": "speech_to_text",
+                    "stage_key": "speech_to_text",
+                    "text": "正在识别语音内容。",
+                    "detail_text": "识别完成后会自动进入原来的导购对话流程。",
+                    "display_text": "正在识别语音内容。\n识别完成后会自动进入原来的导购对话流程。",
+                    "display_duration_ms": 900,
+                    "display_duration_sec": 0.9,
+                    "can_be_replaced": True,
+                },
+            )
+        )
+        content = await audio.read()
+        result = await asyncio.to_thread(
+            speech_service.transcribe_bytes,
+            content=content,
+            filename=audio.filename,
+            content_type=audio.content_type,
+            language=language,
+        )
+        yield format_sse(SSEEvent(event="voice_transcript", data=result.model_dump()))
+        if not result.ok or not result.text.strip():
+            yield format_sse(SSEEvent(event="error", data={"message": result.message, "code": "VOICE_TRANSCRIBE_FAILED"}))
+            yield format_sse(SSEEvent(event="done", data={"finish_reason": "voice_error"}))
+            return
+
+        metadata = {
+            "voice_input": True,
+            "voice_transcript": result.text,
+            "asr_backend": result.backend,
+        }
+        if resume_session_id:
+            metadata["resume_session_id"] = resume_session_id
+        captured_reply = ""
+        async for event in shopping_agent.stream_chat(
+            session_id=session_id,
+            message=result.text,
+            user_id=user_id,
+            input_type="voice_text",
+            resume=resume or bool(resume_session_id),
+            new_session=new_session,
+            metadata=metadata,
+        ):
+            if event.event == "turn_result":
+                frontend_data = event.data.get("frontend_data") or {}
+                captured_reply = ((frontend_data.get("reply_message") or {}).get("text") or "").strip()
+            if event.event == "done":
+                if tts_response and captured_reply:
+                    yield format_sse(
+                        SSEEvent(
+                            event="progress",
+                            data={
+                                "event_type": "progress_message",
+                                "中文说明": "正在把系统回复转换成语音。",
+                                "step": 99,
+                                "stage": "text_to_speech",
+                                "stage_key": "text_to_speech",
+                                "text": "正在生成语音回复。",
+                                "detail_text": "语音是可选增强，文字回复已经可以直接展示。",
+                                "display_text": "正在生成语音回复。\n语音是可选增强，文字回复已经可以直接展示。",
+                                "display_duration_ms": 900,
+                                "display_duration_sec": 0.9,
+                                "can_be_replaced": True,
+                            },
+                        )
+                    )
+                    tts = await asyncio.to_thread(speech_service.synthesize_text, text=captured_reply)
+                    yield format_sse(SSEEvent(event="voice_output", data=tts.model_dump()))
+                yield format_sse(event)
+                return
+            yield format_sse(event)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

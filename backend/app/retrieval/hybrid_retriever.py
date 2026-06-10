@@ -8,6 +8,7 @@ from app.models.agent import CandidateProduct, ParsedQuery
 from app.models.domain import Product, SessionState
 from app.repositories.product_repository import ProductRepository
 from app.retrieval.base import BaseRetriever
+from app.retrieval.category_compatibility import sub_category_matches, sub_category_match_level
 from app.retrieval.document_builder import ProductDocumentBuilder
 
 
@@ -93,6 +94,7 @@ class HybridRetriever(BaseRetriever):
             preference_score = item["preference_score"]
             price_fit_score = item["price_fit_score"]
             matched_reasons = list(dict.fromkeys([*item["matched_reasons"], *item["enhancement_reasons"]]))
+            nickname_boost, nickname_reason = _nickname_match_adjustment(product, parsed_query)
             bge_score = _safe_score(model_scores.get("bge_embedding"), index)
             text2vec_score = _safe_score(model_scores.get("text2vec_embedding"), index)
             reranker_score = _safe_score(rerank_scores, index)
@@ -121,12 +123,19 @@ class HybridRetriever(BaseRetriever):
                 )
             if parsed_query.category and product.category == parsed_query.category:
                 final_score += 0.15
-            if parsed_query.sub_category and product.sub_category == parsed_query.sub_category:
-                final_score += 0.18
+            sub_match_level = sub_category_match_level(parsed_query.sub_category, product.sub_category)
+            if sub_match_level == "exact":
+                final_score += 0.25
+            elif sub_match_level == "compatible":
+                final_score += 0.11
             if parsed_query.brands_include and any(brand in product.brand for brand in parsed_query.brands_include):
                 final_score += 0.08
             if "性价比" in parsed_query.positive_constraints:
                 final_score += _value_price_adjustment(product)
+            final_score += _audience_fit_adjustment(product, parsed_query)
+            final_score += nickname_boost
+            if nickname_reason:
+                matched_reasons.insert(0, nickname_reason)
 
             if final_score <= 0 and not broad:
                 continue
@@ -181,7 +190,7 @@ class HybridRetriever(BaseRetriever):
                     continue
                 if parsed_query.category and product.category != parsed_query.category:
                     continue
-                if parsed_query.sub_category and product.sub_category != parsed_query.sub_category:
+                if parsed_query.sub_category and not sub_category_matches(parsed_query.sub_category, product.sub_category):
                     continue
                 if product:
                     products.append(product)
@@ -191,7 +200,11 @@ class HybridRetriever(BaseRetriever):
             self._candidate(
                 product,
                 score=1.0 - index * 0.05,
-                matched_reasons=["来自上一轮推荐或用户指代", *self._default_reasons(product, parsed_query)],
+                matched_reasons=[
+                    "来自上一轮推荐或用户指代",
+                    *_last_recommendation_reasons(product.sku_id, state),
+                    *self._default_reasons(product, parsed_query),
+                ],
                 raw_scores={"reference": 1.0},
             )
             for index, product in enumerate(products[:top_k])
@@ -200,7 +213,7 @@ class HybridRetriever(BaseRetriever):
     def _hard_filter(self, product: Product, parsed_query: ParsedQuery, *, broad: bool) -> str | None:
         if not broad and parsed_query.category and product.category != parsed_query.category:
             return "category_mismatch"
-        if not broad and parsed_query.sub_category and product.sub_category != parsed_query.sub_category:
+        if not broad and parsed_query.sub_category and not sub_category_matches(parsed_query.sub_category, product.sub_category):
             return "sub_category_mismatch"
         if not broad and _query_is_beverage(parsed_query) and product.sub_category not in _beverage_sub_categories():
             return "not_beverage"
@@ -429,6 +442,7 @@ class HybridRetriever(BaseRetriever):
             product_id=product.product_id or product.sku_id,
             sku_id=product.sku_id,
             name=product.name,
+            display_title=product.display_title,
             brand=product.brand,
             category=product.category,
             sub_category=product.sub_category,
@@ -471,13 +485,46 @@ def _value_price_adjustment(product: Product) -> float:
     return 0.0
 
 
+def _audience_fit_adjustment(product: Product, parsed_query: ParsedQuery) -> float:
+    query_text = " ".join(
+        [
+            parsed_query.raw_message,
+            parsed_query.target_user or "",
+            " ".join(parsed_query.positive_constraints),
+        ]
+    )
+    if product.sub_category == "男士洁面" and not any(term in query_text for term in ["男士", "男生", "男朋友", "爸爸", "男"]):
+        return -0.10
+    return 0.0
+
+
+def _nickname_match_adjustment(product: Product, parsed_query: ParsedQuery) -> tuple[float, str | None]:
+    raw = parsed_query.raw_message.lower()
+    nickname_rules = [
+        ("小棕瓶", "p_beauty_001", "命中商品昵称:小棕瓶"),
+        ("小黑瓶", "p_beauty_002", "命中商品昵称:小黑瓶"),
+        ("神仙水", "p_beauty_003", "命中商品昵称:神仙水"),
+    ]
+    for nickname, sku_id, reason in nickname_rules:
+        if nickname.lower() not in raw:
+            continue
+        if product.sku_id == sku_id:
+            return 0.24, reason
+        if product.sub_category == "精华":
+            return -0.04, None
+    return 0.0, None
+
+
 def _query_is_beverage(parsed_query: ParsedQuery) -> bool:
     raw = parsed_query.raw_message
-    return parsed_query.category == "食品饮料" and any(term in raw for term in ["饮料", "喝的", "喝起来", "口渴", "渴啦", "渴了", "一瓶喝"])
+    return parsed_query.category == "食品饮料" and (
+        any(term in raw for term in ["饮料", "饮品", "喝的", "喝起来", "喝点", "想喝", "口渴", "渴啦", "渴了", "一瓶喝"])
+        or any(term in parsed_query.positive_constraints for term in ["饮料", "饮品"])
+    )
 
 
 def _beverage_sub_categories() -> set[str]:
-    return {"茶饮", "碳酸饮料", "功能饮料", "牛奶", "酸奶", "咖啡", "乳酸菌饮品"}
+    return {"茶饮", "碳酸饮料", "功能饮料", "牛奶", "酸奶", "咖啡", "乳酸菌饮品", "矿泉水", "纯果汁"}
 
 
 def _query_is_for_child(parsed_query: ParsedQuery) -> bool:
@@ -511,10 +558,19 @@ def _risk_notes(product: Product) -> list[str]:
     return notes
 
 
+def _last_recommendation_reasons(sku_id: str, state: SessionState) -> list[str]:
+    for record in state.goods.last_recommendations:
+        if record.sku_id == sku_id and record.reason:
+            return [item.strip() for item in record.reason.split("、") if item.strip()]
+    return []
+
+
 def _negative_satisfied_by_safe_word(term: str, document: str) -> bool:
-    if term in {"酒精", "乙醇", "酒精成分"} and any(safe in document for safe in ["不含酒精", "无酒精", "不添加酒精", "不含乙醇", "无乙醇"]):
+    if term in {"酒精", "乙醇", "酒精成分", "含酒精", "有酒精"} and any(safe in document for safe in ["不含酒精", "无酒精", "不添加酒精", "不含乙醇", "无乙醇"]):
         return True
-    if term in {"糖", "甜", "甜味", "太甜"} and any(safe in document for safe in ["无糖", "0糖", "零糖", "低糖", "不甜", "非甜味"]):
+    if term in {"糖", "甜", "甜味", "太甜", "含糖", "有糖"} and any(safe in document for safe in ["无糖", "0糖", "零糖", "低糖", "不甜", "非甜味"]):
+        return True
+    if term in {"油", "油腻", "太油", "黏腻", "粘腻"} and any(safe in document for safe in ["不油腻", "不黏腻", "不粘腻", "清爽", "轻薄", "控油", "油皮"]):
         return True
     if term in {"防水"} and any(safe in document for safe in ["不防水", "非防水"]):
         return True
@@ -537,10 +593,29 @@ def _direct_or_semantic_match(query_text: str, label: str, similarity: float, *,
         return False
     if label_text in query_text or query_text in label_text:
         return True
-    label_terms = set(re.findall(r"[\u4e00-\u9fff]{2,4}|[A-Za-z0-9]+", label_text))
+    label_terms = {
+        term
+        for term in re.findall(r"[\u4e00-\u9fff]{2,4}|[A-Za-z0-9]+", label_text)
+        if term not in _ENHANCEMENT_MATCH_STOPWORDS
+    }
     if label_terms and any(term in query_text for term in label_terms):
         return True
     return similarity >= threshold
+
+
+_ENHANCEMENT_MATCH_STOPWORDS = {
+    "推荐",
+    "商品",
+    "产品",
+    "日常",
+    "使用",
+    "适合",
+    "什么",
+    "怎么",
+    "怎么办",
+    "可以",
+    "需要",
+}
 
 
 def _used_enhancement_fields(product: Product) -> list[str]:

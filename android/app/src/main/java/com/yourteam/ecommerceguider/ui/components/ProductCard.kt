@@ -5,6 +5,7 @@ package com.yourteam.ecommerceguider.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -30,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.yourteam.ecommerceguider.R
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.theme.AppColors
@@ -37,6 +39,7 @@ import com.yourteam.ecommerceguider.theme.AppDimensions
 import com.yourteam.ecommerceguider.theme.AppRadius
 import com.yourteam.ecommerceguider.theme.AppSpacing
 import com.yourteam.ecommerceguider.theme.AppTypography
+import com.yourteam.ecommerceguider.theme.ChatColors
 import kotlinx.coroutines.delay
 
 @Composable
@@ -50,22 +53,25 @@ fun ProductCard(
     totalCount: Int = 1,
     roleLabel: String? = null,
     showRecommendationReason: Boolean = true,
+    useChatColors: Boolean = false,
 ) {
     val metaText = listOf(product.brand, product.subCategory ?: product.category)
         .filter { it.isNotBlank() }
         .distinct()
         .joinToString(" · ")
     val backendOptionLabel = product.presentation?.optionLabel?.takeIf { it.isNotBlank() }
-    val displayRoleLabel = roleLabel ?: when {
-        backendOptionLabel != null -> backendOptionLabel
-        rank == 1 -> "方案一"
-        rank == 2 -> "方案二"
-        rank == 3 -> "方案三"
-        else -> "方案$rank"
-    }
+    val displayRoleLabel = roleLabel
+        ?.takeIf { it.isNotBlank() && !it.isMechanicalRecommendationLabel() }
+        ?: backendOptionLabel?.takeUnless { it.isMechanicalRecommendationLabel() }
     val imageWidth = if (isPrimary) AppDimensions.RecommendationImageHeight else 96.dp
     val imageHeight = if (isPrimary) AppDimensions.RecommendationImageHeight else 96.dp
     val cardShape = RoundedCornerShape(AppRadius.Card)
+    val cardSurface = if (useChatColors) ChatColors.Surface else AppColors.Surface
+    val cardBorder = if (useChatColors) ChatColors.Border else AppColors.Border
+    val cardTextPrimary = if (useChatColors) ChatColors.TextPrimary else AppColors.TextPrimary
+    val cardTextSecondary = if (useChatColors) ChatColors.TextSecondary else AppColors.TextSecondary
+    val cardTagBackground = if (useChatColors) ChatColors.TagBackground else AppColors.SurfaceSoft
+    val cardTagText = if (useChatColors) ChatColors.TagText else AppColors.TextSecondary
     var addCoolingDown by remember(product.skuId) { mutableStateOf(false) }
 
     LaunchedEffect(addCoolingDown) {
@@ -80,8 +86,8 @@ fun ProductCard(
             .fillMaxWidth()
             .clickable { onClick(product.skuId) },
         shape = cardShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = cardSurface,
+        border = BorderStroke(1.dp, cardBorder),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -105,26 +111,32 @@ fun ProductCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
                 ) {
-                    if (showRecommendationReason) {
+                    if (showRecommendationReason && displayRoleLabel != null) {
                         Surface(
                             shape = RoundedCornerShape(AppRadius.Pill),
-                            color = if (isPrimary) AppColors.Primary else AppColors.SurfaceSoft,
-                            border = BorderStroke(1.dp, if (isPrimary) AppColors.Primary else AppColors.Border),
+                            color = if (isPrimary) AppColors.Primary else cardTagBackground,
+                            border = BorderStroke(1.dp, if (isPrimary) AppColors.Primary else cardBorder),
                         ) {
-                            Text(
-                                text = displayRoleLabel,
-                                modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Xs),
-                                style = AppTypography.CaptionStrong,
-                                color = if (isPrimary) AppColors.OnPrimary else AppColors.TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .heightIn(min = 28.dp)
+                                    .padding(horizontal = AppSpacing.Md),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = displayRoleLabel,
+                                    style = AppTypography.CaptionStrong.copy(lineHeight = 14.sp),
+                                    color = if (isPrimary) AppColors.OnPrimary else cardTagText,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                     Text(
                         text = product.displayTitleShort,
                         style = AppTypography.TitleSmall,
-                        color = AppColors.TextPrimary,
+                        color = cardTextPrimary,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -133,13 +145,17 @@ fun ProductCard(
                         Text(
                             text = metaText,
                             style = AppTypography.BodySmall,
-                            color = AppColors.TextSecondary,
+                            color = cardTextSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    PriceText(price = product.price, level = PriceTextLevel.Normal)
-                    ProductTagRow(tags = product.displayTags)
+                    PriceText(
+                        price = product.price,
+                        level = PriceTextLevel.Normal,
+                        color = cardTextPrimary,
+                    )
+                    ProductTagRow(tags = product.displayTags, useChatColors = useChatColors)
                 }
             }
 
@@ -185,6 +201,7 @@ fun ProductCard(
 fun ProductTagRow(
     tags: List<String>,
     modifier: Modifier = Modifier,
+    useChatColors: Boolean = false,
 ) {
     val displayTags = tags
         .map { it.trim() }
@@ -195,7 +212,7 @@ fun ProductTagRow(
             }
         }
         .distinct()
-        .take(3)
+        .take(2)
 
     if (displayTags.isEmpty()) {
         return
@@ -206,7 +223,12 @@ fun ProductTagRow(
         verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
     ) {
         displayTags.forEach { tag ->
-            TagChip(text = tag)
+            TagChip(
+                text = tag,
+                containerColor = if (useChatColors) ChatColors.TagBackground else null,
+                contentColor = if (useChatColors) ChatColors.TagText else null,
+                borderColor = if (useChatColors) ChatColors.Border else null,
+            )
         }
     }
 }
@@ -217,4 +239,13 @@ fun formatPrice(value: Double): String {
     } else {
         "%.2f".format(value)
     }
+}
+
+private fun String.isMechanicalRecommendationLabel(): Boolean {
+    val normalized = trim().replace(" ", "")
+    return normalized.matches(Regex("""^方案[一二三四五六七八九十\d]+$""")) ||
+        normalized.matches(Regex("""^推荐[一二三四五六七八九十\d]+$""")) ||
+        normalized.matches(Regex("""^第[一二三四五六七八九十\d]+个?推荐$""")) ||
+        normalized == "首选方案" ||
+        normalized == "备选方案"
 }

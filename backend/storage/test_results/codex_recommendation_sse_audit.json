@@ -1,0 +1,2281 @@
+{
+  "status_code": 200,
+  "captured_at": 1780994593.5598,
+  "request": {
+    "session_id": "codex-audit-recommendation-mock",
+    "message": "推荐一款适合油皮的洗面奶"
+  },
+  "event_names": [
+    "progress",
+    "state",
+    "generation_started",
+    "response_completed",
+    "token",
+    "generation_degraded",
+    "recommendation_section_start",
+    "recommendation_text_delta",
+    "recommendation_text_done",
+    "product_card",
+    "recommendation_section_done",
+    "recommendation_section_start",
+    "recommendation_text_delta",
+    "recommendation_text_done",
+    "product_card",
+    "recommendation_section_done",
+    "product_cards",
+    "products",
+    "frontend_action",
+    "turn_result",
+    "done"
+  ],
+  "events": [
+    {
+      "event": "progress",
+      "data": {
+        "event_type": "progress_message",
+        "中文说明": "展示系统处理中状态，减少用户等待感。",
+        "step": 1,
+        "stage": "understanding",
+        "stage_key": "intent_understanding",
+        "text": "收到，我先帮你理解一下需求。",
+        "detail_text": null,
+        "display_text": "收到，我先帮你理解一下需求。",
+        "display_duration_ms": 1200,
+        "display_duration_sec": 1.2,
+        "can_be_replaced": true
+      }
+    },
+    {
+      "event": "state",
+      "data": {
+        "current_flow": "recommendation",
+        "intent": "recommend",
+        "difficulty": "medium",
+        "model_route": {
+          "difficulty": "medium",
+          "need_llm": true,
+          "primary_handler": "retrieval_plus_llm",
+          "reason": "推荐理由需要自然语言组织，但事实由 RAG 约束",
+          "llm_tasks": [
+            "generate_response"
+          ],
+          "small_model_tasks": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "local_model_status": {
+            "enabled": false,
+            "device": "cpu",
+            "backend_dir": "D:\\0603version\\backend",
+            "models_dir": "D:\\0603version\\backend\\models",
+            "bge_embedding": {
+              "path": "D:\\0603version\\backend\\models\\bge-small-zh-v1.5",
+              "resolved_path": "D:\\0603version\\backend\\models\\bge-small-zh-v1.5",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "text2vec": {
+              "path": "D:\\0603version\\backend\\models\\text2vex-base-chinese",
+              "resolved_path": "D:\\0603version\\backend\\models\\text2vex-base-chinese",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "bge_reranker": {
+              "path": "D:\\0603version\\backend\\models\\bge-reranker-base",
+              "resolved_path": "D:\\0603version\\backend\\models\\bge-reranker-base",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "load_errors": {}
+          }
+        },
+        "parsed_query": {
+          "raw_message": "推荐一款适合油皮的洗面奶",
+          "intent": "recommend",
+          "category": "美妆护肤",
+          "sub_category": "洁面",
+          "price_range": {
+            "min": null,
+            "max": null
+          },
+          "positive_constraints": [
+            "油皮"
+          ],
+          "negative_constraints": [],
+          "brands_include": [],
+          "brands_exclude": [],
+          "compare_targets": [],
+          "cart_action": null,
+          "referents": [],
+          "mentioned_products": [],
+          "scenario": null,
+          "target_user": "油皮",
+          "sub_intent": null,
+          "rewritten_query": "适合油皮的洗面奶 美妆护肤 洁面 油皮",
+          "need_clarification": false,
+          "clarification_slots": [],
+          "inherit_context": false,
+          "confidence": 0.85,
+          "route_source": "strict_template",
+          "uncertain_points": [],
+          "intent_plan": {
+            "primary_intent": "recommend",
+            "steps": [
+              {
+                "step": 1,
+                "intent": "recommend",
+                "action": null,
+                "source_text": "推荐一款适合油皮的洗面奶",
+                "target_ref": null,
+                "quantity": null,
+                "sku_id": null,
+                "keep_categories": [],
+                "keep_sub_categories": [],
+                "exclude_sku_ids": [],
+                "requires_tool": false,
+                "requires_retrieval": true
+              }
+            ],
+            "is_multi_intent": false,
+            "needs_llm_resolution": false,
+            "resolution_source": "strict_template",
+            "confidence": 0.85,
+            "reason": "命中严格本地模板"
+          }
+        },
+        "task_plan": [
+          "preprocess_input",
+          "route_model",
+          "merge_context",
+          "extract_constraints",
+          "rewrite_query",
+          "retrieve_products",
+          "filter_products",
+          "rerank_products",
+          "generate_response",
+          "validate_response",
+          "update_memory",
+          "dispatch_frontend_events"
+        ]
+      }
+    },
+    {
+      "event": "generation_started",
+      "data": {
+        "stage_id": "response_generation",
+        "stage_key": "response_composition",
+        "display_label": "生成推荐结论",
+        "message": "正在生成推荐结论",
+        "elapsed_ms": 11.01,
+        "duration_ms": 11.01,
+        "stream_supported": false
+      }
+    },
+    {
+      "event": "response_completed",
+      "data": {
+        "stage_id": "response_generation",
+        "stage_key": "response_composition",
+        "display_label": "生成推荐结论",
+        "text": "结合你的油皮需求，为你筛选了 2 款洁面：",
+        "content": "结合你的油皮需求，为你筛选了 2 款洁面：",
+        "stage_duration_ms": 0.06,
+        "total_duration_ms": 11.86,
+        "duration_ms": 11.86,
+        "stream_supported": false
+      }
+    },
+    {
+      "event": "token",
+      "data": {
+        "text": "结合你的油皮需求，为你筛选了 2 款洁面：",
+        "content": "结合你的油皮需求，为你筛选了 2 款洁面："
+      }
+    },
+    {
+      "event": "generation_degraded",
+      "data": {
+        "request_id": "turn_q001",
+        "sequence": 0,
+        "duration_ms": 12.23,
+        "reason": "response_streaming_not_supported",
+        "message": "recommendation presentation stream unavailable; using existing card reasons"
+      }
+    },
+    {
+      "event": "recommendation_section_start",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 0,
+        "section_index": 1,
+        "product_id": "p_beauty_011",
+        "sku_id": "p_beauty_011",
+        "option_label": "方案一",
+        "sequence": 1,
+        "duration_ms": 12.24,
+        "product_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+        "brand": "珊珂",
+        "event_id": "turn_q001:0:fallback_start:1"
+      }
+    },
+    {
+      "event": "recommendation_text_delta",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 0,
+        "section_index": 1,
+        "product_id": "p_beauty_011",
+        "sku_id": "p_beauty_011",
+        "option_label": "方案一",
+        "sequence": 2,
+        "duration_ms": 12.37,
+        "product_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+        "brand": "珊珂",
+        "event_id": "turn_q001:0:fallback_delta:2",
+        "delta": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。"
+      }
+    },
+    {
+      "event": "recommendation_text_done",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 0,
+        "section_index": 1,
+        "product_id": "p_beauty_011",
+        "sku_id": "p_beauty_011",
+        "option_label": "方案一",
+        "sequence": 3,
+        "duration_ms": 12.41,
+        "product_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+        "brand": "珊珂",
+        "event_id": "turn_q001:0:fallback_text_done:3",
+        "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+        "trade_off": null,
+        "content_source": "fallback"
+      }
+    },
+    {
+      "event": "product_card",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 0,
+        "section_index": 1,
+        "product_id": "p_beauty_011",
+        "sku_id": "p_beauty_011",
+        "option_label": "方案一",
+        "sequence": 4,
+        "duration_ms": 12.42,
+        "product_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+        "brand": "珊珂",
+        "event_id": "turn_q001:0:fallback_product_card:4",
+        "product": {
+          "sku_id": "p_beauty_011",
+          "product_id": "p_beauty_011",
+          "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+          "display_title": null,
+          "category": "美妆护肤",
+          "sub_category": "洁面",
+          "brand": "珊珂",
+          "price": 52.0,
+          "stock": 999,
+          "image_url": "/static/dataset/1_%E7%BC%87%E5%BA%A1%EE%9B%AB%E9%8E%B6%E3%82%88%E5%81%86/images/p_beauty_011_live.jpg",
+          "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+          "recommend_reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+          "highlight_short": "珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷",
+          "suitable_scenarios": [
+            "早晚清洁",
+            "卸妆后二次清洁",
+            "运动后洁面"
+          ],
+          "target_user_tags": [
+            "敏感肌",
+            "敏感肌友好",
+            "学生党友好",
+            "干皮/缺水肌"
+          ],
+          "non_standard_query_tags": [
+            "补水保湿推荐",
+            "不油腻的护肤品",
+            "温和不刺激的护肤品",
+            "深层清洁推荐"
+          ],
+          "matched_reasons": [
+            "匹配洁面",
+            "类目一致"
+          ],
+          "tags": [
+            "保湿",
+            "温和",
+            "敏感肌",
+            "干皮",
+            "运动",
+            "成分"
+          ],
+          "score": 0.5199,
+          "presentation": {
+            "type": "recommendation",
+            "option_label": "方案一",
+            "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+            "trade_off": null,
+            "summary": null,
+            "advantages": [],
+            "suitable_for": null,
+            "key_features": [],
+            "matched_need": null,
+            "usage_advice": null,
+            "bundle_role": null,
+            "bundle_reason": null,
+            "usage_scenario": null,
+            "content_source": "fallback"
+          }
+        }
+      }
+    },
+    {
+      "event": "recommendation_section_done",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 0,
+        "section_index": 1,
+        "product_id": "p_beauty_011",
+        "sku_id": "p_beauty_011",
+        "option_label": "方案一",
+        "sequence": 5,
+        "duration_ms": 12.45,
+        "product_name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+        "brand": "珊珂",
+        "event_id": "turn_q001:0:fallback_section_done:5"
+      }
+    },
+    {
+      "event": "recommendation_section_start",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 1,
+        "section_index": 2,
+        "product_id": "p_beauty_035",
+        "sku_id": "p_beauty_035",
+        "option_label": "方案二",
+        "sequence": 6,
+        "duration_ms": 12.45,
+        "product_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+        "brand": "碧欧泉",
+        "event_id": "turn_q001:1:fallback_start:6"
+      }
+    },
+    {
+      "event": "recommendation_text_delta",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 1,
+        "section_index": 2,
+        "product_id": "p_beauty_035",
+        "sku_id": "p_beauty_035",
+        "option_label": "方案二",
+        "sequence": 7,
+        "duration_ms": 12.49,
+        "product_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+        "brand": "碧欧泉",
+        "event_id": "turn_q001:1:fallback_delta:7",
+        "delta": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。"
+      }
+    },
+    {
+      "event": "recommendation_text_done",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 1,
+        "section_index": 2,
+        "product_id": "p_beauty_035",
+        "sku_id": "p_beauty_035",
+        "option_label": "方案二",
+        "sequence": 8,
+        "duration_ms": 12.51,
+        "product_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+        "brand": "碧欧泉",
+        "event_id": "turn_q001:1:fallback_text_done:8",
+        "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+        "trade_off": null,
+        "content_source": "fallback"
+      }
+    },
+    {
+      "event": "product_card",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 1,
+        "section_index": 2,
+        "product_id": "p_beauty_035",
+        "sku_id": "p_beauty_035",
+        "option_label": "方案二",
+        "sequence": 9,
+        "duration_ms": 12.51,
+        "product_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+        "brand": "碧欧泉",
+        "event_id": "turn_q001:1:fallback_product_card:9",
+        "product": {
+          "sku_id": "p_beauty_035",
+          "product_id": "p_beauty_035",
+          "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+          "display_title": null,
+          "category": "美妆护肤",
+          "sub_category": "男士洁面",
+          "brand": "碧欧泉",
+          "price": 250.0,
+          "stock": 999,
+          "image_url": "/static/dataset/1_%E7%BE%8E%E5%A6%86%E6%8A%A4%E8%82%A4/images/p_beauty_035_live.jpg",
+          "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+          "recommend_reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+          "highlight_short": "碧欧泉男士洁面，专注于修护、控油",
+          "suitable_scenarios": [
+            "日常使用"
+          ],
+          "target_user_tags": [
+            "干皮",
+            "敏感肌友好",
+            "男士护肤",
+            "油皮/混油皮",
+            "干皮/缺水肌"
+          ],
+          "non_standard_query_tags": [
+            "皮肤干燥起皮",
+            "补水保湿推荐",
+            "皮肤泛红舒缓",
+            "日常防晒推荐",
+            "不油腻的护肤品"
+          ],
+          "matched_reasons": [
+            "匹配度一般，作为备选",
+            "油皮",
+            "适合油皮/混油皮"
+          ],
+          "tags": [
+            "控油",
+            "保湿",
+            "温和",
+            "敏感肌",
+            "油皮",
+            "干皮"
+          ],
+          "score": 0.4738,
+          "presentation": {
+            "type": "recommendation",
+            "option_label": "方案二",
+            "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+            "trade_off": null,
+            "summary": null,
+            "advantages": [],
+            "suitable_for": null,
+            "key_features": [],
+            "matched_need": null,
+            "usage_advice": null,
+            "bundle_role": null,
+            "bundle_reason": null,
+            "usage_scenario": null,
+            "content_source": "fallback"
+          }
+        }
+      }
+    },
+    {
+      "event": "recommendation_section_done",
+      "data": {
+        "request_id": "turn_q001",
+        "turn_id": "turn_q001",
+        "section_id": 1,
+        "section_index": 2,
+        "product_id": "p_beauty_035",
+        "sku_id": "p_beauty_035",
+        "option_label": "方案二",
+        "sequence": 10,
+        "duration_ms": 12.53,
+        "product_name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+        "brand": "碧欧泉",
+        "event_id": "turn_q001:1:fallback_section_done:10"
+      }
+    },
+    {
+      "event": "product_cards",
+      "data": {
+        "products": [
+          {
+            "sku_id": "p_beauty_011",
+            "product_id": "p_beauty_011",
+            "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+            "display_title": null,
+            "category": "美妆护肤",
+            "sub_category": "洁面",
+            "brand": "珊珂",
+            "price": 52.0,
+            "stock": 999,
+            "image_url": "/static/dataset/1_%E7%BC%87%E5%BA%A1%EE%9B%AB%E9%8E%B6%E3%82%88%E5%81%86/images/p_beauty_011_live.jpg",
+            "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+            "recommend_reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+            "highlight_short": "珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷",
+            "suitable_scenarios": [
+              "早晚清洁",
+              "卸妆后二次清洁",
+              "运动后洁面"
+            ],
+            "target_user_tags": [
+              "敏感肌",
+              "敏感肌友好",
+              "学生党友好",
+              "干皮/缺水肌"
+            ],
+            "non_standard_query_tags": [
+              "补水保湿推荐",
+              "不油腻的护肤品",
+              "温和不刺激的护肤品",
+              "深层清洁推荐"
+            ],
+            "matched_reasons": [
+              "匹配洁面",
+              "类目一致"
+            ],
+            "tags": [
+              "保湿",
+              "温和",
+              "敏感肌",
+              "干皮",
+              "运动",
+              "成分"
+            ],
+            "score": 0.5199,
+            "presentation": {
+              "type": "recommendation",
+              "option_label": "方案一",
+              "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+              "trade_off": null,
+              "summary": null,
+              "advantages": [],
+              "suitable_for": null,
+              "key_features": [],
+              "matched_need": null,
+              "usage_advice": null,
+              "bundle_role": null,
+              "bundle_reason": null,
+              "usage_scenario": null,
+              "content_source": "fallback"
+            }
+          },
+          {
+            "sku_id": "p_beauty_035",
+            "product_id": "p_beauty_035",
+            "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+            "display_title": null,
+            "category": "美妆护肤",
+            "sub_category": "男士洁面",
+            "brand": "碧欧泉",
+            "price": 250.0,
+            "stock": 999,
+            "image_url": "/static/dataset/1_%E7%BE%8E%E5%A6%86%E6%8A%A4%E8%82%A4/images/p_beauty_035_live.jpg",
+            "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+            "recommend_reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+            "highlight_short": "碧欧泉男士洁面，专注于修护、控油",
+            "suitable_scenarios": [
+              "日常使用"
+            ],
+            "target_user_tags": [
+              "干皮",
+              "敏感肌友好",
+              "男士护肤",
+              "油皮/混油皮",
+              "干皮/缺水肌"
+            ],
+            "non_standard_query_tags": [
+              "皮肤干燥起皮",
+              "补水保湿推荐",
+              "皮肤泛红舒缓",
+              "日常防晒推荐",
+              "不油腻的护肤品"
+            ],
+            "matched_reasons": [
+              "匹配度一般，作为备选",
+              "油皮",
+              "适合油皮/混油皮"
+            ],
+            "tags": [
+              "控油",
+              "保湿",
+              "温和",
+              "敏感肌",
+              "油皮",
+              "干皮"
+            ],
+            "score": 0.4738,
+            "presentation": {
+              "type": "recommendation",
+              "option_label": "方案二",
+              "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+              "trade_off": null,
+              "summary": null,
+              "advantages": [],
+              "suitable_for": null,
+              "key_features": [],
+              "matched_need": null,
+              "usage_advice": null,
+              "bundle_role": null,
+              "bundle_reason": null,
+              "usage_scenario": null,
+              "content_source": "fallback"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event": "products",
+      "data": {
+        "products": [
+          {
+            "sku_id": "p_beauty_011",
+            "product_id": "p_beauty_011",
+            "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+            "display_title": null,
+            "category": "美妆护肤",
+            "sub_category": "洁面",
+            "brand": "珊珂",
+            "price": 52.0,
+            "stock": 999,
+            "image_url": "/static/dataset/1_%E7%BC%87%E5%BA%A1%EE%9B%AB%E9%8E%B6%E3%82%88%E5%81%86/images/p_beauty_011_live.jpg",
+            "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+            "recommend_reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+            "highlight_short": "珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷",
+            "suitable_scenarios": [
+              "早晚清洁",
+              "卸妆后二次清洁",
+              "运动后洁面"
+            ],
+            "target_user_tags": [
+              "敏感肌",
+              "敏感肌友好",
+              "学生党友好",
+              "干皮/缺水肌"
+            ],
+            "non_standard_query_tags": [
+              "补水保湿推荐",
+              "不油腻的护肤品",
+              "温和不刺激的护肤品",
+              "深层清洁推荐"
+            ],
+            "matched_reasons": [
+              "匹配洁面",
+              "类目一致"
+            ],
+            "tags": [
+              "保湿",
+              "温和",
+              "敏感肌",
+              "干皮",
+              "运动",
+              "成分"
+            ],
+            "score": 0.5199,
+            "presentation": {
+              "type": "recommendation",
+              "option_label": "方案一",
+              "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+              "trade_off": null,
+              "summary": null,
+              "advantages": [],
+              "suitable_for": null,
+              "key_features": [],
+              "matched_need": null,
+              "usage_advice": null,
+              "bundle_role": null,
+              "bundle_reason": null,
+              "usage_scenario": null,
+              "content_source": "fallback"
+            }
+          },
+          {
+            "sku_id": "p_beauty_035",
+            "product_id": "p_beauty_035",
+            "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+            "display_title": null,
+            "category": "美妆护肤",
+            "sub_category": "男士洁面",
+            "brand": "碧欧泉",
+            "price": 250.0,
+            "stock": 999,
+            "image_url": "/static/dataset/1_%E7%BE%8E%E5%A6%86%E6%8A%A4%E8%82%A4/images/p_beauty_035_live.jpg",
+            "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+            "recommend_reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+            "highlight_short": "碧欧泉男士洁面，专注于修护、控油",
+            "suitable_scenarios": [
+              "日常使用"
+            ],
+            "target_user_tags": [
+              "干皮",
+              "敏感肌友好",
+              "男士护肤",
+              "油皮/混油皮",
+              "干皮/缺水肌"
+            ],
+            "non_standard_query_tags": [
+              "皮肤干燥起皮",
+              "补水保湿推荐",
+              "皮肤泛红舒缓",
+              "日常防晒推荐",
+              "不油腻的护肤品"
+            ],
+            "matched_reasons": [
+              "匹配度一般，作为备选",
+              "油皮",
+              "适合油皮/混油皮"
+            ],
+            "tags": [
+              "控油",
+              "保湿",
+              "温和",
+              "敏感肌",
+              "油皮",
+              "干皮"
+            ],
+            "score": 0.4738,
+            "presentation": {
+              "type": "recommendation",
+              "option_label": "方案二",
+              "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+              "trade_off": null,
+              "summary": null,
+              "advantages": [],
+              "suitable_for": null,
+              "key_features": [],
+              "matched_need": null,
+              "usage_advice": null,
+              "bundle_role": null,
+              "bundle_reason": null,
+              "usage_scenario": null,
+              "content_source": "fallback"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event": "frontend_action",
+      "data": {
+        "action": "show_product_list",
+        "target_page": "chat",
+        "should_end_conversation": false,
+        "reason": "本轮产生了可展示商品卡片",
+        "confidence": 0.88,
+        "payload": {
+          "product_ids": [
+            "p_beauty_011",
+            "p_beauty_035"
+          ]
+        },
+        "source": "rule"
+      }
+    },
+    {
+      "event": "turn_result",
+      "data": {
+        "frontend_events": [
+          {
+            "步骤": 1,
+            "动作类型": "show_reply",
+            "含义": "展示系统回复",
+            "数据参考": "reply_message",
+            "blocking": false
+          },
+          {
+            "步骤": 2,
+            "动作类型": "show_products",
+            "含义": "展示推荐商品卡片或商品图片",
+            "数据参考": "recommended_products",
+            "blocking": false
+          }
+        ],
+        "frontend_data": {
+          "scene_type": "recommendation",
+          "reply_message": {
+            "中文说明": "系统要展示给用户的回复文本。",
+            "text": "结合你的油皮需求，为你筛选了 2 款洁面："
+          },
+          "recommended_products": {
+            "中文说明": "本轮推荐给用户看的商品卡片，全部来自本地商品库和检索结果。",
+            "products": [
+              {
+                "sku_id": "p_beauty_011",
+                "product_id": "p_beauty_011",
+                "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+                "display_title": null,
+                "category": "美妆护肤",
+                "sub_category": "洁面",
+                "brand": "珊珂",
+                "price": 52.0,
+                "stock": 999,
+                "image_url": "/static/dataset/1_%E7%BC%87%E5%BA%A1%EE%9B%AB%E9%8E%B6%E3%82%88%E5%81%86/images/p_beauty_011_live.jpg",
+                "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+                "recommend_reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+                "highlight_short": "珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷",
+                "suitable_scenarios": [
+                  "早晚清洁",
+                  "卸妆后二次清洁",
+                  "运动后洁面"
+                ],
+                "target_user_tags": [
+                  "敏感肌",
+                  "敏感肌友好",
+                  "学生党友好",
+                  "干皮/缺水肌"
+                ],
+                "non_standard_query_tags": [
+                  "补水保湿推荐",
+                  "不油腻的护肤品",
+                  "温和不刺激的护肤品",
+                  "深层清洁推荐"
+                ],
+                "matched_reasons": [
+                  "匹配洁面",
+                  "类目一致"
+                ],
+                "tags": [
+                  "保湿",
+                  "温和",
+                  "敏感肌",
+                  "干皮",
+                  "运动",
+                  "成分"
+                ],
+                "score": 0.5199,
+                "presentation": {
+                  "type": "recommendation",
+                  "option_label": "方案一",
+                  "reason": "这款商品当前价格 ¥52，比较贴合你关注的油皮，属于洁面方向。它的珊珂绵润泡沫洁面乳，蚕丝蛋白+双重透明质酸，细腻泡沫温和清洁不紧绷，早晚清洁比较突出，适合优先放进候选卡片里查看。",
+                  "trade_off": null,
+                  "summary": null,
+                  "advantages": [],
+                  "suitable_for": null,
+                  "key_features": [],
+                  "matched_need": null,
+                  "usage_advice": null,
+                  "bundle_role": null,
+                  "bundle_reason": null,
+                  "usage_scenario": null,
+                  "content_source": "fallback"
+                }
+              },
+              {
+                "sku_id": "p_beauty_035",
+                "product_id": "p_beauty_035",
+                "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+                "display_title": null,
+                "category": "美妆护肤",
+                "sub_category": "男士洁面",
+                "brand": "碧欧泉",
+                "price": 250.0,
+                "stock": 999,
+                "image_url": "/static/dataset/1_%E7%BE%8E%E5%A6%86%E6%8A%A4%E8%82%A4/images/p_beauty_035_live.jpg",
+                "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+                "recommend_reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+                "highlight_short": "碧欧泉男士洁面，专注于修护、控油",
+                "suitable_scenarios": [
+                  "日常使用"
+                ],
+                "target_user_tags": [
+                  "干皮",
+                  "敏感肌友好",
+                  "男士护肤",
+                  "油皮/混油皮",
+                  "干皮/缺水肌"
+                ],
+                "non_standard_query_tags": [
+                  "皮肤干燥起皮",
+                  "补水保湿推荐",
+                  "皮肤泛红舒缓",
+                  "日常防晒推荐",
+                  "不油腻的护肤品"
+                ],
+                "matched_reasons": [
+                  "匹配度一般，作为备选",
+                  "油皮",
+                  "适合油皮/混油皮"
+                ],
+                "tags": [
+                  "控油",
+                  "保湿",
+                  "温和",
+                  "敏感肌",
+                  "油皮",
+                  "干皮"
+                ],
+                "score": 0.4738,
+                "presentation": {
+                  "type": "recommendation",
+                  "option_label": "方案二",
+                  "reason": "这款商品当前价格 ¥250，比较贴合你关注的油皮，属于男士洁面方向。它的碧欧泉男士洁面，专注于修护、控油，油皮比较突出，适合优先放进候选卡片里查看。",
+                  "trade_off": null,
+                  "summary": null,
+                  "advantages": [],
+                  "suitable_for": null,
+                  "key_features": [],
+                  "matched_need": null,
+                  "usage_advice": null,
+                  "bundle_role": null,
+                  "bundle_reason": null,
+                  "usage_scenario": null,
+                  "content_source": "fallback"
+                }
+              }
+            ]
+          }
+        },
+        "system_debug": {
+          "中文说明": "本部分用于后端调试，展示本轮对话中系统内部状态、记忆、检索和任务执行情况。",
+          "当前轮次分析": {
+            "session_id": "codex-audit-recommendation-mock",
+            "user_id": "codex-audit-recommendation-mock",
+            "意图": "recommend",
+            "业务流程": "recommendation",
+            "商品类别": "美妆护肤",
+            "商品子类": "洁面",
+            "价格约束": {
+              "min": null,
+              "max": null
+            },
+            "正向偏好": [
+              "油皮"
+            ],
+            "否定约束": [],
+            "包含品牌": [],
+            "排除品牌": [],
+            "是否需要检索": true,
+            "是否调用大模型": false
+          },
+          "Doubao意图计划": {
+            "中文说明": "Doubao 返回并被系统解析后的 IntentPlan。steps 表示本轮多个动作的执行顺序；requires_tool 为工具动作，requires_retrieval 为需要商品检索/推荐的动作。",
+            "内容": {
+              "primary_intent": "recommend",
+              "steps": [
+                {
+                  "step": 1,
+                  "intent": "recommend",
+                  "action": null,
+                  "source_text": "推荐一款适合油皮的洗面奶",
+                  "target_ref": null,
+                  "quantity": null,
+                  "sku_id": null,
+                  "keep_categories": [],
+                  "keep_sub_categories": [],
+                  "exclude_sku_ids": [],
+                  "requires_tool": false,
+                  "requires_retrieval": true
+                }
+              ],
+              "is_multi_intent": false,
+              "needs_llm_resolution": false,
+              "resolution_source": "strict_template",
+              "confidence": 0.85,
+              "reason": "命中严格本地模板"
+            }
+          },
+          "对话状态变化": {
+            "变化前": {
+              "当前流程": "recommendation",
+              "当前意图": "recommend",
+              "当前类别": null,
+              "当前子类": null,
+              "活跃约束": {},
+              "缺失槽位": [],
+              "购物车数量": 0,
+              "最近推荐商品": [],
+              "用户画像摘要": null
+            },
+            "变化后": {
+              "当前流程": "recommendation",
+              "当前意图": "recommend",
+              "当前类别": "美妆护肤",
+              "当前子类": "洁面",
+              "活跃约束": {
+                "price_min": null,
+                "price_max": null,
+                "features": [
+                  "油皮"
+                ],
+                "negative_constraints": [],
+                "exclude_brands": [],
+                "include_brands": [],
+                "scenario": null
+              },
+              "缺失槽位": [],
+              "购物车数量": 0,
+              "最近推荐商品": [
+                "p_beauty_011",
+                "p_beauty_035"
+              ]
+            }
+          },
+          "记忆变化": {
+            "短期记忆": {
+              "中文说明": "记录当前会话最近消息和最近推荐商品。",
+              "最近消息数": 2,
+              "最近推荐商品": [
+                {
+                  "rank": 1,
+                  "sku_id": "p_beauty_011",
+                  "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+                  "category": "美妆护肤",
+                  "query_id": "q001",
+                  "reason": "匹配洁面、类目一致",
+                  "price": 52.0
+                },
+                {
+                  "rank": 2,
+                  "sku_id": "p_beauty_035",
+                  "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+                  "category": "美妆护肤",
+                  "query_id": "q001",
+                  "reason": "油皮、适合油皮/混油皮",
+                  "price": 250.0
+                }
+              ],
+              "可解析指代数量": 106
+            },
+            "事件记忆": {
+              "中文说明": "事件记忆用于稳定保存一次业务动作本身，尤其是推荐列表顺序，避免用户说“第一款/第二个”时被后续详情页覆盖。",
+              "当前推荐事件": {
+                "event_id": "rec_001",
+                "query_id": "q001",
+                "rank_to_sku": {
+                  "第1个": "p_beauty_011",
+                  "第1款": "p_beauty_011",
+                  "第1件": "p_beauty_011",
+                  "第一个": "p_beauty_011",
+                  "第一款": "p_beauty_011",
+                  "第一件": "p_beauty_011",
+                  "一号": "p_beauty_011",
+                  "1号": "p_beauty_011",
+                  "第2个": "p_beauty_035",
+                  "第2款": "p_beauty_035",
+                  "第2件": "p_beauty_035",
+                  "第二个": "p_beauty_035",
+                  "第二款": "p_beauty_035",
+                  "第二件": "p_beauty_035",
+                  "二号": "p_beauty_035",
+                  "2号": "p_beauty_035"
+                }
+              },
+              "最近统一事件": [
+                {
+                  "event_id": "rec_001",
+                  "event_type": "recommendation",
+                  "turn_id": 1,
+                  "timestamp": "2026-06-09T16:43:13",
+                  "user_query": "推荐一款适合油皮的洗面奶",
+                  "source_event_id": null,
+                  "category": "美妆护肤",
+                  "constraints": {
+                    "price_min": null,
+                    "price_max": null,
+                    "positive_constraints": [
+                      "油皮"
+                    ],
+                    "negative_constraints": [],
+                    "brands_include": [],
+                    "brands_exclude": [],
+                    "scenario": null
+                  },
+                  "related_product_ids": [
+                    "p_beauty_011",
+                    "p_beauty_035"
+                  ],
+                  "payload": {
+                    "recommendation_mode": "mixed",
+                    "result_status": "partial_match",
+                    "unmet_constraints": {},
+                    "relaxed_constraints": {},
+                    "products": [
+                      {
+                        "rank": 1,
+                        "sku_id": "p_beauty_011",
+                        "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+                        "category": "美妆护肤",
+                        "sub_category": null,
+                        "price": 52.0,
+                        "reason": "匹配洁面、类目一致"
+                      },
+                      {
+                        "rank": 2,
+                        "sku_id": "p_beauty_035",
+                        "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+                        "category": "美妆护肤",
+                        "sub_category": null,
+                        "price": 250.0,
+                        "reason": "油皮、适合油皮/混油皮"
+                      }
+                    ],
+                    "rank_to_sku": {
+                      "1": "p_beauty_011",
+                      "2": "p_beauty_035"
+                    },
+                    "reference_alias_to_sku": {
+                      "第1个": "p_beauty_011",
+                      "第1款": "p_beauty_011",
+                      "第1件": "p_beauty_011",
+                      "第一个": "p_beauty_011",
+                      "第一款": "p_beauty_011",
+                      "第一件": "p_beauty_011",
+                      "一号": "p_beauty_011",
+                      "1号": "p_beauty_011",
+                      "第2个": "p_beauty_035",
+                      "第2款": "p_beauty_035",
+                      "第2件": "p_beauty_035",
+                      "第二个": "p_beauty_035",
+                      "第二款": "p_beauty_035",
+                      "第二件": "p_beauty_035",
+                      "二号": "p_beauty_035",
+                      "2号": "p_beauty_035"
+                    }
+                  }
+                }
+              ],
+              "当前详情商品": null,
+              "最近对比商品": [],
+              "最近购物车相关商品": null
+            },
+            "长期记忆": {
+              "中文说明": "用户画像和长期偏好只来自明确表达或历史摘要，不强行推断敏感信息。",
+              "用户画像摘要": null,
+              "结构化用户画像": {},
+              "显式长期偏好": {
+                "global_preferences": {
+                  "price_preference": null,
+                  "preferred_brands": [],
+                  "excluded_brands": [],
+                  "preferred_style": [],
+                  "avoid_terms": []
+                },
+                "category_preferences": {
+                  "beauty_skincare": {},
+                  "electronics": {},
+                  "shoes": {},
+                  "clothing": {},
+                  "food": {}
+                }
+              }
+            },
+            "更新字段": [
+              "recent_messages",
+              "dialogue_state",
+              "event_memory",
+              "last_recommendations",
+              "cart",
+              "trace"
+            ]
+          },
+          "事件级记忆": {
+            "是否启用": true,
+            "本轮是否写入事件": true,
+            "写入事件类型": "recommendation",
+            "最近事件ID": "rec_001",
+            "最近推荐事件ID": "rec_001",
+            "最近推荐事件rank映射": {
+              "1": "p_beauty_011",
+              "2": "p_beauty_035"
+            },
+            "本轮指代解析来源": "failed",
+            "本轮解析出的商品ID": [],
+            "本轮解析明细": {
+              "source_event_id": null,
+              "resolved": {},
+              "reference_texts": [],
+              "confidence": 0.0
+            }
+          },
+          "运行耗时统计": {
+            "中文说明": "本部分统计本轮后端主要模块耗时，用于定位等待时间瓶颈。计时为轻量级 wall-clock 统计，不包含前端渲染时间。",
+            "turn_start_time": "2026-06-09T16:43:13.537",
+            "turn_end_time": "2026-06-09T16:43:13.556",
+            "total_duration_ms": 18.6,
+            "module_count": 34,
+            "模块明细": [
+              {
+                "module": "privacy_preferences",
+                "中文说明": "读取并应用隐私/个性化设置",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.537",
+                "duration_ms": 0.08
+              },
+              {
+                "module": "history_restore",
+                "中文说明": "按需从本地历史恢复会话",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.537",
+                "duration_ms": 0.0
+              },
+              {
+                "module": "memory_read",
+                "中文说明": "读取当前会话状态、用户画像和购物车",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.537",
+                "duration_ms": 0.13
+              },
+              {
+                "module": "input_preprocess",
+                "中文说明": "输入预处理与简单路由",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.537",
+                "duration_ms": 0.02
+              },
+              {
+                "module": "progress_events_build_fast",
+                "中文说明": "本地快速生成前端 progress events",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.537",
+                "duration_ms": 0.0
+              },
+              {
+                "module": "query_understanding",
+                "中文说明": "意图理解、约束抽取和 IntentPlan 解析",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 2.55
+              },
+              {
+                "module": "multimodal_processing",
+                "中文说明": "多模态输入处理",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "context_merge",
+                "中文说明": "多轮上下文与当前约束合并",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "reference_resolution",
+                "中文说明": "事件记忆和旧引用缓存指代解析",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.09
+              },
+              {
+                "module": "flow_control",
+                "中文说明": "对话流程状态机决策",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.02
+              },
+              {
+                "module": "closing_accept_check",
+                "中文说明": "检测用户是否接受了闭环结算引导",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "task_planning",
+                "中文说明": "生成本轮任务计划",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 0.04
+              },
+              {
+                "module": "model_routing",
+                "中文说明": "模型路由决策",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.541",
+                "duration_ms": 1.22
+              },
+              {
+                "module": "memory_write_model_route",
+                "中文说明": "写入模型路由状态",
+                "start_time": "2026-06-09T16:43:13.541",
+                "end_time": "2026-06-09T16:43:13.541",
+                "duration_ms": 0.02
+              },
+              {
+                "module": "memory_write_user_message",
+                "中文说明": "写入用户消息到短期记忆",
+                "start_time": "2026-06-09T16:43:13.541",
+                "end_time": "2026-06-09T16:43:13.541",
+                "duration_ms": 0.02
+              },
+              {
+                "module": "product_repository_load",
+                "中文说明": "读取本地商品库",
+                "start_time": "2026-06-09T16:43:13.541",
+                "end_time": "2026-06-09T16:43:13.542",
+                "duration_ms": 0.07
+              },
+              {
+                "module": "cart_personalization_analyze",
+                "中文说明": "分析购物车商品侧个性化信号",
+                "start_time": "2026-06-09T16:43:13.542",
+                "end_time": "2026-06-09T16:43:13.542",
+                "duration_ms": 0.0
+              },
+              {
+                "module": "rag_retrieval",
+                "中文说明": "RAG/Hybrid 商品召回",
+                "start_time": "2026-06-09T16:43:13.542",
+                "end_time": "2026-06-09T16:43:13.545",
+                "duration_ms": 3.54
+              },
+              {
+                "module": "multimodal_candidate_boost",
+                "中文说明": "多模态候选增强",
+                "start_time": "2026-06-09T16:43:13.546",
+                "end_time": "2026-06-09T16:43:13.546",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "cart_personalization_rerank",
+                "中文说明": "购物车商品侧个性化重排",
+                "start_time": "2026-06-09T16:43:13.546",
+                "end_time": "2026-06-09T16:43:13.546",
+                "duration_ms": 0.0
+              },
+              {
+                "module": "product_postprocessing",
+                "中文说明": "商品去重、过滤和最终排序",
+                "start_time": "2026-06-09T16:43:13.546",
+                "end_time": "2026-06-09T16:43:13.546",
+                "duration_ms": 0.05
+              },
+              {
+                "module": "product_card_build",
+                "中文说明": "生成商品卡片数据",
+                "start_time": "2026-06-09T16:43:13.546",
+                "end_time": "2026-06-09T16:43:13.548",
+                "duration_ms": 1.43
+              },
+              {
+                "module": "personalization_context",
+                "中文说明": "构建用户侧个性化和购物车侧软约束上下文",
+                "start_time": "2026-06-09T16:43:13.548",
+                "end_time": "2026-06-09T16:43:13.548",
+                "duration_ms": 0.18
+              },
+              {
+                "module": "response_generation",
+                "中文说明": "Prompt 构造与回复生成",
+                "start_time": "2026-06-09T16:43:13.548",
+                "end_time": "2026-06-09T16:43:13.548",
+                "duration_ms": 0.06
+              },
+              {
+                "module": "response_validation",
+                "中文说明": "回复事实校验和幻觉修复",
+                "start_time": "2026-06-09T16:43:13.548",
+                "end_time": "2026-06-09T16:43:13.549",
+                "duration_ms": 0.31
+              },
+              {
+                "module": "scene_presentation_build",
+                "中文说明": "构造结构化商品展示字段",
+                "start_time": "2026-06-09T16:43:13.549",
+                "end_time": "2026-06-09T16:43:13.549",
+                "duration_ms": 0.14
+              },
+              {
+                "module": "memory_write_assistant_message",
+                "中文说明": "写入系统回复到短期记忆",
+                "start_time": "2026-06-09T16:43:13.549",
+                "end_time": "2026-06-09T16:43:13.549",
+                "duration_ms": 0.02
+              },
+              {
+                "module": "memory_write_recommendation_event",
+                "中文说明": "写入推荐事件记忆",
+                "start_time": "2026-06-09T16:43:13.550",
+                "end_time": "2026-06-09T16:43:13.551",
+                "duration_ms": 0.17
+              },
+              {
+                "module": "frontend_action_decision",
+                "中文说明": "前端动作决策",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.551",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "memory_update_dialogue_state",
+                "中文说明": "更新对话状态、候选商品和行为记录",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.551",
+                "duration_ms": 0.06
+              },
+              {
+                "module": "memory_read_after_turn",
+                "中文说明": "读取更新后的会话状态",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.551",
+                "duration_ms": 0.0
+              },
+              {
+                "module": "frontend_events_build",
+                "中文说明": "构造 frontend_events/frontend_data/system_debug",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.551",
+                "duration_ms": 0.24
+              },
+              {
+                "module": "history_save",
+                "中文说明": "保存本轮本地用户历史和 state_snapshot",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.556",
+                "duration_ms": 4.53
+              },
+              {
+                "module": "profile_refresh_schedule",
+                "中文说明": "后台调度长期用户画像刷新",
+                "start_time": "2026-06-09T16:43:13.556",
+                "end_time": "2026-06-09T16:43:13.556",
+                "duration_ms": 0.01
+              },
+              {
+                "module": "trace_save",
+                "中文说明": "保存本轮 trace 日志",
+                "start_time": "2026-06-09T16:43:13.556",
+                "end_time": "2026-06-09T16:43:13.556",
+                "duration_ms": 0.23
+              }
+            ],
+            "模型调用": {
+              "调用次数": 3,
+              "总耗时_ms": 0.21,
+              "planned_call_count": 3,
+              "attempted_call_count": 0,
+              "real_http_call_count": 0,
+              "successful_call_count": 0,
+              "failed_call_count": 0,
+              "mock_call_count": 3,
+              "fallback_count": 0,
+              "明细": [
+                {
+                  "module": "response_generation",
+                  "provider": "MockLLMClient",
+                  "purpose": "generate_response",
+                  "duration_ms": 0.06,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": true,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                },
+                {
+                  "module": "scene_presentation_build",
+                  "provider": "MockLLMClient",
+                  "purpose": "build_scene_presentation",
+                  "duration_ms": 0.14,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": true,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                },
+                {
+                  "module": "frontend_action_decision",
+                  "provider": "MockLLMClient",
+                  "purpose": "frontend_action_decision",
+                  "duration_ms": 0.01,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": true,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                }
+              ]
+            },
+            "Top耗时模块": [
+              {
+                "module": "history_save",
+                "中文说明": "保存本轮本地用户历史和 state_snapshot",
+                "start_time": "2026-06-09T16:43:13.551",
+                "end_time": "2026-06-09T16:43:13.556",
+                "duration_ms": 4.53
+              },
+              {
+                "module": "rag_retrieval",
+                "中文说明": "RAG/Hybrid 商品召回",
+                "start_time": "2026-06-09T16:43:13.542",
+                "end_time": "2026-06-09T16:43:13.545",
+                "duration_ms": 3.54
+              },
+              {
+                "module": "query_understanding",
+                "中文说明": "意图理解、约束抽取和 IntentPlan 解析",
+                "start_time": "2026-06-09T16:43:13.537",
+                "end_time": "2026-06-09T16:43:13.540",
+                "duration_ms": 2.55
+              },
+              {
+                "module": "product_card_build",
+                "中文说明": "生成商品卡片数据",
+                "start_time": "2026-06-09T16:43:13.546",
+                "end_time": "2026-06-09T16:43:13.548",
+                "duration_ms": 1.43
+              },
+              {
+                "module": "model_routing",
+                "中文说明": "模型路由决策",
+                "start_time": "2026-06-09T16:43:13.540",
+                "end_time": "2026-06-09T16:43:13.541",
+                "duration_ms": 1.22
+              }
+            ]
+          },
+          "Progress事件": {
+            "中文说明": "展示本轮为了减少前端等待感而预测并发送的 progress events。",
+            "预测工作类型": [
+              "intent_understanding",
+              "constraint_extraction",
+              "retrieval",
+              "selection_rerank",
+              "response_composition"
+            ],
+            "预计耗时等级": "medium",
+            "是否启用progress": true,
+            "是否并行启动": true,
+            "是否老用户": false,
+            "生成时机": "request_entry_parallel",
+            "本地快速生成": true,
+            "目标首次发送_ms": 500,
+            "首条progress输出耗时_ms": 0.01,
+            "首次progress生成耗时_ms": 0.01,
+            "progress输出间隔_ms": 1200,
+            "已输出数量": 1,
+            "停止原因": "正式结果已开始输出",
+            "实际总耗时_ms": 18.6,
+            "最终主流程耗时_ms": 13.74,
+            "使用的progress模板": [
+              "intent_understanding",
+              "constraint_extraction",
+              "retrieval",
+              "selection_rerank",
+              "response_composition"
+            ],
+            "计划progress事件数量": 5,
+            "progress事件数量": 1,
+            "实际输出progress事件数量": 1,
+            "events": [
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 1,
+                "stage": "understanding",
+                "stage_key": "intent_understanding",
+                "text": "收到，我先帮你理解一下需求。",
+                "detail_text": null,
+                "display_text": "收到，我先帮你理解一下需求。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 2,
+                "stage": "constraint_extraction",
+                "stage_key": "constraint_extraction",
+                "text": "正在提取预算、品类、品牌和功能偏好。",
+                "detail_text": null,
+                "display_text": "正在提取预算、品类、品牌和功能偏好。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 3,
+                "stage": "retrieval",
+                "stage_key": "retrieval",
+                "text": "我在检索真实可展示的商品信息。",
+                "detail_text": "我会优先核对品类、肤质、功效和成分品牌偏好。像油皮、干皮、敏感肌这类信息会作为适配信号参与筛选，让推荐更贴近真实护肤需求。",
+                "display_text": "我在检索真实可展示的商品信息。\n我会优先核对品类、肤质、功效和成分品牌偏好。像油皮、干皮、敏感肌这类信息会作为适配信号参与筛选，让推荐更贴近真实护肤需求。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 4,
+                "stage": "rerank",
+                "stage_key": "selection_rerank",
+                "text": "正在从候选商品中挑出更值得优先看的几款。",
+                "detail_text": "排序时会更重视功效贴合、肤质适配和评价反馈。如果你提出了成分或肤感偏好，我会把这些重点放进推荐优先级里一起考虑。",
+                "display_text": "正在从候选商品中挑出更值得优先看的几款。\n排序时会更重视功效贴合、肤质适配和评价反馈。如果你提出了成分或肤感偏好，我会把这些重点放进推荐优先级里一起考虑。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 5,
+                "stage": "generation",
+                "stage_key": "response_composition",
+                "text": "马上给你一版简洁的推荐结果。",
+                "detail_text": "我会把结论写短一点，更多细节交给商品卡片展示。回复会优先给出可行动的推荐结果，让你能快速看到商品、价格和主要理由。",
+                "display_text": "马上给你一版简洁的推荐结果。\n我会把结论写短一点，更多细节交给商品卡片展示。回复会优先给出可行动的推荐结果，让你能快速看到商品、价格和主要理由。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              }
+            ]
+          },
+          "进度事件": {
+            "中文说明": "展示本轮为了减少前端等待感而预测并发送的 progress events。",
+            "预测工作类型": [
+              "intent_understanding",
+              "constraint_extraction",
+              "retrieval",
+              "selection_rerank",
+              "response_composition"
+            ],
+            "预计耗时等级": "medium",
+            "是否启用progress": true,
+            "是否并行启动": true,
+            "是否老用户": false,
+            "生成时机": "request_entry_parallel",
+            "本地快速生成": true,
+            "目标首次发送_ms": 500,
+            "首条progress输出耗时_ms": 0.01,
+            "首次progress生成耗时_ms": 0.01,
+            "progress输出间隔_ms": 1200,
+            "已输出数量": 1,
+            "停止原因": "正式结果已开始输出",
+            "实际总耗时_ms": 18.6,
+            "最终主流程耗时_ms": 13.74,
+            "使用的progress模板": [
+              "intent_understanding",
+              "constraint_extraction",
+              "retrieval",
+              "selection_rerank",
+              "response_composition"
+            ],
+            "计划progress事件数量": 5,
+            "progress事件数量": 1,
+            "实际输出progress事件数量": 1,
+            "events": [
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 1,
+                "stage": "understanding",
+                "stage_key": "intent_understanding",
+                "text": "收到，我先帮你理解一下需求。",
+                "detail_text": null,
+                "display_text": "收到，我先帮你理解一下需求。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 2,
+                "stage": "constraint_extraction",
+                "stage_key": "constraint_extraction",
+                "text": "正在提取预算、品类、品牌和功能偏好。",
+                "detail_text": null,
+                "display_text": "正在提取预算、品类、品牌和功能偏好。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 3,
+                "stage": "retrieval",
+                "stage_key": "retrieval",
+                "text": "我在检索真实可展示的商品信息。",
+                "detail_text": "我会优先核对品类、肤质、功效和成分品牌偏好。像油皮、干皮、敏感肌这类信息会作为适配信号参与筛选，让推荐更贴近真实护肤需求。",
+                "display_text": "我在检索真实可展示的商品信息。\n我会优先核对品类、肤质、功效和成分品牌偏好。像油皮、干皮、敏感肌这类信息会作为适配信号参与筛选，让推荐更贴近真实护肤需求。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 4,
+                "stage": "rerank",
+                "stage_key": "selection_rerank",
+                "text": "正在从候选商品中挑出更值得优先看的几款。",
+                "detail_text": "排序时会更重视功效贴合、肤质适配和评价反馈。如果你提出了成分或肤感偏好，我会把这些重点放进推荐优先级里一起考虑。",
+                "display_text": "正在从候选商品中挑出更值得优先看的几款。\n排序时会更重视功效贴合、肤质适配和评价反馈。如果你提出了成分或肤感偏好，我会把这些重点放进推荐优先级里一起考虑。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              },
+              {
+                "event_type": "progress_message",
+                "中文说明": "展示系统处理中状态，减少用户等待感。",
+                "step": 5,
+                "stage": "generation",
+                "stage_key": "response_composition",
+                "text": "马上给你一版简洁的推荐结果。",
+                "detail_text": "我会把结论写短一点，更多细节交给商品卡片展示。回复会优先给出可行动的推荐结果，让你能快速看到商品、价格和主要理由。",
+                "display_text": "马上给你一版简洁的推荐结果。\n我会把结论写短一点，更多细节交给商品卡片展示。回复会优先给出可行动的推荐结果，让你能快速看到商品、价格和主要理由。",
+                "display_duration_ms": 1200,
+                "display_duration_sec": 1.2,
+                "can_be_replaced": true
+              }
+            ]
+          },
+          "本地模型状态": {
+            "enabled": false,
+            "device": "cpu",
+            "backend_dir": "D:\\0603version\\backend",
+            "models_dir": "D:\\0603version\\backend\\models",
+            "bge_embedding": {
+              "path": "D:\\0603version\\backend\\models\\bge-small-zh-v1.5",
+              "resolved_path": "D:\\0603version\\backend\\models\\bge-small-zh-v1.5",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "text2vec": {
+              "path": "D:\\0603version\\backend\\models\\text2vex-base-chinese",
+              "resolved_path": "D:\\0603version\\backend\\models\\text2vex-base-chinese",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "bge_reranker": {
+              "path": "D:\\0603version\\backend\\models\\bge-reranker-base",
+              "resolved_path": "D:\\0603version\\backend\\models\\bge-reranker-base",
+              "path_exists": true,
+              "required_files": {
+                "ok": true,
+                "files": {
+                  "config.json": true,
+                  "tokenizer_config.json": true,
+                  "vocab.txt_or_tokenizer.json": true,
+                  "weight_file": true
+                },
+                "missing": []
+              },
+              "loaded": false,
+              "load_error": null
+            },
+            "load_errors": {}
+          },
+          "场景展示生成": {
+            "scene_type": "recommendation",
+            "llm_required": false,
+            "llm_call_attempted": false,
+            "llm_is_mock": true,
+            "http_request_sent": false,
+            "http_request_succeeded": false,
+            "duration_ms": 0,
+            "raw_llm_output": null,
+            "json_parse_succeeded": false,
+            "parsed_items": [],
+            "candidate_sku_ids": [
+              "p_beauty_011",
+              "p_beauty_035"
+            ],
+            "valid_sku_ids": [],
+            "invalid_sku_ids": [],
+            "missing_sku_ids": [
+              "p_beauty_011",
+              "p_beauty_035"
+            ],
+            "validation_errors": [],
+            "fallback_reason": "llm_not_required",
+            "content_source_by_sku": {
+              "p_beauty_011": "fallback",
+              "p_beauty_035": "fallback"
+            },
+            "issues": [],
+            "llm_called": false,
+            "comparison_data": null,
+            "display_title_usage": {
+              "是否启用": false,
+              "来源": "ecommerce_agent_dataset/slogan_generation_report.json",
+              "推荐商品使用数量": 0,
+              "备选商品使用数量": 0,
+              "样例": []
+            }
+          },
+          "商品展示标题": {
+            "中文说明": "记录本轮推荐商品是否带有前端展示用 display_title。该字段只用于商品卡片标题展示，不替代真实商品名、价格、SKU 或库存。",
+            "是否启用": false,
+            "来源": "ecommerce_agent_dataset/slogan_generation_report.json",
+            "推荐商品使用数量": 0,
+            "备选商品使用数量": 0,
+            "样例": []
+          },
+          "购物车商品侧个性化": {
+            "中文说明": "展示购物车商品侧个性化如何作为软约束影响本轮排序。当前用户明确需求仍是硬约束。",
+            "是否启用": false,
+            "禁用原因": "购物车为空或购物车商品已不在商品库中",
+            "目标类目": null,
+            "参考购物车商品": [],
+            "忽略的非同类购物车商品": [],
+            "商品标签": [],
+            "价格画像": {},
+            "库存覆盖": {},
+            "命中的本地规则": [],
+            "是否调用Doubao": false,
+            "是否需要复杂搭配分析": false,
+            "复杂搭配分析处理方式": null,
+            "排序影响": []
+          },
+          "商品增强字段使用": {
+            "中文说明": "展示本轮如何使用商品增强字段参与 query enhancement、召回重排、推荐理由、详情问答和比较事实。",
+            "是否启用": true,
+            "使用的增强字段": [
+              "product_highlight",
+              "highlight_short",
+              "highlight_detail",
+              "suitable_scenarios",
+              "target_user_tags",
+              "non_standard_query_tags"
+            ],
+            "命中的非标准问题标签": [],
+            "命中的适用场景": [],
+            "命中的人群标签": [
+              "油皮/混油皮"
+            ],
+            "排序影响": [
+              {
+                "sku_id": "p_beauty_035",
+                "enhancement_score": 0.2,
+                "matched_reasons": [
+                  "油皮",
+                  "适合油皮/混油皮"
+                ],
+                "matches": {
+                  "used_fields": [
+                    "product_highlight",
+                    "highlight_short",
+                    "highlight_detail",
+                    "suitable_scenarios",
+                    "target_user_tags",
+                    "non_standard_query_tags"
+                  ],
+                  "matched_non_standard_query_tags": [],
+                  "matched_suitable_scenarios": [],
+                  "matched_target_user_tags": [
+                    "油皮/混油皮"
+                  ],
+                  "matched_highlight_fields": [],
+                  "enhancement_boost_basis": [
+                    "适合油皮/混油皮"
+                  ]
+                }
+              }
+            ]
+          },
+          "回复策略": {
+            "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+            "匹配状态": "partial_match",
+            "是否启用积极回复": true,
+            "是否避免否定开头": true,
+            "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+            "使用的个性化参考": [
+              "领域导购风格"
+            ],
+            "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+            "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+          },
+          "个性化分析": {
+            "中文说明": "展示本轮回复中使用了哪些用户历史和个性化信息。该部分只用于调试，不展示给普通用户。",
+            "是否启用个性化": false,
+            "使用的用户画像摘要": null,
+            "领域导购风格": {
+              "中文说明": "领域导购风格只影响表达方式和解释重点，不改变当前硬约束和商品事实。",
+              "商品类别": "美妆护肤",
+              "商品子类": "洁面",
+              "导购角色": "美妆护肤导购小姐姐",
+              "风格指令": "温柔细腻、少夸大功效，优先说肤质/质地/成分或妆效，再给简短购买建议。",
+              "解释重点": [
+                "肤质适配",
+                "质地肤感",
+                "成分/功效边界",
+                "使用场景"
+              ],
+              "禁忌": [
+                "不要承诺医学疗效",
+                "不要用过度绝对化功效词"
+              ]
+            },
+            "本轮选中的历史证据": [],
+            "本轮使用的few-shot示例": [],
+            "相似人群参考": {},
+            "相似历史用户协同过滤": {},
+            "个性化生成策略": "新用户历史积累中：已有0轮，满3轮后从下一轮开始启用对话个性化。",
+            "用户画像更新": {
+              "是否更新": false,
+              "新增观察": []
+            },
+            "新用户冷启动": {
+              "是否冷启动": true,
+              "已积累轮数": 0,
+              "启用阈值": 3,
+              "本轮是否启用": false
+            }
+          },
+          "隐私保护": {
+            "中文说明": "展示本轮个性化是否受到隐私设置约束。普通用户页面不展示。",
+            "个性化模式": "full",
+            "是否允许个性化": true,
+            "是否允许使用历史原文做个性化": true,
+            "是否仅使用语义摘要": false,
+            "是否保存原始历史": true
+          },
+          "层次记忆": {
+            "中文说明": "展示短期记忆向长期语义记忆晋升的候选观察。具体长期结果保存在本地 profile.json。",
+            "短期会话消息数": 2,
+            "最近推荐商品数": 2,
+            "本轮是否产生晋升候选": false,
+            "本轮晋升候选观察": []
+          },
+          "多模态分析": {
+            "中文说明": "展示本轮图片输入、视觉分析和图文融合查询过程。该部分只用于调试，不展示给普通用户。",
+            "是否启用多模态": false,
+            "图片输入": {},
+            "图片理解结果": {},
+            "图文融合查询": {},
+            "视觉匹配商品": {},
+            "库存匹配判断": {}
+          },
+          "RAG检索过程": {
+            "检索方式": [
+              "结构化过滤",
+              "关键词匹配",
+              "属性/约束匹配"
+            ],
+            "召回商品数量": 2,
+            "召回商品ID": [
+              "p_beauty_011",
+              "p_beauty_035"
+            ],
+            "过滤商品数量": 149,
+            "过滤商品ID样例": [
+              "p_beauty_001",
+              "p_beauty_002",
+              "p_beauty_003",
+              "p_beauty_004",
+              "p_beauty_005",
+              "p_beauty_006",
+              "p_beauty_007",
+              "p_beauty_008",
+              "p_beauty_009",
+              "p_beauty_010",
+              "p_beauty_012",
+              "p_beauty_013",
+              "p_beauty_014",
+              "p_beauty_015",
+              "p_beauty_016",
+              "p_beauty_017",
+              "p_beauty_018",
+              "p_beauty_019",
+              "p_beauty_020",
+              "p_beauty_021"
+            ],
+            "最终推荐商品ID": [
+              "p_beauty_011",
+              "p_beauty_035"
+            ],
+            "检索评分摘要": [
+              {
+                "sku_id": "p_beauty_011",
+                "name": "珊珂洗颜专科绵润泡沫洁面乳细腻丰富泡沫温和清洁洁面120g",
+                "score": 0.5199,
+                "raw_scores": {
+                  "keyword": 0.2222,
+                  "semantic": 0.0948,
+                  "lexical_semantic": 0.0948,
+                  "bge_embedding": 0.0,
+                  "text2vec_embedding": 0.0,
+                  "bge_reranker": 0.0,
+                  "constraint": 0.0,
+                  "enhancement": 0.0,
+                  "preference": 0.0,
+                  "price_fit": 0.4
+                },
+                "matched_reasons": [
+                  "匹配洁面",
+                  "类目一致"
+                ],
+                "enhancement_matches": {
+                  "used_fields": [
+                    "product_highlight",
+                    "highlight_short",
+                    "highlight_detail",
+                    "suitable_scenarios",
+                    "target_user_tags",
+                    "non_standard_query_tags"
+                  ]
+                }
+              },
+              {
+                "sku_id": "p_beauty_035",
+                "name": "碧欧泉男士水动力洁面啫喱清爽控油保湿125ml",
+                "score": 0.4738,
+                "raw_scores": {
+                  "keyword": 0.4444,
+                  "semantic": 0.1184,
+                  "lexical_semantic": 0.1184,
+                  "bge_embedding": 0.0,
+                  "text2vec_embedding": 0.0,
+                  "bge_reranker": 0.0,
+                  "constraint": 0.5,
+                  "enhancement": 0.2,
+                  "preference": 0.0,
+                  "price_fit": 0.4
+                },
+                "matched_reasons": [
+                  "油皮",
+                  "适合油皮/混油皮"
+                ],
+                "enhancement_matches": {
+                  "used_fields": [
+                    "product_highlight",
+                    "highlight_short",
+                    "highlight_detail",
+                    "suitable_scenarios",
+                    "target_user_tags",
+                    "non_standard_query_tags"
+                  ],
+                  "matched_non_standard_query_tags": [],
+                  "matched_suitable_scenarios": [],
+                  "matched_target_user_tags": [
+                    "油皮/混油皮"
+                  ],
+                  "matched_highlight_fields": [],
+                  "enhancement_boost_basis": [
+                    "适合油皮/混油皮"
+                  ]
+                }
+              }
+            ]
+          },
+          "工具执行": [],
+          "模型调用": {
+            "LLM是否调用": false,
+            "Doubao是否真实调用": false,
+            "调用客户端": "MockLLMClient",
+            "调用目的": [
+              "generate_response",
+              "build_scene_presentation",
+              "frontend_action_decision"
+            ],
+            "模型调用次数": 3,
+            "模型调用总耗时_ms": 0.21,
+            "planned_call_count": 3,
+            "attempted_call_count": 0,
+            "real_http_call_count": 0,
+            "successful_call_count": 0,
+            "failed_call_count": 0,
+            "mock_call_count": 3,
+            "fallback_count": 0,
+            "调用明细": [
+              {
+                "module": "response_generation",
+                "provider": "MockLLMClient",
+                "purpose": "generate_response",
+                "duration_ms": 0.06,
+                "llm_call_attempted": false,
+                "llm_is_mock": true,
+                "http_request_sent": false,
+                "http_request_succeeded": false,
+                "http_status_code": null,
+                "raw_output_received": false,
+                "fallback_triggered": false,
+                "fallback_reason": "skipped_by_policy",
+                "call_succeeded": false,
+                "skipped_by_policy": true
+              },
+              {
+                "module": "scene_presentation_build",
+                "provider": "MockLLMClient",
+                "purpose": "build_scene_presentation",
+                "duration_ms": 0.14,
+                "llm_call_attempted": false,
+                "llm_is_mock": true,
+                "http_request_sent": false,
+                "http_request_succeeded": false,
+                "http_status_code": null,
+                "raw_output_received": false,
+                "fallback_triggered": false,
+                "fallback_reason": "skipped_by_policy",
+                "call_succeeded": false,
+                "skipped_by_policy": true
+              },
+              {
+                "module": "frontend_action_decision",
+                "provider": "MockLLMClient",
+                "purpose": "frontend_action_decision",
+                "duration_ms": 0.01,
+                "llm_call_attempted": false,
+                "llm_is_mock": true,
+                "http_request_sent": false,
+                "http_request_succeeded": false,
+                "http_status_code": null,
+                "raw_output_received": false,
+                "fallback_triggered": false,
+                "fallback_reason": "skipped_by_policy",
+                "call_succeeded": false,
+                "skipped_by_policy": true
+              }
+            ],
+            "本地小模型任务": [
+              "bge_embedding_recall",
+              "text2vec_semantic_recall",
+              "bge_reranker"
+            ],
+            "前端动作决策来源": "rule"
+          },
+          "输出校验": {
+            "ok": true,
+            "issues": [],
+            "repaired": false
+          },
+          "历史恢复状态": {
+            "中文说明": "说明本轮是否从用户历史会话中恢复上下文。",
+            "是否恢复": false,
+            "恢复的用户": null,
+            "恢复的会话": null,
+            "恢复后的当前类别": null,
+            "恢复后的候选商品": []
+          },
+          "前端动作决策": {
+            "action": "show_product_list",
+            "target_page": "chat",
+            "should_end_conversation": false,
+            "reason": "本轮产生了可展示商品卡片",
+            "confidence": 0.88,
+            "payload": {
+              "product_ids": [
+                "p_beauty_011",
+                "p_beauty_035"
+              ]
+            },
+            "source": "rule"
+          },
+          "原始SSE事件": [
+            "state",
+            "generation_started",
+            "response_completed",
+            "token",
+            "generation_degraded",
+            "recommendation_section_start",
+            "recommendation_text_delta",
+            "recommendation_text_done",
+            "product_card",
+            "recommendation_section_done",
+            "recommendation_section_start",
+            "recommendation_text_delta",
+            "recommendation_text_done",
+            "product_card",
+            "recommendation_section_done",
+            "product_cards",
+            "products",
+            "frontend_action",
+            "turn_result"
+          ],
+          "后台用户画像刷新": {
+            "中文说明": "长期用户画像每3轮在后台刷新一次；刷新不阻塞本轮回复，成功后写入本地 profile 和会话记忆。",
+            "是否触发": false,
+            "触发原因": "未到3轮刷新周期",
+            "turn_count": 1,
+            "后台执行": true,
+            "阻塞用户回复": false,
+            "inflight": false
+          }
+        }
+      }
+    },
+    {
+      "event": "done",
+      "data": {
+        "finish_reason": "stop"
+      }
+    }
+  ]
+}

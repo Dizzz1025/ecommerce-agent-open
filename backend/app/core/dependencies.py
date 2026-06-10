@@ -42,6 +42,7 @@ from app.services.cart_service import CartService
 from app.services.checkout_service import CheckoutService
 from app.services.order_service import OrderService
 from app.services.product_service import ProductService
+from app.services.speech_service import SpeechService
 from app.tools.action_executor import ActionExecutor
 from app.tools.cart_tool import CartTool
 from app.tools.checkout_tool import CheckoutTool
@@ -61,6 +62,21 @@ def get_product_repository() -> ProductRepository:
 @lru_cache
 def get_product_service() -> ProductService:
     return ProductService(product_repository=get_product_repository())
+
+
+@lru_cache
+def get_speech_service() -> SpeechService:
+    return SpeechService(
+        enabled=settings.enable_speech,
+        upload_dir=settings.speech_upload_dir,
+        tts_dir=settings.tts_output_dir,
+        asr_backend=settings.asr_backend,
+        asr_model_name=settings.asr_model_name,
+        tts_backend=settings.tts_backend,
+        tts_voice=settings.tts_voice,
+        macos_tts_voice=settings.macos_tts_voice,
+        max_audio_mb=settings.speech_max_audio_mb,
+    )
 
 
 @lru_cache

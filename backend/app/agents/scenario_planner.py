@@ -44,21 +44,22 @@ class ScenarioPlanner:
             return ScenePlan(
                 scenario="旅行/三亚度假",
                 sub_queries=[
-                    SceneSubQuery(label="防晒保护", category="美妆护肤", sub_category="防晒", query=f"{message} 防晒 清爽", reason="海边紫外线强，优先防晒"),
-                    SceneSubQuery(label="清爽穿搭", category="服饰运动", sub_category="短袖T恤", query=f"{message} 清爽 透气 短袖", reason="高温场景需要透气衣物"),
-                    SceneSubQuery(label="随身收纳", category="服饰运动", sub_category="背包", query=f"{message} 轻便 背包 通勤 旅行", reason="短途出行需要收纳"),
-                    SceneSubQuery(label="补水饮品", category="食品饮料", sub_category="功能饮料", query=f"{message} 饮料 补水", reason="户外活动需要补水"),
+                    SceneSubQuery(label="清爽防晒", category="美妆护肤", sub_category="防晒", query=f"{message} 巴黎欧莱雅 娜丽丝 防晒 清爽 高倍 海边", reason="海边紫外线强，优先准备面部防晒"),
+                    SceneSubQuery(label="防晒衣", category="服饰运动", sub_category="防晒衣", query=f"{message} 蕉下 防晒衣 轻薄 透气 三亚 海边", reason="三亚户外时间长，防晒衣能覆盖手臂和肩颈"),
+                    SceneSubQuery(label="沙滩拖鞋", category="服饰运动", sub_category="沙滩拖鞋", query=f"{message} 沙滩拖鞋 海边 防滑 轻便", reason="海边和酒店往返需要轻便防滑拖鞋"),
+                    SceneSubQuery(label="泳衣", category="服饰运动", sub_category="泳衣", query=f"{message} 泳衣 海边 度假 速干", reason="度假游泳或海边玩水时更方便"),
+                    SceneSubQuery(label="遮阳帽", category="服饰运动", sub_category="帽子", query=f"{message} 帽子 遮阳 防晒 透气", reason="遮阳帽能补足头面部防晒"),
                 ],
-                unsupported_needs=["拖鞋", "泳衣"],
+                unsupported_needs=[],
             )
         if any(term in message for term in ["健身", "健身房", "运动装备", "开始运动"]):
             return ScenePlan(
                 scenario="健身入门",
                 sub_queries=[
-                    SceneSubQuery(label="运动上衣", category="服饰运动", sub_category="速干T恤", query=f"{message} 速干 运动 T恤", reason="训练时需要吸汗透气"),
-                    SceneSubQuery(label="跑步训练鞋", category="服饰运动", sub_category="跑步鞋", query=f"{message} 跑步鞋 缓震 轻量", reason="基础有氧和器械训练都需要支撑"),
-                    SceneSubQuery(label="运动长裤", category="服饰运动", sub_category="运动长裤", query=f"{message} 运动裤 训练", reason="适合健身房训练"),
-                    SceneSubQuery(label="补给饮品", category="食品饮料", sub_category="功能饮料", query=f"{message} 功能饮料", reason="运动后补给"),
+                    SceneSubQuery(label="基础速干上衣", category="服饰运动", sub_category="速干T恤", query=f"{message} 迪卡侬 KALENJI 基础 速干 透气 入门 健身", reason="新手训练先准备一件基础速干上衣，出汗后不容易黏身"),
+                    SceneSubQuery(label="运动短裤", category="服饰运动", sub_category="运动短裤", query=f"{message} 优衣库 DRY 运动短裤 轻薄 透气 训练", reason="健身房训练需要活动方便的轻薄下装"),
+                    SceneSubQuery(label="运动袜", category="服饰运动", sub_category="运动袜", query=f"{message} 安踏 运动袜 透气 吸汗 防臭 跑步 训练", reason="运动袜能减少磨脚和闷汗"),
+                    SceneSubQuery(label="蛋白补给", category="食品饮料", sub_category="蛋白粉", query=f"{message} Swisse 蛋白粉 健身 低糖 低脂 补给", reason="训练后可以准备蛋白类补给"),
                 ],
                 unsupported_needs=["水杯", "毛巾"],
             )

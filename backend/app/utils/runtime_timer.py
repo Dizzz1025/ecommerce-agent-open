@@ -43,6 +43,23 @@ class RuntimeTimer:
         call_debug: dict[str, Any] | None = None,
     ) -> None:
         if not called:
+            item = {
+                "module": module,
+                "provider": provider,
+                "purpose": purpose,
+                "duration_ms": round(duration_ms, 2),
+                "llm_call_attempted": False,
+                "llm_is_mock": provider == "MockLLMClient",
+                "http_request_sent": False,
+                "http_request_succeeded": False,
+                "http_status_code": None,
+                "raw_output_received": False,
+                "fallback_triggered": False,
+                "fallback_reason": "skipped_by_policy",
+                "call_succeeded": False,
+                "skipped_by_policy": True,
+            }
+            self._model_calls.append(item)
             return
         item = {
             "module": module,

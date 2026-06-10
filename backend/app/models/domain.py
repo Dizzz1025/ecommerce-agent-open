@@ -44,6 +44,7 @@ class Product(BaseModel):
     product_id: str | None = None
     name: str
     title: str | None = None
+    display_title: str | None = None
     category: str
     sub_category: str | None = None
     brand: str
@@ -51,9 +52,8 @@ class Product(BaseModel):
     base_price: float | None = None
     stock: int
     image_url: str
-    image_path: str | None = None
     detail_image_url: str | None = None
-    detail_image_path: str | None = None
+    image_path: str | None = None
     skus: list[ProductSku] = Field(default_factory=list)
     spotlight: ProductSpotlight = Field(default_factory=ProductSpotlight)
     reviews_summary: str
@@ -84,6 +84,7 @@ class ProductCard(BaseModel):
     sku_id: str
     product_id: str | None = None
     name: str
+    display_title: str | None = None
     category: str
     sub_category: str | None = None
     brand: str
@@ -91,6 +92,7 @@ class ProductCard(BaseModel):
     stock: int
     image_url: str
     reason: str
+    recommend_reason: str = ""
     highlight_short: str = ""
     suitable_scenarios: list[str] = Field(default_factory=list)
     target_user_tags: list[str] = Field(default_factory=list)

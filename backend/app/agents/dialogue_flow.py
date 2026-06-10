@@ -85,6 +85,15 @@ class DialogueFlowController:
                 need_llm=False,
                 missing_slots=parsed.clarification_slots,
             )
+        if (parsed.inherit_context or intent == IntentType.REFINE.value) and (
+            parsed.price_range.min is not None or parsed.price_range.max is not None
+        ):
+            return FlowDecision(
+                flow=DialogueFlow.REFINEMENT,
+                reason="用户在上一轮基础上调整预算或价格接受范围",
+                need_retrieval=True,
+                need_llm=True,
+            )
         if parsed.negative_constraints or parsed.brands_exclude:
             return FlowDecision(
                 flow=DialogueFlow.EXCLUSION,

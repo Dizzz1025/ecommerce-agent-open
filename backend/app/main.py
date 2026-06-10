@@ -23,6 +23,12 @@ def create_app() -> FastAPI:
             StaticFiles(directory=str(settings.product_dataset_dir)),
             name="dataset-static",
         )
+    settings.tts_output_dir.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/static/tts",
+        StaticFiles(directory=str(settings.tts_output_dir)),
+        name="tts-static",
+    )
     app.include_router(health.router, tags=["health"])
     app.include_router(api_router, prefix=settings.api_prefix)
 

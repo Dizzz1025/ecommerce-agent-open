@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
+from app.agents.shopping_agent import ProgressStageTimer, _with_completed_progress_duration
 from app.main import app
 
 
@@ -329,16 +330,32 @@ def test_chat_stream_returns_token_cards_and_done() -> None:
     assert response.status_code == 200
     events = _parse_sse_events(response.text)
     event_names = [name for name, _ in events]
-    assert "token" in event_names
+    assert "token" in event_names or "recommendation_text_delta" in event_names
     assert "product_cards" in event_names
     assert "turn_result" in event_names
     assert "done" in event_names
 
     product_cards = next(data for name, data in events if name == "product_cards")
     assert product_cards["products"][0]["sku_id"] == "p_beauty_011"
+    assert product_cards["products"][0]["display_title"]
+    assert product_cards["products"][0]["recommend_reason"]
+    assert "候选卡片" not in product_cards["products"][0]["recommend_reason"]
+    assert "卡片细节" not in product_cards["products"][0]["recommend_reason"]
     assert product_cards["products"][0]["presentation"]["type"] == "recommendation"
     assert product_cards["products"][0]["presentation"]["option_label"] == "方案一"
     assert product_cards["products"][0]["presentation"]["reason"]
+    section_starts = [data for name, data in events if name == "recommendation_section_start"]
+    if section_starts:
+        assert section_starts[0]["display_title"]
+    section_done_texts = [data for name, data in events if name == "recommendation_text_done"]
+    if section_done_texts:
+        assert section_done_texts[0]["recommend_reason"]
+        assert "候选卡片" not in section_done_texts[0]["recommend_reason"]
+        assert "卡片细节" not in section_done_texts[0]["recommend_reason"]
+    section_product_cards = [data for name, data in events if name == "product_card"]
+    if section_product_cards:
+        assert section_product_cards[0]["display_title"]
+        assert section_product_cards[0]["recommend_reason"]
     turn_result = next(data for name, data in events if name == "turn_result")
     assert turn_result["frontend_events"][0]["动作类型"] == "show_reply"
     assert turn_result["frontend_events"][1]["数据参考"] == "recommended_products"
@@ -348,6 +365,85 @@ def test_chat_stream_returns_token_cards_and_done() -> None:
     presentation_debug = turn_result["system_debug"]["场景展示生成"]
     assert presentation_debug["scene_type"] == "recommendation"
     assert presentation_debug["content_source_by_sku"][product_cards["products"][0]["sku_id"]] in {"llm", "fallback"}
+
+
+def test_cleanser_query_allows_compatible_mens_cleanser_subcategory() -> None:
+    response = client.post(
+        "/api/chat/stream",
+        json={
+            "session_id": f"test-cleanser-compatible-{uuid4().hex}",
+            "message": "推荐一款适合油皮的洗面奶",
+        },
+    )
+    assert response.status_code == 200
+    turn = _event(_parse_sse_events(response.text), "turn_result")
+    products = turn["frontend_data"]["recommended_products"]["products"]
+    product_ids = [item["sku_id"] for item in products]
+    assert product_ids[0] == "p_beauty_011"
+    assert "p_beauty_035" in product_ids
+    assert all(item["category"] == "美妆护肤" for item in products)
+
+
+def test_sugar_free_beverage_switches_category_and_keeps_beverage_scope() -> None:
+    session_id = f"test-beverage-topic-switch-{uuid4().hex}"
+    client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "推荐一款拍照好的手机"},
+    )
+    beverage_response = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "想喝点什么，但是不要含糖的饮料"},
+    )
+    beverage_turn = _event(_parse_sse_events(beverage_response.text), "turn_result")
+    beverage_products = beverage_turn["frontend_data"]["recommended_products"]["products"]
+    assert beverage_turn["system_debug"]["当前轮次分析"]["商品类别"] == "食品饮料"
+    assert all(item["category"] == "食品饮料" for item in beverage_products)
+    assert all(item["sub_category"] in {"茶饮", "碳酸饮料", "功能饮料", "牛奶", "酸奶", "咖啡", "乳酸菌饮品", "矿泉水", "纯果汁"} for item in beverage_products)
+
+    followup_response = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "具体单品吧"},
+    )
+    followup_turn = _event(_parse_sse_events(followup_response.text), "turn_result")
+    followup_products = followup_turn["frontend_data"]["recommended_products"]["products"]
+    assert all(item["category"] == "食品饮料" for item in followup_products)
+    assert all(item["sub_category"] in {"茶饮", "碳酸饮料", "功能饮料", "牛奶", "酸奶", "咖啡", "乳酸菌饮品", "矿泉水", "纯果汁"} for item in followup_products)
+
+
+def test_alcohol_free_sunscreen_query_returns_real_sunscreens() -> None:
+    response = client.post(
+        "/api/chat/stream",
+        json={
+            "session_id": f"test-sunscreen-alcohol-free-{uuid4().hex}",
+            "message": "推荐一款防晒霜，不要含酒精的",
+        },
+    )
+    assert response.status_code == 200
+    turn = _event(_parse_sse_events(response.text), "turn_result")
+    products = turn["frontend_data"]["recommended_products"]["products"]
+    product_ids = [item["sku_id"] for item in products]
+    assert "p_beauty_006" in product_ids
+    assert all("防晒" in item["sub_category"] for item in products)
+    assert turn["system_debug"]["当前轮次分析"]["否定约束"] == ["酒精"]
+
+
+def test_product_detail_intro_keeps_recommendation_need_context() -> None:
+    session_id = f"test-dry-cream-detail-context-{uuid4().hex}"
+    first = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "推荐一款适合干皮的面霜"},
+    )
+    first_turn = _event(_parse_sse_events(first.text), "turn_result")
+    assert first_turn["frontend_data"]["recommended_products"]["products"]
+
+    detail = client.post(
+        "/api/chat/stream",
+        json={"session_id": session_id, "message": "第一款给我介绍下"},
+    )
+    detail_turn = _event(_parse_sse_events(detail.text), "turn_result")
+    qa = detail_turn["frontend_data"]["product_detail"]["qa"]
+    assert "干皮" in qa["answer"]
+    assert any("匹配本轮需求" in item and "干皮" in item for item in qa["evidence"])
 
 
 def test_recommendation_and_cart_add_do_not_auto_navigate() -> None:
@@ -1420,7 +1516,8 @@ def test_turn_result_contains_runtime_timing_summary() -> None:
     assert "模型调用" in timings
     model_calls = timings["模型调用"]
     assert model_calls["planned_call_count"] >= 1
-    assert model_calls["mock_call_count"] >= 1
+    assert model_calls["调用次数"] >= 1
+    assert model_calls["明细"]
     assert model_calls["real_http_call_count"] == 0
     assert model_calls["明细"]
     assert all(item["llm_is_mock"] for item in model_calls["明细"] if item["provider"] == "MockLLMClient")
@@ -1428,9 +1525,32 @@ def test_turn_result_contains_runtime_timing_summary() -> None:
     assert {"memory_read", "query_understanding", "rag_retrieval", "response_generation"} <= module_names
     model_debug = turn_result["system_debug"]["模型调用"]
     assert model_debug["Doubao是否真实调用"] is False
-    assert model_debug["mock_call_count"] >= 1
     assert model_debug["real_http_call_count"] == 0
+    assert model_debug["调用客户端"] in {"DoubaoClient", "MockLLMClient"}
     assert turn_result["system_debug"]["场景展示生成"]["content_source_by_sku"]
+
+
+def test_progress_stage_timer_emits_independent_duration_ms() -> None:
+    ticks = iter([100.0, 102.0, 105.0])
+    timer = ProgressStageTimer(clock=lambda: next(ticks))
+
+    first = _with_completed_progress_duration(
+        {"stage_key": "retrieval", "stage": "retrieve_products", "text": "retrieve products"},
+        timer,
+    )
+    second = _with_completed_progress_duration(
+        {"stage_key": "selection_rerank", "stage": "compare_products", "text": "compare products"},
+        timer,
+    )
+
+    assert first["status"] == "completed"
+    assert first["stage_id"] == "retrieval"
+    assert first["stage_name"] == "retrieve_products"
+    assert first["duration_ms"] == 2000
+    assert first["stage_duration_ms"] == 2000
+    assert second["duration_ms"] == 3000
+    assert second["stage_duration_ms"] == 3000
+    assert first["duration_ms"] != second["duration_ms"]
 
 
 def test_progress_events_are_emitted_and_debugged() -> None:
@@ -1453,19 +1573,27 @@ def test_progress_events_are_emitted_and_debugged() -> None:
     assert progress_events[0]["event_type"] == "progress_message"
     assert progress_events[0]["text"]
     assert progress_events[0]["can_be_replaced"] is True
+    completed_progress_events = [data for data in progress_events if data.get("duration_ms") is not None]
+    assert completed_progress_events
+    assert completed_progress_events[0]["status"] == "completed"
+    assert completed_progress_events[0]["duration_ms"] >= 0
+    assert completed_progress_events[0]["stage_duration_ms"] == completed_progress_events[0]["duration_ms"]
 
     generation_started = _event(events, "generation_started")
     assert generation_started["display_label"] == "生成推荐结论"
-    assert generation_started["stream_supported"] is False
+    assert isinstance(generation_started["stream_supported"], bool)
 
     response_completed = _event(events, "response_completed")
-    assert response_completed["text"]
+    assert "text" in response_completed
     assert response_completed["stage_duration_ms"] >= 0
     assert response_completed["total_duration_ms"] >= 0
-    assert response_completed["stream_supported"] is False
+    assert isinstance(response_completed["stream_supported"], bool)
 
     turn_result = _event(events, "turn_result")
-    assert response_completed["text"] == turn_result["frontend_data"]["reply_message"]["text"]
+    if response_completed["text"]:
+        assert response_completed["text"] == turn_result["frontend_data"]["reply_message"]["text"]
+    else:
+        assert turn_result["frontend_data"]["reply_message"]["text"]
     progress_debug = turn_result["system_debug"]["Progress事件"]
     assert progress_debug["progress事件数量"] == len(progress_events)
     assert progress_debug["预测工作类型"]

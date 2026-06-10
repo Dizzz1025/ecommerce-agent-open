@@ -333,7 +333,7 @@ class FrontendEventBuilder:
         runtime_timings = trace_payload.get("runtime_timings", {}) or {}
         model_call_summary = runtime_timings.get("模型调用", {}) or {}
         model_call_details = model_call_summary.get("明细", []) or []
-        has_model_call = bool(trace_payload.get("llm_called")) or bool(model_call_summary.get("调用次数"))
+        has_model_call = bool(trace_payload.get("llm_called")) or bool(model_call_summary.get("attempted_call_count"))
         has_doubao_call = any(
             item.get("provider") == "DoubaoClient"
             and not item.get("llm_is_mock")
@@ -398,6 +398,10 @@ class FrontendEventBuilder:
             "进度事件": self._progress_debug(trace_payload),
             "本地模型状态": model_route.get("local_model_status", {}),
             "场景展示生成": trace_payload.get("presentation", {}),
+            "商品展示标题": {
+                "中文说明": "记录本轮推荐商品是否带有前端展示用 display_title。该字段只用于商品卡片标题展示，不替代真实商品名、价格、SKU 或库存。",
+                **((trace_payload.get("presentation") or {}).get("display_title_usage") or {}),
+            },
             "购物车商品侧个性化": self._cart_personalization_debug(trace_payload),
             "商品增强字段使用": self._product_enhancement_debug(trace_payload),
             "回复策略": self._response_strategy_debug(trace_payload),
@@ -669,25 +673,42 @@ class FrontendEventBuilder:
         ][:3]
         if candidate.score < 0.5:
             if meaningful:
-                reason = f"这款更适合作为备选，主要可取点是{'、'.join(meaningful)}，可以先点开确认细节。"
+                reason = _two_sentence_reason(
+                    f"这款更适合作为备选，主要可取点是{'、'.join(meaningful)}。",
+                    "它和你的部分条件可能略有差异，可以先点开卡片确认细节。",
+                )
             else:
-                reason = "这款更适合作为备选，来自当前相关类目，可以先点开确认细节。"
+                reason = _two_sentence_reason(
+                    "这款更适合作为备选，来自当前相关类目。",
+                    "它可以作为补充选择，建议点开卡片确认细节。",
+                )
         elif meaningful:
-            reason = f"这款比较贴合你对{'、'.join(meaningful)}的要求，适合优先查看。"
+            reason = _two_sentence_reason(
+                f"这款比较贴合你对{'、'.join(meaningful)}的要求，适合优先查看。",
+                f"它属于{candidate.sub_category or candidate.category}方向，可以和其他候选商品一起对比。",
+            )
         elif candidate.sub_category:
-            reason = f"这款属于{candidate.sub_category}类目，和你当前想看的方向比较接近。"
+            reason = _two_sentence_reason(
+                f"这款属于{candidate.sub_category}类目，和你当前想看的方向比较接近。",
+                "它来自真实商品库，可以先查看卡片里的价格和图片。",
+            )
         else:
-            reason = "这款来自当前商品库的真实匹配结果，可以进一步查看。"
+            reason = _two_sentence_reason(
+                "这款来自当前商品库的真实匹配结果，可以进一步查看。",
+                "它适合作为本轮推荐的补充候选。",
+            )
         return {
             "sku_id": candidate.sku_id,
             "product_id": candidate.product_id,
             "name": candidate.name,
+            "display_title": candidate.display_title,
             "category": candidate.category,
             "sub_category": candidate.sub_category,
             "brand": candidate.brand,
             "price": candidate.price,
             "image_url": candidate.image_url,
             "reason": reason,
+            "recommend_reason": reason,
             "score": candidate.score,
             "presentation": {
                 "type": "recommendation",
@@ -702,6 +723,10 @@ class FrontendEventBuilder:
 def _option_label(index: int) -> str:
     labels = ["方案一", "方案二", "方案三", "方案四", "方案五"]
     return labels[index - 1] if index <= len(labels) else f"方案{index}"
+
+
+def _two_sentence_reason(first: str, second: str) -> str:
+    return f"{first.rstrip('。！？；;，,')}。{second.rstrip('。！？；;，,')}。"
 
 
 def _local_model_available(status: dict[str, Any]) -> bool:

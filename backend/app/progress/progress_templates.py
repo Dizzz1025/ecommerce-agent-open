@@ -390,19 +390,19 @@ LATENCY_LEVEL_CONFIG = {
         "中文说明": "适合本地模板、购物车查看、简单澄清等快速任务。",
         "min_events": 1,
         "max_events": 2,
-        "default_display_duration_ms": 500
+        "default_display_duration_ms": 900
         },
     "medium": {
         "中文说明": "适合普通推荐、筛选、商品详情问答。",
         "min_events": 3,
         "max_events": 5,
-        "default_display_duration_ms": 700
+        "default_display_duration_ms": 1200
         },
     "slow": {
         "中文说明": "适合复杂比较、场景组合、多模态检索、个性化推荐。",
         "min_events": 4,
         "max_events": 7,
-        "default_display_duration_ms": 850
+        "default_display_duration_ms": 1500
         }
     }
 

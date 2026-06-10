@@ -18,7 +18,11 @@ import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpotlightUiModel
+import com.yourteam.ecommerceguider.data.model.asRecommendationTitleOrNull
+import com.yourteam.ecommerceguider.data.model.sanitizeRecommendReason
 import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -51,6 +55,9 @@ class ShoppingRepository(
     private val sessionId: String = ShoppingSession.sessionId,
     private val userId: String? = ShoppingSession.userId,
 ) {
+    val currentUserId: String?
+        get() = userId
+
     fun streamChat(message: String): Flow<ChatStreamEvent> = flow {
         val payload = JSONObject()
             .put("session_id", sessionId)
@@ -133,6 +140,81 @@ class ShoppingRepository(
             connection.disconnect()
         }
     }.flowOn(Dispatchers.IO)
+
+    suspend fun transcribeVoice(audioFile: File): Result<String> = withContext(Dispatchers.IO) {
+        if (!audioFile.exists() || audioFile.length() <= 0L) {
+            return@withContext Result.failure(IOException("录音文件为空，请重新录音。"))
+        }
+        val boundary = "----EcommerceGuiderVoice${UUID.randomUUID()}"
+        val connection = openMultipartConnection(
+            path = "/api/voice/transcribe",
+            boundary = boundary,
+            readTimeoutMs = 120_000,
+        )
+
+        try {
+            BufferedOutputStream(connection.outputStream).use { output ->
+                writeMultipartField(output, boundary, "language", "zh")
+                writeMultipartFile(
+                    output = output,
+                    boundary = boundary,
+                    fieldName = "audio",
+                    fileName = audioFile.name.sanitizeMultipartFileName(),
+                    mimeType = audioFile.guessAudioMimeType(),
+                ) {
+                    FileInputStream(audioFile)
+                }
+                output.writeUtf8("--$boundary--\r\n")
+                output.flush()
+            }
+
+            val responseCode = connection.responseCode
+            val body = connection.readBodyText()
+            if (responseCode !in 200..299) {
+                return@withContext Result.failure(IOException(parseApiMessage(body, "语音识别请求失败。")))
+            }
+            val json = JSONObject(body)
+            val text = json.optString("text").trim()
+            val ok = json.optNullableBoolean("ok") ?: text.isNotBlank()
+            if (ok && text.isNotBlank()) {
+                Result.success(text)
+            } else {
+                Result.failure(IOException(parseApiMessage(body, "没有识别到语音内容，请再试一次。")))
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    suspend fun synthesizeVoice(text: String): Result<String> = withContext(Dispatchers.IO) {
+        val content = text.trim()
+        if (content.isBlank()) {
+            return@withContext Result.failure(IOException("待播放文本为空。"))
+        }
+        val connection = openFormConnection(path = "/api/voice/synthesize", readTimeoutMs = 120_000)
+        try {
+            writeForm(connection, mapOf("text" to content.take(600)))
+            val responseCode = connection.responseCode
+            val body = connection.readBodyText()
+            if (responseCode !in 200..299) {
+                return@withContext Result.failure(IOException(parseApiMessage(body, "语音合成请求失败。")))
+            }
+            val json = JSONObject(body)
+            val url = json.optString("url").trim()
+            val ok = json.optNullableBoolean("ok") ?: url.isNotBlank()
+            if (ok && url.isNotBlank()) {
+                Result.success(absolutizeUrl(url))
+            } else {
+                Result.failure(IOException(parseApiMessage(body, "语音播放暂不可用。")))
+            }
+        } catch (error: Exception) {
+            Result.failure(error)
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     suspend fun fetchProduct(skuId: String): ProductUiModel? = withContext(Dispatchers.IO) {
         val connection = openJsonConnection(path = "/api/products/$skuId", method = "GET")
@@ -279,11 +361,15 @@ class ShoppingRepository(
         return connection
     }
 
-    private fun openMultipartConnection(path: String, boundary: String): HttpURLConnection {
+    private fun openMultipartConnection(
+        path: String,
+        boundary: String,
+        readTimeoutMs: Int = 60_000,
+    ): HttpURLConnection {
         val connection = URL("$baseUrl$path").openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
         connection.connectTimeout = 10_000
-        connection.readTimeout = 60_000
+        connection.readTimeout = readTimeoutMs
         connection.setRequestProperty("Accept", "text/event-stream, application/json")
         connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
         connection.doInput = true
@@ -293,9 +379,32 @@ class ShoppingRepository(
         return connection
     }
 
+    private fun openFormConnection(path: String, readTimeoutMs: Int = 60_000): HttpURLConnection {
+        val connection = URL("$baseUrl$path").openConnection() as HttpURLConnection
+        connection.requestMethod = "POST"
+        connection.connectTimeout = 10_000
+        connection.readTimeout = readTimeoutMs
+        connection.setRequestProperty("Accept", "application/json")
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+        connection.doInput = true
+        connection.doOutput = true
+        return connection
+    }
+
     private fun writeJson(connection: HttpURLConnection, payload: JSONObject) {
         OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { writer ->
             writer.write(payload.toString())
+            writer.flush()
+        }
+    }
+
+    private fun writeForm(connection: HttpURLConnection, fields: Map<String, String>) {
+        val payload = fields.entries.joinToString("&") { (key, value) ->
+            "${URLEncoder.encode(key, StandardCharsets.UTF_8.name())}=" +
+                URLEncoder.encode(value, StandardCharsets.UTF_8.name())
+        }
+        OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { writer ->
+            writer.write(payload)
             writer.flush()
         }
     }
@@ -321,6 +430,19 @@ class ShoppingRepository(
                 }
                 json.toChatStreamEvent(currentEvent)?.let { event ->
                     val section = event.recommendationSection
+                    if (
+                        event.event == "recommendation_section_start" ||
+                        event.event == "recommendation_text_done" ||
+                        event.event == "product_card"
+                    ) {
+                        Log.d(
+                            STREAM_DEBUG_TAG,
+                            "[recommendation_android_parse] event=${event.event} " +
+                                "sectionIndex=${section?.sectionIndex} skuId=${section?.skuId} " +
+                                "displayTitle='${section?.displayTitle.orEmpty()}' " +
+                                "recommendReasonLength=${section?.recommendReason?.length ?: 0}",
+                        )
+                    }
                     when (event.event) {
                         "recommendation_text_delta" -> {
                             val now = System.currentTimeMillis()
@@ -404,7 +526,6 @@ class ShoppingRepository(
                     progressStageId = optString("stage_key").ifBlank { optString("stage_id") },
                     progressDisplayLabel = optNullableString("display_label")
                         ?: optNullableString("user_facing_label"),
-                    stageDurationMs = optNullableLong("stage_duration_ms"),
                     totalDurationMs = optNullableLong("total_duration_ms"),
                     responseStreamSupported = optNullableBoolean("stream_supported"),
                 )
@@ -501,7 +622,6 @@ class ShoppingRepository(
                     progressDisplayLabel = optNullableString("user_facing_label")
                         ?: optNullableString("display_label"),
                     progressSummary = optNullableString("summary") ?: text.takeIf { it.isNotBlank() },
-                    stageDurationMs = optNullableLong("stage_duration_ms"),
                     totalDurationMs = optNullableLong("total_duration_ms"),
                 )
             }
@@ -534,6 +654,10 @@ class ShoppingRepository(
             "done" -> ChatStreamEvent(event = "done")
             else -> null
         }
+    }
+
+    internal fun parseChatStreamEventForTest(eventName: String, payload: JSONObject): ChatStreamEvent? {
+        return payload.toChatStreamEvent(eventName)
     }
 
     private fun writeMultipartField(
@@ -712,12 +836,22 @@ class ShoppingRepository(
         val detailImageUrl = (optNullableString("detail_image_url") ?: optNullableString("detailImageUrl"))
             ?.let(::absolutizeUrl)
             ?.takeIf { it.isNotBlank() }
+        val recommendationDisplayTitle = optNullableString("display_title")
+            ?: optNullableString("displayTitle")
+        val explicitRecommendTitle = optNullableString("recommend_title")
+            ?: optNullableString("recommendTitle")
+            ?: recommendationDisplayTitle
+        val rawRecommendReason = optNullableString("recommend_reason")
+            ?: optNullableString("recommendReason")
+            ?: optNullableString("reason")
+        val recommendReason = rawRecommendReason.sanitizeRecommendReason().takeIf { it.isNotBlank() }
         return ProductUiModel(
             skuId = optString("sku_id"),
             productId = optNullableString("product_id"),
             name = optString("name").ifBlank { optString("title") },
             title = optNullableString("title"),
             shortTitle = optNullableString("short_title") ?: optNullableString("shortTitle"),
+            recommendationDisplayTitle = recommendationDisplayTitle,
             category = optString("category"),
             brand = optString("brand"),
             price = optNumber("price"),
@@ -727,7 +861,9 @@ class ShoppingRepository(
             detailImageUrl = detailImageUrl,
             imagePath = optNullableString("image_path"),
             subCategory = optNullableString("sub_category"),
-            reason = optNullableString("reason") ?: optNullableString("highlight_short"),
+            reason = recommendReason ?: optNullableString("highlight_short"),
+            recommendTitle = explicitRecommendTitle?.takeIf { it.isNotBlank() },
+            recommendReason = recommendReason?.takeIf { it.isNotBlank() },
             highlightShort = optString("highlight_short"),
             highlightDetail = optString("highlight_detail"),
             productHighlight = optString("product_highlight"),
@@ -756,6 +892,9 @@ class ShoppingRepository(
         }
         return ProductPresentationUiModel(
             type = type,
+            title = optNullableString("title")
+                ?: optNullableString("display_title")
+                ?: optNullableString("displayTitle"),
             shortTitle = optNullableString("short_title") ?: optNullableString("shortTitle"),
             optionLabel = optNullableString("option_label"),
             reason = optNullableString("reason"),
@@ -764,6 +903,12 @@ class ShoppingRepository(
             summary = optNullableString("summary"),
             advantages = optJSONArray("advantages").toStringList(),
             suitableFor = optNullableString("suitable_for"),
+            keyFeatures = optJSONArray("key_features").toStringList(),
+            matchedNeed = optNullableString("matched_need"),
+            usageAdvice = optNullableString("usage_advice"),
+            bundleRole = optNullableString("bundle_role"),
+            bundleReason = optNullableString("bundle_reason"),
+            usageScenario = optNullableString("usage_scenario"),
             contentSource = optString("content_source"),
         )
     }
@@ -773,20 +918,21 @@ class ShoppingRepository(
         product: ProductUiModel? = null,
         done: Boolean = false,
     ): RecommendationSectionUiModel? {
+        val resolvedProduct = product ?: optJSONObject("product")?.toProduct()
         val skuId = optString("sku_id").ifBlank {
-            product?.skuId ?: optJSONObject("product")?.optString("sku_id").orEmpty()
+            resolvedProduct?.skuId ?: optJSONObject("product")?.optString("sku_id").orEmpty()
         }
         if (skuId.isBlank()) {
             return null
         }
-        val sectionIndex = optInt("section_index").takeIf { it > 0 } ?: 1
+        val sectionIndex = if (has("section_index")) optInt("section_index") else 1
         val turnId = optNullableString("turn_id") ?: "turn_current"
-        val optionLabel = optNullableString("option_label") ?: when (sectionIndex) {
-            1 -> "方案一"
-            2 -> "方案二"
-            3 -> "方案三"
-            else -> "方案$sectionIndex"
-        }
+        val optionLabel = optNullableString("option_label").orEmpty()
+        val rawRecommendReason = optNullableString("recommend_reason")
+            ?: optNullableString("recommendReason")
+            ?: optNullableString("reason")
+            ?: resolvedProduct?.reason
+        val recommendReason = rawRecommendReason.sanitizeRecommendReason()
         return RecommendationSectionUiModel(
             eventId = optNullableString("event_id"),
             requestId = optNullableString("request_id"),
@@ -795,14 +941,60 @@ class ShoppingRepository(
             sectionIndex = sectionIndex,
             skuId = skuId,
             optionLabel = optionLabel,
+            displayTitle = resolveRecommendationDisplayTitle(resolvedProduct),
             text = text.orEmpty(),
-            reason = optNullableString("reason"),
+            recommendReason = recommendReason,
+            reason = rawRecommendReason,
             tradeOff = optNullableString("trade_off"),
-            productName = optNullableString("product_name") ?: product?.displayTitleShort,
-            brand = optNullableString("brand") ?: product?.brand,
-            product = product ?: optJSONObject("product")?.toProduct(),
+            recommendationTags = resolvedProduct?.recommendationTags.orEmpty(),
+            productName = optNullableString("product_name") ?: resolvedProduct?.displayTitleShort,
+            brand = optNullableString("brand") ?: resolvedProduct?.brand,
+            product = resolvedProduct,
             done = done,
         )
+    }
+
+    private fun JSONObject.resolveRecommendationDisplayTitle(
+        product: ProductUiModel?,
+    ): String {
+        val presentationJson = optJSONObject("presentation")
+        val candidates = listOf(
+            optNullableString("display_title"),
+            optNullableString("displayTitle"),
+            optNullableString("section_title"),
+            optNullableString("sectionTitle"),
+            optNullableString("recommendation_title"),
+            optNullableString("recommendationTitle"),
+            optNullableString("recommend_title"),
+            optNullableString("recommendTitle"),
+            presentationJson?.optNullableString("title"),
+            presentationJson?.optNullableString("display_title"),
+            presentationJson?.optNullableString("displayTitle"),
+            presentationJson?.optNullableString("short_title"),
+            presentationJson?.optNullableString("shortTitle"),
+            product?.recommendationDisplayTitle,
+            product?.recommendTitle,
+            product?.presentation?.title,
+            product?.presentation?.shortTitle,
+        )
+        return candidates.firstNotNullOfOrNull { it.cleanRecommendationTitle(product) }.orEmpty()
+    }
+
+    private fun String?.cleanRecommendationTitle(product: ProductUiModel?): String? {
+        val value = asRecommendationTitleOrNull() ?: return null
+        if (product != null && value == product.displayTitle && value.length > 18) {
+            return null
+        }
+        return value
+    }
+
+    private fun String.isMechanicalRecommendationTitle(): Boolean {
+        val normalized = trim().replace(" ", "")
+        return normalized.matches(Regex("""^方案[一二三四五六七八九十\d]+$""")) ||
+            normalized.matches(Regex("""^推荐[一二三四五六七八九十\d]+$""")) ||
+            normalized.matches(Regex("""^第[一二三四五六七八九十\d]+个?推荐$""")) ||
+            normalized == "首选方案" ||
+            normalized == "备选方案"
     }
 
     private fun JSONArray?.toSkus(): List<ProductSkuUiModel> {
@@ -1032,6 +1224,15 @@ class ShoppingRepository(
         }
     }
 
+    private fun HttpURLConnection.readBodyText(): String {
+        val stream = if (responseCode in 200..299) {
+            inputStream
+        } else {
+            errorStream ?: runCatching { inputStream }.getOrNull()
+        }
+        return runCatching { stream?.readUtf8Text().orEmpty() }.getOrDefault("")
+    }
+
     private fun ContentResolver.displayName(uri: Uri): String? {
         return query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
             ?.use { cursor ->
@@ -1051,6 +1252,18 @@ class ShoppingRepository(
             .ifBlank { "image_search.jpg" }
     }
 
+    private fun File.guessAudioMimeType(): String {
+        return when (extension.lowercase()) {
+            "m4a" -> "audio/mp4"
+            "aac" -> "audio/aac"
+            "mp3" -> "audio/mpeg"
+            "wav" -> "audio/wav"
+            "ogg" -> "audio/ogg"
+            "webm" -> "audio/webm"
+            else -> "audio/mp4"
+        }
+    }
+
     private fun extractErrorMessage(connection: HttpURLConnection): String {
         val stream = connection.errorStream ?: runCatching { connection.inputStream }.getOrNull()
         val body = runCatching { stream?.readUtf8Text().orEmpty() }.getOrDefault("")
@@ -1064,6 +1277,18 @@ class ShoppingRepository(
                 body
             }
         }.getOrDefault(body)
+    }
+
+    private fun parseApiMessage(body: String, fallback: String): String {
+        if (body.isBlank()) {
+            return fallback
+        }
+        return runCatching {
+            val json = JSONObject(body)
+            json.optString("message")
+                .ifBlank { json.optString("detail") }
+                .ifBlank { fallback }
+        }.getOrDefault(body.ifBlank { fallback })
     }
 
     private fun absolutizeUrl(raw: String): String {

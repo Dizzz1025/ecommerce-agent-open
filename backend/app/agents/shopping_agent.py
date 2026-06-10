@@ -1,6 +1,7 @@
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
+import threading
 import traceback as _traceback
 
 from app.retrieval.fallback import RetrievalFallback, FallbackResult
@@ -61,6 +62,77 @@ from app.utils.runtime_timer import RuntimeTimer
 logger = get_logger(__name__)
 
 
+class ProgressStageTimer:
+    """Tracks real elapsed time for each emitted progress stage."""
+
+    def __init__(self, clock: Callable[[], float] = perf_counter) -> None:
+        self._clock = clock
+        self._stage_started_at = self._clock()
+
+    def complete_current(self) -> int:
+        now = self._clock()
+        duration_ms = int((now - self._stage_started_at) * 1000)
+        self._stage_started_at = now
+        return max(duration_ms, 0)
+
+
+def _with_completed_progress_duration(event: dict, timer: ProgressStageTimer) -> dict:
+    duration_ms = timer.complete_current()
+    return _with_progress_duration(event, duration_ms)
+
+
+def _with_progress_duration(event: dict, duration_ms: int) -> dict:
+    completed_event = dict(event)
+    stage_id = str(
+        completed_event.get("stage_id")
+        or completed_event.get("stage_key")
+        or completed_event.get("stage")
+        or ""
+    )
+    stage_name = str(
+        completed_event.get("stage_name")
+        or completed_event.get("display_label")
+        or completed_event.get("stage")
+        or stage_id
+    )
+    if stage_id:
+        completed_event.setdefault("stage_id", stage_id)
+    if stage_name:
+        completed_event.setdefault("stage_name", stage_name)
+    completed_event["status"] = "completed"
+    completed_event["duration_ms"] = duration_ms
+    completed_event["stage_duration_ms"] = duration_ms
+    return completed_event
+
+
+class ProgressCompletionTracker:
+    def __init__(self, progress_plan: dict, clock: Callable[[], float] = perf_counter) -> None:
+        self._timer = ProgressStageTimer(clock=clock)
+        self._events_by_stage: dict[str, dict] = {}
+        self._emitted: set[str] = set()
+        for event in progress_plan.get("events", []):
+            if not isinstance(event, dict):
+                continue
+            stage_key = str(event.get("stage_key") or event.get("stage_id") or "")
+            if stage_key and stage_key not in self._events_by_stage:
+                self._events_by_stage[stage_key] = event
+
+    def complete(self, stage_key: str) -> SSEEvent | None:
+        if stage_key in self._emitted:
+            return None
+        event = self._events_by_stage.get(stage_key)
+        if event is None:
+            return None
+        self._emitted.add(stage_key)
+        completed = _with_completed_progress_duration(event, self._timer)
+        logger.info(
+            "progress_stage_completed stage_id=%s duration_ms=%s source=core",
+            completed.get("stage_id") or completed.get("stage_key"),
+            completed.get("duration_ms"),
+        )
+        return SSEEvent(event="progress", data=completed)
+
+
 class ShoppingAgent:
     """Task-oriented RAG shopping agent orchestration entry point."""
 
@@ -115,6 +187,7 @@ class ShoppingAgent:
         self.multimodal_service = multimodal_service
         self.progress_event_builder = progress_event_builder
         self.cart_aware_personalization = cart_aware_personalization
+        self._profile_refresh_inflight: set[str] = set()
 
     async def stream_chat(
         self,
@@ -192,6 +265,11 @@ class ShoppingAgent:
                     if progress_plan.get("首条progress输出耗时_ms") is None:
                         progress_plan["首条progress输出耗时_ms"] = round((perf_counter() - request_start) * 1000, 2)
                     progress_plan["已输出数量"] = progress_index
+                    logger.info(
+                        "progress_stage_predicted stage_id=%s progress_index=%s",
+                        event.get("stage_key") if isinstance(event, dict) else None,
+                        progress_index,
+                    )
                     yield SSEEvent(event="progress", data=event)
                     await asyncio.sleep(0)
                     next_progress_at = perf_counter() + progress_interval
@@ -209,6 +287,14 @@ class ShoppingAgent:
                     break
 
                 if backend_event.event == "progress":
+                    if (
+                        not progress_stopped
+                        and isinstance(backend_event.data, dict)
+                        and backend_event.data.get("duration_ms") is not None
+                    ):
+                        progress_stopped = True
+                        progress_plan["停止原因"] = "真实阶段完成事件已开始输出"
+                    yield backend_event
                     continue
 
                 if not progress_stopped and backend_event.event != "state":
@@ -311,6 +397,23 @@ class ShoppingAgent:
                 )
                 progress_plan["首次progress生成耗时_ms"] = timer.elapsed_ms()
         trace.progress_plan = progress_plan
+        progress_completion_tracker = ProgressCompletionTracker(progress_plan)
+
+        def complete_progress_stage(stage_key: str) -> SSEEvent | None:
+            event = progress_completion_tracker.complete(stage_key)
+            if event is not None:
+                progress_plan["已输出数量"] = int(progress_plan.get("已输出数量") or 0) + 1
+                trace.legacy_sse_events.append("progress")
+            return event
+
+        def complete_response_progress_events() -> list[SSEEvent]:
+            events: list[SSEEvent] = []
+            for stage_key in ("cart_completion", "response_composition"):
+                event = complete_progress_stage(stage_key)
+                if event is not None:
+                    events.append(event)
+            return events
+
         if not metadata.get("_disable_core_progress_yield"):
             for progress_event in progress_plan.get("events", []):
                 yield SSEEvent(event="progress", data=progress_event)
@@ -330,6 +433,9 @@ class ShoppingAgent:
                 duration_ms=timer.last_duration("query_understanding"),
                 call_debug=self._llm_call_debug(),
             )
+        for progress_stage_key in ("intent_understanding", "cart_intent_understanding"):
+            if progress_event := complete_progress_stage(progress_stage_key):
+                yield progress_event
         with timer.measure("multimodal_processing", "多模态输入处理"):
             multimodal_context = self.multimodal_service.process(
                 input_type=input_type,
@@ -346,6 +452,8 @@ class ShoppingAgent:
         with timer.measure("reference_resolution", "事件记忆和旧引用缓存指代解析"):
             state, reference_resolution = self._resolve_event_references(session_id, parsed_query, state)
         trace.reference_resolution = reference_resolution
+        if progress_event := complete_progress_stage("memory_context"):
+            yield progress_event
         self._promote_ellipsis_reference_intent(parsed_query)
         if parsed_query.inherit_context and parsed_query.category:
             parsed_query.need_clarification = False
@@ -404,6 +512,8 @@ class ShoppingAgent:
         model_route_payload["llm_provider"] = self.response_generator.llm_client.__class__.__name__
         with timer.measure("memory_write_model_route", "写入模型路由状态"):
             self.session_memory.update_model_route(session_id, model_route_payload)
+        if progress_event := complete_progress_stage("constraint_extraction"):
+            yield progress_event
 
         trace.intent = parsed_query.intent
         trace.flow_after = decision.flow.value
@@ -462,6 +572,8 @@ class ShoppingAgent:
                     duration_ms=timer.last_duration("cart_personalization_analyze"),
                     call_debug=self._llm_call_debug(),
                 )
+            if progress_event := complete_progress_stage("cart_inventory_check"):
+                yield progress_event
             if privacy_update.get("updated"):
                 preference_result = PreferenceUpdateResult(
                     updated=True,
@@ -508,6 +620,9 @@ class ShoppingAgent:
                             parsed_query=parsed_query,
                             tool_result=tool_result,
                         )
+                for progress_stage_key in ("cart_updating", "cart_checkout_processing"):
+                    if progress_event := complete_progress_stage(progress_stage_key):
+                        yield progress_event
                 if tool_result.payload and tool_result.tool_name != "need_spec_selection":
                     yield SSEEvent(event="cart_update", data=tool_result.payload)
                     yield SSEEvent(event="cart", data={"cart": tool_result.payload})
@@ -520,6 +635,8 @@ class ShoppingAgent:
                     candidates=[],
                     cart_personalization_context=cart_personalization_context,
                 )
+                for progress_event in complete_response_progress_events():
+                    yield progress_event
                 yield self._generation_started_event(timer=timer, model_route=model_route)
                 trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
@@ -544,6 +661,8 @@ class ShoppingAgent:
                     candidates=[],
                     cart_personalization_context=cart_personalization_context,
                 )
+                for progress_event in complete_response_progress_events():
+                    yield progress_event
                 yield self._generation_started_event(timer=timer, model_route=model_route)
                 trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
@@ -577,6 +696,8 @@ class ShoppingAgent:
                     scene_plan = self.scenario_planner.plan(parsed_query.raw_message)
                 with timer.measure("rag_retrieval", "场景化多子查询商品检索"):
                     candidates = self._retrieve_scene_candidates(scene_plan, state)
+                if progress_event := complete_progress_stage("retrieval"):
+                    yield progress_event
                 model_route, model_route_payload = self._refresh_local_model_status(model_route)
                 trace.model_route = model_route_payload
                 with timer.measure("cart_personalization_rerank", "购物车商品侧个性化重排"):
@@ -589,6 +710,8 @@ class ShoppingAgent:
                 products = [products_by_id[item.sku_id] for item in context_candidates if item.sku_id in products_by_id]
                 with timer.measure("product_card_build", "生成商品卡片数据"):
                     cards = self.post_processor.build_product_cards(candidates, products_by_id)
+                if progress_event := complete_progress_stage("selection_rerank"):
+                    yield progress_event
                 trace.retrieved_product_ids = [item.sku_id for item in candidates]
                 personalization_context = self._build_personalization_context_timed(
                     timer=timer,
@@ -598,6 +721,8 @@ class ShoppingAgent:
                     candidates=candidates,
                     cart_personalization_context=cart_personalization_context,
                 )
+                for progress_event in complete_response_progress_events():
+                    yield progress_event
                 yield self._generation_started_event(timer=timer, model_route=model_route)
                 trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
@@ -633,6 +758,8 @@ class ShoppingAgent:
                         trace.legacy_sse_events.extend(["cart_update", "cart"])
                 with timer.measure("rag_retrieval", "RAG/Hybrid 商品召回"):
                     raw_candidates = self._retrieve_for_flow(parsed_query, decision, state)
+                if progress_event := complete_progress_stage("retrieval"):
+                    yield progress_event
                 model_route, model_route_payload = self._refresh_local_model_status(model_route)
                 trace.model_route = model_route_payload
                 with timer.measure("multimodal_candidate_boost", "多模态候选增强"):
@@ -650,7 +777,7 @@ class ShoppingAgent:
                         limit=5 if decision.flow == DialogueFlow.COMPARISON else 3,
                     )
                 if decision.flow == DialogueFlow.PRODUCT_QA and parsed_query.mentioned_products:
-                    exact_candidates = self._mentioned_product_candidates(parsed_query, products_by_id)
+                    exact_candidates = self._mentioned_product_candidates(parsed_query, products_by_id, state)
                     if exact_candidates:
                         raw_candidates = exact_candidates
                         candidates = exact_candidates
@@ -682,6 +809,8 @@ class ShoppingAgent:
                 products = [products_by_id[item.sku_id] for item in context_candidates if item.sku_id in products_by_id]
                 with timer.measure("product_card_build", "生成商品卡片数据"):
                     cards = self.post_processor.build_product_cards(candidates, products_by_id)
+                if progress_event := complete_progress_stage("selection_rerank"):
+                    yield progress_event
 
                 if decision.flow == DialogueFlow.PRODUCT_QA:
                     with timer.measure("product_qa", "商品详情/问答事实抽取"):
@@ -713,11 +842,12 @@ class ShoppingAgent:
                 )
                 recommendation_stream_used = (
                     self._should_stream_recommendation_sections(decision, cards)
-                    and qa_result is None
                     and self._llm_supports_response_streaming()
                 )
                 recommendation_request_id = f"turn_{query_id}" if recommendation_stream_used else None
                 recommendation_sequence = 1 if recommendation_stream_used else None
+                for progress_event in complete_response_progress_events():
+                    yield progress_event
                 yield self._generation_started_event(
                     timer=timer,
                     model_route=model_route,
@@ -750,6 +880,8 @@ class ShoppingAgent:
                 if tool_prefix_messages:
                     response_text = "\n".join(tool_prefix_messages) + "\n\n" + response_text
             else:
+                for progress_event in complete_response_progress_events():
+                    yield progress_event
                 yield self._generation_started_event(timer=timer, model_route=model_route)
                 trace.legacy_sse_events.append("generation_started")
                 response_text = self._generate_response_timed(
@@ -790,7 +922,7 @@ class ShoppingAgent:
                         cards=cards,
                         products=products,
                         candidates=candidates,
-                        use_llm=model_route.need_llm and not recommendation_stream_used,
+                        use_llm=model_route.need_llm and decision.flow == DialogueFlow.COMPARISON,
                     )
                 timer.mark_model_call(
                     module="scene_presentation_build",
@@ -804,6 +936,7 @@ class ShoppingAgent:
                     **self.scene_presentation_builder.last_debug,
                     "llm_called": self.scene_presentation_builder.last_llm_called,
                     "comparison_data": comparison_data.model_dump() if comparison_data else None,
+                    "display_title_usage": self._display_title_usage(cards, alternatives),
                 }
                 if decision.flow == DialogueFlow.COMPARISON:
                     response_text = self.scene_presentation_builder.comparison_intro(parsed_query, cards)
@@ -828,6 +961,8 @@ class ShoppingAgent:
                 for item in candidates[:5]
             ]
             trace.product_enhancement = self._product_enhancement_trace(candidates if candidates else alternatives)
+            if "display_title_usage" not in trace.presentation:
+                trace.presentation["display_title_usage"] = self._display_title_usage(cards, alternatives)
             if recommendation_stream_used and cards:
                 recommendation_plan = build_recommendation_plan(
                     request_id=f"turn_{query_id}",
@@ -842,6 +977,7 @@ class ShoppingAgent:
                     "sku_ids": [item.sku_id for item in recommendation_plan.items],
                     "core_constraints": recommendation_plan.core_constraints,
                 }
+                trace.presentation["display_title_usage"] = self._display_title_usage(cards, alternatives)
                 stream_state: dict = {}
                 with timer.measure("response_generation", "流式生成推荐方案正文"):
                     async for section_event in self._stream_recommendation_presentation_events(
@@ -885,11 +1021,10 @@ class ShoppingAgent:
                 yield self._response_completed_event(timer=timer, response_text=response_text)
                 trace.legacy_sse_events.append("response_completed")
 
-                if not self._should_stream_recommendation_sections(decision, cards):
-                    for chunk in self._chunk_text(response_text):
-                        yield SSEEvent(event="token", data={"text": chunk, "content": chunk})
-                        trace.legacy_sse_events.append("token")
-                        await asyncio.sleep(0)
+                for chunk in self._chunk_text(response_text):
+                    yield SSEEvent(event="token", data={"text": chunk, "content": chunk})
+                    trace.legacy_sse_events.append("token")
+                    await asyncio.sleep(0)
 
             if cards and decision.flow != DialogueFlow.PRODUCT_QA:
                 if self._should_stream_recommendation_sections(decision, cards) and not recommendation_stream_used:
@@ -1054,21 +1189,16 @@ class ShoppingAgent:
                     trace=trace.model_dump(),
                     frontend_output=turn_output.model_dump(),
                 )
-            with timer.measure("profile_refresh", "按需刷新长期用户画像"):
-                refreshed_profile = self.user_profile_service.maybe_refresh_profile(
-                    effective_user_id,
+            with timer.measure("profile_refresh_schedule", "后台调度长期用户画像刷新"):
+                profile_refresh_status = self._schedule_profile_refresh(
+                    user_id=effective_user_id,
+                    session_id=session_id,
+                    turn_count=len(state_after.behaviours),
                     force=frontend_action.should_end_conversation,
                 )
-            if refreshed_profile.get("profile_summary_text"):
-                with timer.measure("memory_write_profile", "写入刷新后的用户画像到会话"):
-                    self.session_memory.attach_user_profile(
-                        session_id,
-                        user_id=effective_user_id,
-                        summary_text=refreshed_profile.get("profile_summary_text"),
-                        structured_profile=refreshed_profile.get("structured_profile") or {},
-                    )
             trace.runtime_timings = timer.summary()
             turn_output.system_debug["运行耗时统计"] = trace.runtime_timings
+            turn_output.system_debug["后台用户画像刷新"] = profile_refresh_status
             if "Progress事件" in turn_output.system_debug:
                 turn_output.system_debug["Progress事件"]["实际总耗时_ms"] = trace.runtime_timings.get("total_duration_ms")
                 turn_output.system_debug["Progress事件"]["最终主流程耗时_ms"] = progress_plan.get("最终主流程耗时_ms")
@@ -1140,6 +1270,53 @@ class ShoppingAgent:
             or profile.get("profile_summary_text")
             or profile.get("history_summary")
         )
+
+    def _schedule_profile_refresh(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        turn_count: int,
+        force: bool = False,
+    ) -> dict:
+        should_refresh = force or (turn_count >= 3 and turn_count % 3 == 0)
+        status = {
+            "中文说明": "长期用户画像每3轮在后台刷新一次；刷新不阻塞本轮回复，成功后写入本地 profile 和会话记忆。",
+            "是否触发": False,
+            "触发原因": None,
+            "turn_count": turn_count,
+            "后台执行": True,
+            "阻塞用户回复": False,
+            "inflight": False,
+        }
+        if not should_refresh:
+            status["触发原因"] = "未到3轮刷新周期"
+            return status
+        if user_id in self._profile_refresh_inflight:
+            status.update({"触发原因": "已有同用户画像刷新任务在后台执行", "inflight": True})
+            return status
+
+        reason = "会话结束/下单引导后强制刷新" if force else "达到每3轮后台刷新周期"
+        self._profile_refresh_inflight.add(user_id)
+
+        def worker() -> None:
+            try:
+                refreshed_profile = self.user_profile_service.maybe_refresh_profile(user_id, force=True)
+                if refreshed_profile.get("profile_summary_text"):
+                    self.session_memory.attach_user_profile(
+                        session_id,
+                        user_id=user_id,
+                        summary_text=refreshed_profile.get("profile_summary_text"),
+                        structured_profile=refreshed_profile.get("structured_profile") or {},
+                    )
+            except Exception as exc:
+                logger.warning("Background profile refresh failed for user_id=%s: %s", user_id, exc)
+            finally:
+                self._profile_refresh_inflight.discard(user_id)
+
+        threading.Thread(target=worker, name=f"profile-refresh-{user_id}", daemon=True).start()
+        status.update({"是否触发": True, "触发原因": reason, "inflight": True})
+        return status
 
     def _resolve_event_references(self, session_id: str, parsed_query: ParsedQuery, state) -> tuple[object, dict]:
         """Resolve "第一款/第二个/这款" before retrieval or cart tools run.
@@ -1326,6 +1503,7 @@ class ShoppingAgent:
     def _mentioned_product_candidates(
         parsed_query: ParsedQuery,
         products_by_id: dict[str, Product],
+        state,
     ) -> list[CandidateProduct]:
         candidates: list[CandidateProduct] = []
         for index, sku_id in enumerate(dict.fromkeys(parsed_query.mentioned_products), start=1):
@@ -1343,7 +1521,10 @@ class ShoppingAgent:
                     sub_category=product.sub_category,
                     price=product.price,
                     image_url=product.image_url,
-                    matched_reasons=["来自上一轮推荐或用户指代"],
+                    matched_reasons=[
+                        "来自上一轮推荐或用户指代",
+                        *_recommendation_record_reasons(product.sku_id, state),
+                    ],
                     score=1.0,
                     raw_scores={"reference_memory": 1.0},
                 )
@@ -1502,7 +1683,7 @@ class ShoppingAgent:
                 "message": "正在生成推荐结论",
                 "elapsed_ms": elapsed_ms,
                 "duration_ms": elapsed_ms,
-                "stream_supported": self._llm_supports_response_streaming(),
+                "stream_supported": bool(request_id and self._llm_supports_response_streaming()),
                 **({"request_id": request_id} if request_id else {}),
                 **({"sequence": sequence} if sequence is not None else {}),
             },
@@ -1530,7 +1711,7 @@ class ShoppingAgent:
                 "stage_duration_ms": response_duration_ms,
                 "total_duration_ms": total_duration_ms,
                 "duration_ms": total_duration_ms,
-                "stream_supported": self._llm_supports_response_streaming(),
+                "stream_supported": bool(request_id and self._llm_supports_response_streaming()),
                 **({"request_id": request_id} if request_id else {}),
                 **({"sequence": sequence} if sequence is not None else {}),
             },
@@ -1578,6 +1759,9 @@ class ShoppingAgent:
         started_sections: set[int] = set()
         completed_sections: set[int] = set()
         text_by_section: dict[int, str] = {item.section_id: "" for item in plan.items}
+        display_title_by_section: dict[int, str] = {
+            item.section_id: item.display_title or "" for item in plan.items
+        }
         source_by_section: dict[int, str] = {}
         sequence = initial_sequence
         first_delta_ms: float | None = None
@@ -1599,6 +1783,7 @@ class ShoppingAgent:
                 "product_id": item.product_id,
                 "sku_id": item.sku_id,
                 "option_label": item.option_label,
+                "display_title": display_title_by_section.get(section_id) or item.display_title,
                 "sequence": seq,
                 "duration_ms": timer.elapsed_ms(),
                 "product_name": card.name,
@@ -1658,8 +1843,15 @@ class ShoppingAgent:
             item = item_by_section[section_id]
             card_index = card_index_by_section[section_id]
             reason = text_by_section.get(section_id, "").strip() or _fallback_plan_reason(item)
+            display_title = display_title_by_section.get(section_id) or item.display_title
             source = source_by_section.get(section_id, "fallback")
-            cards[card_index] = self._card_with_presentation_reason(cards[card_index], item, reason, source)
+            cards[card_index] = self._card_with_presentation_reason(
+                cards[card_index],
+                item,
+                reason,
+                source,
+                display_title=display_title,
+            )
             completed_sections.add(section_id)
             text_by_section[section_id] = reason
             text_done_seq = next_sequence()
@@ -1674,6 +1866,15 @@ class ShoppingAgent:
                 len(reason),
                 datetime.now().isoformat(timespec="milliseconds"),
             )
+            logger.info(
+                "[recommendation_backend] event=product_card request_id=%s section_index=%s sku_id=%s product_id=%s display_title=%r recommend_reason_len=%s",
+                plan.request_id,
+                item.rank,
+                item.sku_id,
+                item.product_id,
+                display_title or "",
+                len(reason),
+            )
             return [
                 SSEEvent(
                     event="recommendation_text_done",
@@ -1681,6 +1882,7 @@ class ShoppingAgent:
                         **common_payload(section_id, text_done_seq),
                         "event_id": f"{plan.request_id}:{section_id}:text_done:{text_done_seq}",
                         "reason": reason,
+                        "recommend_reason": reason,
                         "trade_off": item.fallback_trade_off,
                         "content_source": source,
                     },
@@ -1690,6 +1892,7 @@ class ShoppingAgent:
                     data={
                         **common_payload(section_id, product_seq),
                         "event_id": f"{plan.request_id}:{section_id}:product_card:{product_seq}",
+                        "recommend_reason": reason,
                         "product": cards[card_index].model_dump(),
                     },
                 ),
@@ -1707,6 +1910,8 @@ class ShoppingAgent:
             if section_id not in item_by_section:
                 return
             if parsed_event.event_type == "section_start":
+                if parsed_event.display_title:
+                    display_title_by_section[section_id] = parsed_event.display_title
                 event = start_event(section_id)
                 if event is not None:
                     yield event
@@ -1822,6 +2027,7 @@ class ShoppingAgent:
                     "product_id": card.product_id,
                     "sku_id": card.sku_id,
                     "option_label": option_label,
+                    "display_title": card.display_title,
                     "sequence": seq,
                     "duration_ms": timer.elapsed_ms(),
                     "product_name": card.name,
@@ -1860,6 +2066,7 @@ class ShoppingAgent:
                             **payload(sequence),
                             "event_id": f"{request_id}:{section_id}:fallback_delta:{sequence}",
                             "delta": reason,
+                            "recommend_reason": reason,
                         },
                     )
                 )
@@ -1873,6 +2080,15 @@ class ShoppingAgent:
                 len(reason),
                 datetime.now().isoformat(timespec="milliseconds"),
             )
+            logger.info(
+                "[recommendation_backend] event=product_card request_id=%s section_index=%s sku_id=%s product_id=%s display_title=%r recommend_reason_len=%s",
+                request_id,
+                index,
+                card.sku_id,
+                card.product_id,
+                card.display_title or "",
+                len(reason),
+            )
             events.append(
                 SSEEvent(
                     event="recommendation_text_done",
@@ -1880,6 +2096,7 @@ class ShoppingAgent:
                         **payload(sequence),
                         "event_id": f"{request_id}:{section_id}:fallback_text_done:{sequence}",
                         "reason": reason,
+                        "recommend_reason": reason,
                         "trade_off": presentation.trade_off if presentation else None,
                         "content_source": presentation.content_source if presentation else "fallback",
                     },
@@ -1892,6 +2109,7 @@ class ShoppingAgent:
                     data={
                         **payload(sequence),
                         "event_id": f"{request_id}:{section_id}:fallback_product_card:{sequence}",
+                        "recommend_reason": reason,
                         "product": card.model_dump(),
                     },
                 )
@@ -1914,7 +2132,11 @@ class ShoppingAgent:
         item,
         reason: str,
         content_source: str,
+        display_title: str | None = None,
     ) -> ProductCard:
+        reason = str(reason or "").strip()
+        if content_source != "llm" or not reason:
+            reason = _ensure_two_sentence_card_reason(reason, fallback=card.recommend_reason or card.reason)
         current = card.presentation
         presentation = (
             current.model_copy(
@@ -1934,7 +2156,30 @@ class ShoppingAgent:
                 content_source=content_source,
             )
         )
-        return card.model_copy(update={"presentation": presentation})
+        update = {"presentation": presentation, "reason": reason, "recommend_reason": reason}
+        if display_title:
+            update["display_title"] = display_title
+        return card.model_copy(update=update)
+
+    @staticmethod
+    def _display_title_usage(cards: list[ProductCard], alternatives: list[CandidateProduct] | None = None) -> dict:
+        card_items = [
+            {"sku_id": card.sku_id, "display_title": card.display_title}
+            for card in cards
+            if card.display_title
+        ]
+        alt_items = [
+            {"sku_id": item.sku_id, "display_title": item.display_title}
+            for item in (alternatives or [])
+            if item.display_title
+        ][:5]
+        return {
+            "是否启用": bool(card_items or alt_items),
+            "来源": "ecommerce_agent_dataset/slogan_generation_report.json",
+            "推荐商品使用数量": len(card_items),
+            "备选商品使用数量": len(alt_items),
+            "样例": [*card_items[:5], *alt_items[: max(0, 5 - len(card_items[:5]))]],
+        }
 
     @staticmethod
     def _recommendation_response_text(plan: RecommendationPlan, texts: dict[int, str]) -> str:
@@ -2559,6 +2804,16 @@ class ShoppingAgent:
             "scenario": parsed_query.scenario or previous_constraints.get("scenario"),
         }
         related_sku_ids = [item.sku_id for item in candidates]
+        previous_dialogue = state.dialogue_state_tracking
+        if parsed_query.intent == IntentType.SCENE_BUNDLE.value:
+            next_category = parsed_query.category
+            next_sub_category = parsed_query.sub_category
+        elif same_topic:
+            next_category = parsed_query.category or previous_dialogue.current_category
+            next_sub_category = parsed_query.sub_category or previous_dialogue.current_sub_category
+        else:
+            next_category = parsed_query.category
+            next_sub_category = parsed_query.sub_category
         self.session_memory.append_behaviour(
             session_id=session_id,
             behaviour=BehaviourRecord(
@@ -2575,8 +2830,8 @@ class ShoppingAgent:
             session_id=session_id,
             current_intent=parsed_query.intent,
             current_flow=flow,
-            current_category=parsed_query.category if parsed_query.intent == IntentType.SCENE_BUNDLE.value else parsed_query.category or state.dialogue_state_tracking.current_category,
-            current_sub_category=parsed_query.sub_category if parsed_query.intent == IntentType.SCENE_BUNDLE.value else parsed_query.sub_category or state.dialogue_state_tracking.current_sub_category,
+            current_category=next_category,
+            current_sub_category=next_sub_category,
             slots={
                 "category": parsed_query.category,
                 "sub_category": parsed_query.sub_category,
@@ -2659,6 +2914,15 @@ def _merge_lists(old: list, new: list) -> list:
     return list(dict.fromkeys([*old, *new]))
 
 
+def _recommendation_record_reasons(sku_id: str, state) -> list[str]:
+    goods = getattr(state, "goods", None)
+    records = getattr(goods, "last_recommendations", []) if goods else []
+    for record in records:
+        if getattr(record, "sku_id", None) == sku_id and getattr(record, "reason", None):
+            return [item.strip() for item in record.reason.split("、") if item.strip()]
+    return []
+
+
 def _clean_optional_text(value: object) -> str | None:
     if value is None:
         return None
@@ -2670,11 +2934,29 @@ def _clean_optional_text(value: object) -> str | None:
 
 def _fallback_plan_reason(item) -> str:
     if item.fallback_reason:
-        return item.fallback_reason
+        return _ensure_two_sentence_card_reason(item.fallback_reason, fallback=f"{item.name}与当前需求匹配，适合作为重点比较对象。")
     points = "、".join(item.matching_points[:3])
     if points:
-        return f"{item.name} 当前价格 ¥{item.price:g}，主要匹配点是{points}，可以先查看卡片细节。"
-    return f"{item.name} 当前价格 ¥{item.price:g}，和你当前想看的方向比较接近，可以作为{item.plan_type}查看。"
+        return _ensure_two_sentence_card_reason(
+            f"{item.name} 当前价格 ¥{item.price:g}，主要匹配点是{points}。",
+            fallback="它的核心卖点和当前需求关联明确。",
+        )
+    return _ensure_two_sentence_card_reason(
+        f"{item.name} 当前价格 ¥{item.price:g}，和你当前想看的方向比较接近。",
+        fallback=f"它可以作为{item.plan_type}查看，建议点开卡片确认细节。",
+    )
+
+
+def _ensure_two_sentence_card_reason(reason: str, *, fallback: str) -> str:
+    text = str(reason or "").strip() or fallback
+    text = text.replace("\n", " ").replace("；", "。").replace(";", "。")
+    parts = [item.strip(" 。！？") for item in text.replace("！", "。").replace("？", "。").split("。") if item.strip(" 。！？")]
+    fallback_parts = [item.strip(" 。！？") for item in fallback.replace("！", "。").replace("？", "。").replace("；", "。").split("。") if item.strip(" 。！？")]
+    while len(parts) < 2 and fallback_parts:
+        parts.append(fallback_parts.pop(0))
+    if len(parts) < 2:
+        parts.append("它的核心卖点和适用场景可以作为判断依据。")
+    return f"{parts[0]}。{parts[1]}。"
 
 
 def _minimal_error_turn_output(session_id: str, user_id: str, exc: Exception) -> dict:

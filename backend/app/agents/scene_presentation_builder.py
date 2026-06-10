@@ -138,10 +138,11 @@ class ScenePresentationBuilder:
         for index, card in enumerate(cards, start=1):
             item = llm_items.get(card.sku_id)
             if item and _nullable_text(item.get("reason")):
+                reason = str(item.get("reason", "")).strip()
                 presentation = ProductPresentation(
                     type="recommendation",
                     option_label=_option_label(index),
-                    reason=str(item.get("reason", "")).strip(),
+                    reason=reason,
                     trade_off=_nullable_text(item.get("trade_off")),
                     content_source="llm",
                 )
@@ -152,7 +153,8 @@ class ScenePresentationBuilder:
                     self.last_debug["validation_errors"].append(f"empty_reason:{card.sku_id}")
                 presentation = self._recommendation_fallback(card=card, index=index, parsed_query=parsed_query)
             self.last_debug["content_source_by_sku"][card.sku_id] = presentation.content_source
-            merged.append(cards_by_sku[card.sku_id].model_copy(update={"presentation": presentation}))
+            card_reason = presentation.reason or card.recommend_reason or card.reason
+            merged.append(cards_by_sku[card.sku_id].model_copy(update={"presentation": presentation, "reason": card_reason, "recommend_reason": card_reason}))
         self.last_debug["missing_sku_ids"] = [card.sku_id for card in cards if card.sku_id not in llm_items]
         if not llm_items and not self.last_debug.get("fallback_reason"):
             self.last_debug["fallback_reason"] = "llm_not_required" if not use_llm else "no_valid_llm_items"
@@ -390,7 +392,8 @@ class ScenePresentationBuilder:
             "Task: recommendation_presentation\n"
             "Return only JSON: {\"items\":[{\"sku_id\":\"...\",\"reason\":\"...\",\"trade_off\":null}]}.\n"
             "Rules: use only candidate sku_id values; do not return option_label, ranking, price, stock, image, or recommendation grade; "
-            "reason must connect current user need with verified facts; trade_off must be fact-based or null.\n"
+            "reason must be exactly two short Chinese sentences. Sentence 1 explains why the product matches the current need; sentence 2 highlights a verified selling point, user fit, scene, or difference. "
+            "If it is a fallback/alternative, mention the closer match point and the slight gap. trade_off must be fact-based or null.\n"
             f"User need: {parsed_query.raw_message}\n"
             f"Candidate facts:\n{self._fact_lines(cards, products, candidates)}"
         )
@@ -424,6 +427,7 @@ class ScenePresentationBuilder:
             facts = [
                 f"sku_id={card.sku_id}",
                 f"name={card.name}",
+                f"display_title={card.display_title or ''}",
                 f"brand={card.brand}",
                 f"category={card.category}/{card.sub_category or ''}",
                 f"price={card.price:g}",
@@ -575,14 +579,36 @@ def _debug_items(items: list[Any]) -> list[dict[str, Any]]:
 def _recommendation_fallback_reason(*, card: ProductCard, parsed_query: ParsedQuery) -> str:
     need_text = _need_text(parsed_query)
     facts = _product_fact_parts(card)
-    fact_text = "，".join(facts[:3])
+    fact_text = "，".join(facts[:2])
     price_text = f"¥{card.price:g}"
-    brand_name = f"{card.brand} {card.name}".strip()
+    display = f"「{card.display_title}」" if card.display_title else card.name or "这款商品"
+    category_text = card.sub_category or card.category or "商品"
     if fact_text:
-        return f"{brand_name} 当前价格 {price_text}，可取点是{fact_text}；结合你关注的{need_text}，可以作为一个具体方案查看。"
+        return _ensure_two_sentence_reason(
+            f"{display}当前价格 {price_text}，比较贴合你关注的{need_text}，属于{category_text}方向。",
+            fallback=f"它的{fact_text}比较突出，更适合关注这些特征的用户。",
+        )
     if card.reason:
-        return f"{brand_name} 当前价格 {price_text}，检索理由是{_short_text(card.reason, 70)}；结合你关注的{need_text}，可以继续看卡片细节。"
-    return f"{brand_name} 当前价格 {price_text}，和你当前想看的{parsed_query.sub_category or parsed_query.category or '商品'}方向比较接近。"
+        return _ensure_two_sentence_reason(
+            f"{display}当前价格 {price_text}，比较贴合你关注的{need_text}，属于{category_text}方向。",
+            fallback=f"它的检索理由是{_short_text(card.reason, 70)}，和当前需求保持一致。",
+        )
+    return _ensure_two_sentence_reason(
+        f"{display}当前价格 {price_text}，和你当前想看的{parsed_query.sub_category or parsed_query.category or '商品'}方向比较接近。",
+        fallback="它来自当前商品库的真实候选，可以先点开确认细节。",
+    )
+
+
+def _ensure_two_sentence_reason(reason: str, *, fallback: str) -> str:
+    text = str(reason or "").strip() or fallback
+    text = text.replace("\n", " ").replace("；", "。").replace(";", "。")
+    parts = [item.strip(" 。！？") for item in text.replace("！", "。").replace("？", "。").split("。") if item.strip(" 。！？")]
+    fallback_parts = [item.strip(" 。！？") for item in fallback.replace("！", "。").replace("？", "。").replace("；", "。").split("。") if item.strip(" 。！？")]
+    while len(parts) < 2 and fallback_parts:
+        parts.append(fallback_parts.pop(0))
+    if len(parts) < 2:
+        parts.append("它的核心卖点和适用场景可以作为判断依据。")
+    return f"{parts[0]}。{parts[1]}。"
 
 
 def _need_text(parsed_query: ParsedQuery) -> str:
@@ -606,7 +632,7 @@ def _product_fact_parts(card: ProductCard) -> list[str]:
         *card.tags,
     ]:
         text = _clean_fact_text(value)
-        if text and text not in parts:
+        if text and text not in parts and not any(text in existing or existing in text for existing in parts):
             parts.append(text)
     return parts
 

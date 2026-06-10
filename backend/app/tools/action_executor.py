@@ -262,6 +262,10 @@ class ActionExecutor:
     def _needs_spec_selection(product: Product, variant: ProductSku | None) -> bool:
         return len(product.skus) > 1 and variant is None
 
+    @staticmethod
+    def _default_variant(product: Product) -> ProductSku | None:
+        return product.skus[0] if product.skus else None
+
     def _bulk_spec_selection_result(
         self,
         parsed_query: ParsedQuery,
@@ -320,10 +324,10 @@ class ActionExecutor:
         ]
         scored_matches = [(score, sku) for score, sku in scored_matches if score > 0]
         if not scored_matches:
-            return None
+            return self._default_variant(product)
         best_score = max(score for score, _ in scored_matches)
         best_matches = [sku for score, sku in scored_matches if score == best_score]
-        return best_matches[0] if len(best_matches) == 1 else None
+        return best_matches[0] if len(best_matches) == 1 else self._default_variant(product)
 
     @staticmethod
     def _sku_matches_message(sku: ProductSku, normalized_message: str) -> bool:

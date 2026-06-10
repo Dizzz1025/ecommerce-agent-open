@@ -639,12 +639,12 @@ def _structured_presentation_response(intent: IntentType, context: str) -> str:
 def _mock_recommendation_stream_response(context: str) -> str:
     marker = "RecommendationPlan JSON:\n"
     if marker not in context:
-        return "[[SECTION:0]]\n我先按当前商品事实整理了一个可查看的方案，具体价格和参数以商品卡片为准。\n[[END_SECTION]]\n"
+        return "[[SECTION:0|TITLE:贴合当前需求的选择]]\n我先按当前商品事实整理了一个可比较的推荐理由，具体价格和参数以商品事实为准。\n[[END_SECTION]]\n"
     raw = context.split(marker, 1)[1].strip()
     try:
         plan = json.loads(raw)
     except Exception:
-        return "[[SECTION:0]]\n我先按当前商品事实整理了一个可查看的方案，具体价格和参数以商品卡片为准。\n[[END_SECTION]]\n"
+        return "[[SECTION:0|TITLE:贴合当前需求的选择]]\n我先按当前商品事实整理了一个可比较的推荐理由，具体价格和参数以商品事实为准。\n[[END_SECTION]]\n"
     sections = []
     for item in (plan.get("items") or [])[:5]:
         section_id = int(item.get("section_id") or 0)
@@ -659,9 +659,10 @@ def _mock_recommendation_stream_response(context: str) -> str:
             point_text = str(facts.get("highlight_short") or item.get("fallback_reason") or "和你的需求方向接近")
         caution_text = ""
         if cautions:
-            caution_text = f"需要注意的是{cautions[0]}，下单前可以再看一下卡片细节。"
-        text = f"{name}{price_text}，作为{item.get('plan_type') or '推荐方案'}，主要匹配点是{point_text}。{caution_text}"
-        sections.append(f"[[SECTION:{section_id}]]\n{text}\n[[END_SECTION]]")
+            caution_text = f"需要注意的是{cautions[0]}。"
+        title = str(item.get("display_title") or facts.get("highlight_short") or "贴合当前需求的选择").strip()[:20]
+        text = f"{name}{price_text}，主要匹配点是{point_text}。{caution_text}"
+        sections.append(f"[[SECTION:{section_id}|TITLE:{title}]]\n{text}\n[[END_SECTION]]")
     return "\n".join(sections) + ("\n" if sections else "")
 
 

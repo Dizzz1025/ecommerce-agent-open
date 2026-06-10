@@ -1,8 +1,9 @@
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote, unquote, urlparse
+from urllib.parse import quote, unquote, urlsplit
 
 from app.models.domain import Product, ProductSpotlight
 from app.utils.json_loader import load_json_file
@@ -20,6 +21,7 @@ class ProductRepository:
         self.dataset_dir = dataset_dir
         self._cache: list[Product] | None = None
         self._by_id: dict[str, Product] = {}
+        self._display_titles: dict[str, str] | None = None
 
     def list_products(self) -> list[Product]:
         if self._cache is None:
@@ -98,11 +100,21 @@ class ProductRepository:
             spotlight=spotlight,
             enhancement=_enhancement_payload(raw),
         )
+        display_tag_text = self._build_display_tag_text(
+            title=name,
+            brand=raw.get("brand", ""),
+            category=raw.get("category", ""),
+            sub_category=raw.get("sub_category", ""),
+            skus=raw.get("skus", []),
+            spotlight=spotlight,
+            enhancement=_enhancement_payload(raw),
+        )
         return {
             "sku_id": sku_id,
             "product_id": raw.get("product_id") or sku_id,
             "name": name,
             "title": raw.get("title") or name,
+            "display_title": self._display_title(raw.get("product_id") or sku_id),
             "category": raw.get("category", ""),
             "sub_category": raw.get("sub_category"),
             "brand": raw.get("brand", ""),
@@ -110,16 +122,15 @@ class ProductRepository:
             "base_price": raw.get("base_price") or price,
             "stock": int(raw.get("stock") or 999),
             "image_url": image_url,
-            "image_path": raw.get("image_path"),
             "detail_image_url": detail_image_url,
-            "detail_image_path": raw.get("detail_image_path") or raw.get("detailImagePath"),
+            "image_path": raw.get("image_path"),
             "skus": raw.get("skus", []),
             "spotlight": spotlight,
             "reviews_summary": raw.get("reviews_summary") or self._summarize_reviews(raw.get("rag_knowledge", {})),
             "rag_knowledge": raw.get("rag_knowledge", {}),
             **_enhancement_payload(raw),
             "searchable_text": searchable_text,
-            "tags": self._extract_tags(searchable_text),
+            "tags": self._extract_tags(display_tag_text),
         }
 
     def _normalize_dataset_item(self, raw: dict[str, Any]) -> dict[str, Any]:
@@ -130,7 +141,7 @@ class ProductRepository:
         min_price = min(sku_prices) if sku_prices else float(raw.get("base_price", 0))
         image_path = self._resolve_dataset_image_path(raw.get("image_path", ""))
         image_url = f"/static/dataset/{quote(image_path, safe='/')}" if image_path else ""
-        detail_image_path = self._resolve_detail_dataset_image_path(image_path)
+        detail_image_path = self._resolve_dataset_detail_image_path(image_path)
         detail_image_url = f"/static/dataset/{quote(detail_image_path, safe='/')}" if detail_image_path else None
         rag_knowledge = raw.get("rag_knowledge", {})
         searchable_text = self._build_searchable_text(
@@ -143,7 +154,16 @@ class ProductRepository:
             spotlight={},
             enhancement=_enhancement_payload(raw),
         )
-        tags = self._extract_tags(searchable_text)
+        display_tag_text = self._build_display_tag_text(
+            title=title,
+            brand=raw.get("brand", ""),
+            category=raw.get("category", ""),
+            sub_category=raw.get("sub_category", ""),
+            skus=skus,
+            spotlight={},
+            enhancement=_enhancement_payload(raw),
+        )
+        tags = self._extract_tags(display_tag_text)
         spotlight = ProductSpotlight(
             skin_type=[term for term in ["油皮", "混油皮", "干皮", "敏感肌"] if term in searchable_text],
             features=tags[:8],
@@ -155,6 +175,7 @@ class ProductRepository:
             "product_id": product_id,
             "name": title,
             "title": title,
+            "display_title": self._display_title(product_id),
             "category": raw.get("category", ""),
             "sub_category": raw.get("sub_category"),
             "brand": raw.get("brand", ""),
@@ -162,9 +183,8 @@ class ProductRepository:
             "base_price": raw.get("base_price") or min_price,
             "stock": 999,
             "image_url": image_url,
-            "image_path": image_path,
             "detail_image_url": detail_image_url,
-            "detail_image_path": detail_image_path,
+            "image_path": image_path,
             "skus": skus,
             "spotlight": spotlight.model_dump(),
             "reviews_summary": self._summarize_reviews(rag_knowledge),
@@ -205,6 +225,39 @@ class ProductRepository:
             parts.extend([str(faq.get("question", "")), str(faq.get("answer", ""))])
         for review in rag_knowledge.get("user_reviews", []):
             parts.append(str(review.get("content", "")))
+        return " ".join(part for part in parts if part).strip()
+
+    @staticmethod
+    def _build_display_tag_text(
+        *,
+        title: str,
+        brand: str,
+        category: str,
+        sub_category: str | None,
+        skus: list[dict[str, Any]],
+        spotlight: dict[str, Any],
+        enhancement: dict[str, Any] | None = None,
+    ) -> str:
+        """Return curated product facts used only for display tag extraction.
+
+        Full searchable text intentionally includes FAQ/reviews/marketing copy.
+        Display tags are shown on product cards, so they must not be inferred
+        from support phrases like "联系客服拍照反馈" or unrelated long-form text.
+        """
+        parts: list[str] = [title, brand, category, sub_category or ""]
+        for sku in skus:
+            parts.extend(str(value) for value in sku.get("properties", {}).values())
+        for key in ["features", "skin_type", "exclude"]:
+            value = spotlight.get(key)
+            if isinstance(value, list):
+                parts.extend(str(item) for item in value if item)
+        enhancement = enhancement or {}
+        parts.extend(
+            str(enhancement.get(key, ""))
+            for key in ["product_highlight", "highlight_short", "highlight_detail"]
+        )
+        for key in ["suitable_scenarios", "target_user_tags", "non_standard_query_tags"]:
+            parts.extend(str(item) for item in enhancement.get(key, []) if item)
         return " ".join(part for part in parts if part).strip()
 
     @staticmethod
@@ -254,95 +307,164 @@ class ProductRepository:
         if not image_path or not self.dataset_dir:
             return image_path
 
-        normalized = image_path.replace("\\", "/")
+        normalized = _safe_relative_image_reference(image_path) or ""
+        is_detail_reference = _is_detail_image_reference(normalized)
         direct_path = self.dataset_dir / normalized
-        if direct_path.exists():
+        if (
+            normalized
+            and not is_detail_reference
+            and _is_within_directory(direct_path, self.dataset_dir)
+            and direct_path.is_file()
+        ):
             return normalized
 
-        filename = Path(normalized).name
+        filename = _safe_image_filename(image_path)
         if not filename:
             return normalized
 
-        for candidate in self.dataset_dir.glob(f"*/images/{filename}"):
+        for image_dir in self.dataset_dir.glob("*/images"):
+            candidate = image_dir / filename
             if candidate.is_file() and not candidate.name.startswith("._"):
                 return candidate.relative_to(self.dataset_dir).as_posix()
 
-        for candidate in self.dataset_dir.rglob(filename):
-            if candidate.is_file() and not candidate.name.startswith("._"):
+        for candidate in self.dataset_dir.rglob("*"):
+            if (
+                candidate.is_file()
+                and candidate.name == filename
+                and candidate.parent.name != "images_android"
+                and not candidate.name.startswith("._")
+            ):
                 return candidate.relative_to(self.dataset_dir).as_posix()
 
-        return normalized
+        return "" if is_detail_reference else normalized
 
-    def _resolve_detail_dataset_image_path(self, image_path: str) -> str | None:
-        """Return a product-detail image path from a sibling images_android dir.
-
-        The ordinary image_path keeps its existing meaning. This helper only
-        creates an optional detail-specific path when a safe file exists under
-        the same product image directory.
-        """
-        if not image_path or not self.dataset_dir:
+    def _resolve_dataset_detail_image_path(self, original_image_path: str) -> str | None:
+        if not original_image_path or not self.dataset_dir:
             return None
 
-        normalized = image_path.replace("\\", "/")
-        parsed_path = urlparse(normalized).path if "://" in normalized else normalized
-        decoded_path = unquote(parsed_path).replace("\\", "/").strip("/")
-        filename = Path(decoded_path).name
-        if not self._safe_image_filename(filename):
+        filename = _safe_image_filename(original_image_path)
+        if not filename:
             return None
 
-        parent = Path(decoded_path).parent.as_posix()
-        detail_dirs = [f"{parent}/images_android" if parent and parent != "." else "images_android"]
-        if parent.endswith("/images"):
-            detail_dirs.append(f"{parent.removesuffix('/images')}/images_android")
-        stem = Path(filename).stem
-        suffix = Path(filename).suffix.lower()
-        candidates: list[str] = []
-        for detail_dir in detail_dirs:
-            candidates.append(f"{detail_dir}/{filename}")
-            for extension in [".jpg", ".jpeg", ".png", ".webp"]:
-                if extension != suffix:
-                    candidates.append(f"{detail_dir}/{stem}{extension}")
+        detail_filenames = _detail_image_filename_candidates(filename)
+        normalized = _safe_relative_image_reference(original_image_path) or ""
+        if normalized:
+            parts = normalized.split("/")
+            for index in range(len(parts) - 2, -1, -1):
+                if parts[index] == "images":
+                    for detail_filename in detail_filenames:
+                        detail_parts = [*parts[:index], "images_android", detail_filename]
+                        detail_relative = "/".join(detail_parts)
+                        detail_path = self.dataset_dir / detail_relative
+                        if _is_within_directory(detail_path, self.dataset_dir) and detail_path.is_file():
+                            return detail_relative
+                    break
 
-        dataset_root = self.dataset_dir.resolve()
-        for candidate in candidates:
-            candidate_path = (self.dataset_dir / candidate).resolve()
-            if not self._is_relative_to(candidate_path, dataset_root):
-                continue
-            if candidate_path.is_file() and not candidate_path.name.startswith("._"):
-                return candidate_path.relative_to(dataset_root).as_posix()
-
-        for detail_dir_path in self.dataset_dir.glob("*/images_android"):
-            candidate = detail_dir_path / filename
-            candidate_path = candidate.resolve()
-            if self._is_relative_to(candidate_path, dataset_root) and candidate.is_file() and not candidate.name.startswith("._"):
-                return candidate.relative_to(dataset_root).as_posix()
-
-            for extension in [".jpg", ".jpeg", ".png", ".webp"]:
-                if extension == suffix:
-                    continue
-                candidate = detail_dir_path / f"{stem}{extension}"
-                candidate_path = candidate.resolve()
-                if self._is_relative_to(candidate_path, dataset_root) and candidate.is_file() and not candidate.name.startswith("._"):
-                    return candidate.relative_to(dataset_root).as_posix()
+        for detail_dir in self.dataset_dir.glob("*/images_android"):
+            for detail_filename in detail_filenames:
+                candidate = detail_dir / detail_filename
+                if candidate.is_file() and not candidate.name.startswith("._"):
+                    return candidate.relative_to(self.dataset_dir).as_posix()
 
         return None
 
-    @staticmethod
-    def _safe_image_filename(filename: str) -> bool:
-        if not filename or filename in {".", ".."}:
-            return False
-        if "/" in filename or "\\" in filename:
-            return False
-        return ".." not in Path(filename).parts
+    def _display_title(self, product_id: str | None) -> str | None:
+        if not product_id:
+            return None
+        if self._display_titles is None:
+            self._display_titles = self._load_display_titles()
+        return self._display_titles.get(str(product_id))
 
-    @staticmethod
-    def _is_relative_to(path: Path, root: Path) -> bool:
+    def _load_display_titles(self) -> dict[str, str]:
+        path = self._resolve_display_title_report_path()
+        if path is None or not path.exists():
+            return {}
         try:
-            path.relative_to(root)
-            return True
-        except ValueError:
-            return False
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        items = payload.get("items") if isinstance(payload, dict) else payload
+        if not isinstance(items, list):
+            return {}
+        titles: dict[str, str] = {}
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            product_id = str(item.get("product_id") or "").strip()
+            display_title = str(item.get("display_title") or "").strip()
+            if product_id and display_title:
+                titles[product_id] = display_title
+        return titles
 
+    def _resolve_display_title_report_path(self) -> Path | None:
+        env_path = os.getenv("PRODUCT_SLOGAN_REPORT_PATH")
+        candidates: list[Path] = []
+        if env_path:
+            path = Path(env_path)
+            candidates.append(path if path.is_absolute() else self.source_path.parent / path)
+        if self.dataset_dir:
+            candidates.append(self.dataset_dir / "slogan_generation_report.json")
+        base_dirs = []
+        if self.dataset_dir:
+            base_dirs.extend([self.dataset_dir.parent, self.dataset_dir.parent.parent])
+        base_dirs.extend([self.source_path.parent, self.source_path.parent.parent])
+        for base in base_dirs:
+            candidates.append(base / "ecommerce_dataset_with_slogans" / "slogan_generation_report.json")
+        for candidate in candidates:
+            if candidate.exists() and candidate.is_file():
+                return candidate
+        return None
+
+
+
+def _safe_image_filename(image_reference: str | None) -> str | None:
+    if not image_reference:
+        return None
+    raw_path = urlsplit(str(image_reference).strip()).path
+    normalized = unquote(raw_path).replace("\\", "/")
+    filename = Path(normalized).name
+    if not filename or filename in {".", ".."} or filename.startswith("._"):
+        return None
+    if "/" in filename or "\\" in filename:
+        return None
+    return filename
+
+
+def _safe_relative_image_reference(image_reference: str | None) -> str | None:
+    if not image_reference:
+        return None
+    raw_path = urlsplit(str(image_reference).strip()).path
+    normalized = unquote(raw_path).replace("\\", "/").lstrip("/")
+    dataset_prefix = "static/dataset/"
+    if normalized.startswith(dataset_prefix):
+        normalized = normalized[len(dataset_prefix):]
+    parts = [part for part in normalized.split("/") if part and part != "."]
+    if not parts or any(part == ".." for part in parts):
+        return None
+    return "/".join(parts)
+
+
+def _is_within_directory(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve().relative_to(directory.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _is_detail_image_reference(relative_path: str) -> bool:
+    return any(part == "images_android" for part in relative_path.replace("\\", "/").split("/"))
+
+
+def _detail_image_filename_candidates(filename: str) -> list[str]:
+    path = Path(filename)
+    stem = path.stem
+    suffix = path.suffix.lower()
+    candidates = [filename]
+    for extension in [".jpg", ".jpeg", ".png", ".webp"]:
+        if extension != suffix:
+            candidates.append(f"{stem}{extension}")
+    return list(dict.fromkeys(candidates))
 
 
 def _normalize_text(text: str) -> str:

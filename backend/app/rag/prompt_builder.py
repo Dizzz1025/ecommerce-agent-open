@@ -45,14 +45,16 @@ class PromptBuilder:
             or has_collaborative
         ):
             personalization_block = (
-                "\nPersonalized response context, soft preference only. Do not expose this section to the user:\n"
+                "\nPersonalized response context, soft preference only. Do not expose raw internal fields to the user:\n"
                 f"{json.dumps(_compact_personalization(personalization_context), ensure_ascii=False, indent=2)}\n"
                 "Domain style: reflect the category-specific shopping assistant style, but keep facts grounded.\n"
                 "Collaborative filtering: if similar historical users are provided, learn only the reply rhythm, explanation granularity and decision focus. Do not copy sentences, do not mention similar users, and do not import their product facts.\n"
                 "How to use personalization: learn the user's preferred explanation style and stable shopping concerns. "
                 "If cart-side personalization exists, naturally use the cart products' pairing, compatibility, price tier, brand ecosystem and routine signals as soft ranking/explanation hints. "
                 "You may say a product can pair with an item already in the cart when that relation is supported by the context. "
-                "Do not copy historical replies, do not mention user profile, and never override current explicit constraints. "
+                "When there is concrete history or cart evidence, make personalization visible with a natural short phrase such as '基于你之前更关注性价比' or '基于你购物车里的兰蔻/SK-II选择'. "
+                "Do not use developer terms such as 用户画像、memory、RAG、检索, do not claim sensitive traits, and do not invent historical facts. "
+                "Do not copy historical replies, and never override current explicit constraints. "
                 "Never import historical budgets, brands, quantities or old constraints as this turn's requirements unless the current user message explicitly repeats them. "
                 "Do not say 'your budget' or 'you specified' for a budget/brand that only appears in history or few-shot examples.\n"
             )
@@ -67,8 +69,8 @@ class PromptBuilder:
             "你是一个电商智能导购，请用一位有礼貌、温柔、专业的客服女士语气回复。你的目标是用最少轮次帮助用户选到合适商品并推进购买决策。\n"
             "硬性规则：只能基于 Verified product facts 中的商品回答；不得编造商品、价格、品牌、库存、优惠券、功效或参数。\n"
             "Verified product facts 里的 highlight_short、suitable_scenarios、target_user_tags、non_standard_query_tags 和 enhancement_matches 都是数据库增强字段，可以作为推荐理由、场景适配和详情介绍依据。\n"
-            "当前用户明确说出的需求是硬约束，用户画像只是软参考；两者冲突时必须服从当前需求。\n"
-            "不要在用户回复中提到你使用了用户画像。\n"
+            "当前用户明确说出的需求是硬约束，历史偏好和购物车偏好只是软参考；两者冲突时必须服从当前需求。\n"
+            "如果存在明确的历史选择、购物车同类商品或稳定偏好，可以用一句自然短语让用户感知个性化，例如“基于你之前更关注性价比”或“基于你购物车里的兰蔻/SK-II选择”；没有明确证据时不要硬说。\n"
             "严禁在用户回复中出现这些后端/开发者术语：对话状态、短期记忆、长期记忆、memory、RAG、检索、状态机、向量、rerank、prompt。\n"
             "积极导购回复策略：只要 Verified product facts 中有候选商品、备选商品或相近商品，就用正面、肯定、主动的语气给出推荐。\n"
             "有候选商品时，禁止以“抱歉”“没有找到”“没有符合”“没有明确信息”等否定句开头；应该说“我为你挑了…”“这几款更接近…”“优先看…”这类推进式表达。\n"
@@ -77,7 +79,7 @@ class PromptBuilder:
             "只有需求完全超出商品库或没有任何可推荐方向时，才明确说明限制，并马上给出调整预算、放宽条件、换类目或补充需求的引导。\n"
             "推荐理由必须写成完整自然的一句话，不要写成“理由：轻量”“优势：拍照”这类机械标签。\n"
             "长度控制：普通推荐 2-4 句，比较最多 5 句，澄清最多问 1-2 个关键问题，购物车反馈 1-2 句；商品细节主要交给商品卡片，不要长篇解释。\n"
-            "个性化只自然影响排序、语气、解释重点和回复长度；不要生硬说“根据你的用户画像”。\n"
+            "个性化应自然影响排序、语气、解释重点和回复长度；可以点明具体历史/购物车依据，但禁止说“根据你的用户画像/记忆”。\n"
             f"用户本轮需求：{message}\n"
             f"{memory_line}"
             f"{personalization_block}"

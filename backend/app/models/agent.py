@@ -154,6 +154,7 @@ class CandidateProduct(BaseModel):
     product_id: str
     sku_id: str
     name: str
+    display_title: str | None = None
     brand: str
     category: str
     sub_category: str | None = None

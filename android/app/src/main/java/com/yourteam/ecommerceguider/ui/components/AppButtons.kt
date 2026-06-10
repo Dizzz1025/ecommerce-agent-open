@@ -52,31 +52,38 @@ fun AppIconButton(
     style: AppIconButtonStyle = AppIconButtonStyle.Surface,
     containerSize: Dp = AppDimensions.IconButton,
     hitAreaSize: Dp = containerSize.coerceAtLeast(AppDimensions.IconButton),
+    minimumTouchSize: Dp = AppDimensions.IconButton,
     iconSize: Dp = AppDimensions.IconMedium,
+    containerColorOverride: Color? = null,
+    contentColorOverride: Color? = null,
+    borderColorOverride: Color? = null,
     icon: @Composable BoxScope.() -> Unit,
 ) {
     val shape = CircleShape
-    val containerColor = when {
+    val defaultContainerColor = when {
         !enabled -> AppColors.SurfaceSoft
         selected && style != AppIconButtonStyle.Hero -> AppColors.Primary
         style == AppIconButtonStyle.Plain -> Color.Transparent
         style == AppIconButtonStyle.Hero -> AppColors.HeroIconBackground
         else -> AppColors.Surface
     }
-    val contentColor = when {
+    val defaultContentColor = when {
         !enabled -> AppColors.TextDisabled
         selected && style != AppIconButtonStyle.Hero -> AppColors.OnPrimary
         selected && style == AppIconButtonStyle.Hero -> AppColors.Primary
         style == AppIconButtonStyle.Hero -> AppColors.HeroIcon
         else -> AppColors.TextPrimary
     }
-    val borderColor = when {
+    val defaultBorderColor = when {
         !enabled -> AppColors.Border
         selected || style == AppIconButtonStyle.Plain || style == AppIconButtonStyle.Hero -> Color.Transparent
         else -> AppColors.Border
     }
+    val containerColor = containerColorOverride ?: defaultContainerColor
+    val contentColor = contentColorOverride ?: defaultContentColor
+    val borderColor = borderColorOverride ?: defaultBorderColor
     val touchSize = hitAreaSize
-        .coerceAtLeast(AppDimensions.IconButton)
+        .coerceAtLeast(minimumTouchSize)
         .coerceAtLeast(containerSize)
 
     Box(

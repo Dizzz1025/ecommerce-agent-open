@@ -2,8 +2,6 @@
 
 package com.yourteam.ecommerceguider.ui.screens.chat.components
 
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,6 +27,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,12 +49,14 @@ import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
+import com.yourteam.ecommerceguider.data.model.asRecommendationTitleOrNull
+import com.yourteam.ecommerceguider.data.model.recommendationSectionTitleForRender
 import com.yourteam.ecommerceguider.theme.AppColors
 import com.yourteam.ecommerceguider.theme.AppDimensions
-import com.yourteam.ecommerceguider.theme.AppMotion
 import com.yourteam.ecommerceguider.theme.AppRadius
 import com.yourteam.ecommerceguider.theme.AppSpacing
 import com.yourteam.ecommerceguider.theme.AppTypography
+import com.yourteam.ecommerceguider.theme.ChatColors
 import com.yourteam.ecommerceguider.theme.EcommerceGuiderTheme
 import com.yourteam.ecommerceguider.ui.components.AppIconButton
 import com.yourteam.ecommerceguider.ui.components.AppIconButtonStyle
@@ -70,14 +74,19 @@ private val SmallPanelShape = RoundedCornerShape(AppRadius.Large)
 @Composable
 fun GuideTopBar(
     cartItemCount: Int,
-    historyCount: Int,
+    displayName: String?,
     onHistoryClick: () -> Unit,
     onCartClick: () -> Unit,
     onAddressClick: () -> Unit = {},
 ) {
+    val greeting = displayName
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { "你好，$it" }
+        ?: "你好"
     Surface(
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Divider),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Row(
             modifier = Modifier
@@ -102,25 +111,34 @@ fun GuideTopBar(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "你好",
+                    text = greeting,
                     style = AppTypography.BodyStrong,
-                    color = AppColors.TextPrimary,
+                    color = ChatColors.TextPrimary,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "今天想买点什么呢？",
                     style = AppTypography.BodySmall,
-                    color = AppColors.TextSecondary,
+                    color = ChatColors.TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            BadgeIconButton(
-                count = historyCount,
-                contentDescription = "历史需求",
-                iconRes = R.drawable.ic_history_24,
+            AppIconButton(
                 onClick = onHistoryClick,
-            )
+                style = AppIconButtonStyle.Surface,
+                containerSize = AppDimensions.IconButton,
+                iconSize = AppDimensions.IconSmall,
+                containerColorOverride = ChatColors.Surface,
+                contentColorOverride = ChatColors.TextPrimary,
+                borderColorOverride = ChatColors.Border,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_history_24),
+                    contentDescription = "历史需求",
+                )
+            }
             BadgeIconButton(
                 count = cartItemCount,
                 contentDescription = "购物车",
@@ -144,6 +162,9 @@ private fun BadgeIconButton(
             style = AppIconButtonStyle.Surface,
             containerSize = AppDimensions.IconButton,
             iconSize = AppDimensions.IconSmall,
+            containerColorOverride = ChatColors.Surface,
+            contentColorOverride = ChatColors.TextPrimary,
+            borderColorOverride = ChatColors.Border,
         ) {
             Icon(
                 painter = painterResource(iconRes),
@@ -198,13 +219,18 @@ fun HistoryRequestsDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "关闭",
+                    color = ChatColors.WarmAccent,
+                )
+            }
         },
         title = {
             Text(
                 text = "历史需求",
                 style = AppTypography.TitleSmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
         },
         text = {
@@ -216,7 +242,7 @@ fun HistoryRequestsDialog(
                     Text(
                         text = "还没有历史需求。",
                         style = AppTypography.Body,
-                        color = AppColors.TextSecondary,
+                        color = ChatColors.TextSecondary,
                     )
                 } else {
                     turns.forEachIndexed { index, turn ->
@@ -253,8 +279,8 @@ private fun HistoryTurnBlock(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -262,6 +288,14 @@ private fun HistoryTurnBlock(
         ) {
             TagChip(text = "第 ${index + 1} 轮", tone = TagChipTone.Neutral)
             HistoryTextBlock(label = "你", text = turn.userMessage.content)
+            turn.assistantMessage?.thinking
+                ?.takeIf { it.status != AssistantThinkingStatus.Idle && it.stages.isNotEmpty() }
+                ?.let { thinking ->
+                    HistoryThinkingBlock(
+                        turnId = turn.userMessage.turnId,
+                        thinking = thinking,
+                    )
+                }
             turn.assistantMessage?.content
                 ?.takeIf { it.isNotBlank() }
                 ?.let { HistoryTextBlock(label = "导购回复", text = it) }
@@ -287,16 +321,31 @@ private fun HistoryTextBlock(
         Text(
             text = label,
             style = AppTypography.CaptionStrong,
-            color = AppColors.TextSecondary,
+            color = ChatColors.TextSecondary,
         )
         Text(
             text = text,
             style = AppTypography.BodySmall,
-            color = AppColors.TextPrimary,
+            color = ChatColors.TextPrimary,
             maxLines = 6,
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+@Composable
+private fun HistoryThinkingBlock(
+    turnId: String,
+    thinking: AssistantThinkingUiModel,
+) {
+    var expanded by rememberSaveable(turnId, "history-thinking") { mutableStateOf(false) }
+    ThinkingProcessCard(
+        thinking = thinking,
+        isStreaming = false,
+        errorMessage = null,
+        expanded = expanded,
+        onToggle = { expanded = !expanded },
+    )
 }
 
 @Composable
@@ -307,38 +356,14 @@ private fun HistoryRecommendationBlock(
     activeSpecSelection: SpecSelectionUiModel? = null,
     onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
 ) {
-    val inlineSpecSelection = activeSpecSelection?.takeIf { selection ->
-        selection.source == "product_card" &&
-            selection.anchorRecommendationId == section.stableKey
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
-        section.displayText.ifBlank { section.text }
-            .takeIf { it.isNotBlank() }
-            ?.let { text ->
-                Text(
-                    text = text,
-                    style = AppTypography.BodySmall,
-                    color = AppColors.TextSecondary,
-                )
-            }
-        section.product?.let { product ->
-            ProductCard(
-                product = product,
-                onClick = onProductClick,
-                onAddToCart = { selectedProduct -> onAddToCart(selectedProduct, section.stableKey) },
-                rank = section.sectionIndex,
-                isPrimary = false,
-                roleLabel = section.optionLabel,
-                showRecommendationReason = false,
-            )
-        }
-        inlineSpecSelection?.let { selection ->
-            InlineSpecSelectionPanel(
-                selection = selection,
-                onOptionClick = { option -> onSpecOptionClick(selection, option) },
-            )
-        }
-    }
+    RecommendationSection(
+        section = section,
+        totalCount = 1,
+        onProductClick = onProductClick,
+        onAddToCart = onAddToCart,
+        activeSpecSelection = activeSpecSelection,
+        onSpecOptionClick = onSpecOptionClick,
+    )
 }
 
 @Composable
@@ -346,8 +371,8 @@ fun WelcomeCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SmallPanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -356,12 +381,12 @@ fun WelcomeCard() {
             Text(
                 text = "说出预算、场景或纠结点",
                 style = AppTypography.BodyStrong,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             Text(
                 text = "我会根据真实商品数据给出购买建议、推荐理由和可加购商品。",
                 style = AppTypography.BodySmall,
-                color = AppColors.TextSecondary,
+                color = ChatColors.TextSecondary,
             )
         }
     }
@@ -377,35 +402,33 @@ fun AssistantAnswerIntroCard(
     thinkingExpanded: Boolean,
     onToggleThinking: () -> Unit,
 ) {
-    val hasFormalOutput = answer.isNotBlank() || products.isNotEmpty()
     val hasError = !errorMessage.isNullOrBlank()
     val hasThinking = thinking.status != AssistantThinkingStatus.Idle &&
         (thinking.stages.isNotEmpty() || isStreaming)
+    val hasAnswer = answer.isNotBlank()
+    val shouldShowErrorInAnswer = hasError && !isStreaming && (hasAnswer || !hasThinking)
 
-    if (hasFormalOutput && answer.isBlank()) {
+    if (!hasError && !hasThinking && !hasAnswer) {
         return
     }
-    if (!hasError && !hasThinking && answer.isBlank()) {
-        return
-    }
 
-    Crossfade(
-        targetState = answer.isNotBlank(),
-        animationSpec = tween(durationMillis = AppMotion.Normal),
-        label = "assistant-message-crossfade",
-    ) { showFormalAnswer ->
-        if (showFormalAnswer) {
-            AssistantAnswerBlock(
-                answer = answer,
-                errorMessage = errorMessage.takeIf { hasError && !isStreaming },
-            )
-        } else {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+    ) {
+        if (hasThinking) {
             ThinkingProcessCard(
                 thinking = thinking,
-                isStreaming = isStreaming,
-                errorMessage = errorMessage.takeIf { hasError && !isStreaming },
+                isStreaming = isStreaming && thinking.status != AssistantThinkingStatus.Done,
+                errorMessage = errorMessage.takeIf { hasError && !isStreaming && !hasAnswer },
                 expanded = thinkingExpanded,
                 onToggle = onToggleThinking,
+            )
+        }
+        if (hasAnswer || shouldShowErrorInAnswer) {
+            AssistantAnswerBlock(
+                answer = answer,
+                errorMessage = errorMessage.takeIf { shouldShowErrorInAnswer },
             )
         }
     }
@@ -416,25 +439,20 @@ private fun AssistantAnswerBlock(
     answer: String,
     errorMessage: String?,
 ) {
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = SmallPanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
     ) {
-        Column(
-            modifier = Modifier.padding(AppSpacing.Md),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
-        ) {
-            Text(
-                text = "购买结论",
-                style = AppTypography.CaptionStrong,
-                color = AppColors.TextSecondary,
-            )
-            ParagraphText(text = answer)
-            errorMessage?.let {
-                InlineError(message = it)
-            }
+        Text(
+            text = "购买结论",
+            style = AppTypography.CaptionStrong,
+            color = ChatColors.WarmAccent,
+        )
+        answer
+            .takeIf { it.isNotBlank() }
+            ?.let { ParagraphText(text = it) }
+        errorMessage?.let {
+            InlineError(message = it)
         }
     }
 }
@@ -450,8 +468,8 @@ private fun ThinkingProcessCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SmallPanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -480,7 +498,7 @@ private fun ThinkingProcessContent(
     val completedCount = stages.count { it.status == AssistantProcessStageStatus.Completed }
     val title = when (thinking.status) {
         AssistantThinkingStatus.Failed -> "推荐思路未完成"
-        AssistantThinkingStatus.Done -> "推荐思路已完成"
+        AssistantThinkingStatus.Done -> "推荐思考已完成"
         AssistantThinkingStatus.Generating -> "正在整理回复"
         AssistantThinkingStatus.Running -> "推荐思路"
         AssistantThinkingStatus.Idle -> "推荐思路"
@@ -494,7 +512,7 @@ private fun ThinkingProcessContent(
             thinking.status == AssistantThinkingStatus.Done -> Icon(
                 painter = painterResource(R.drawable.ic_check_circle_20),
                 contentDescription = null,
-                tint = AppColors.Success,
+                tint = ChatColors.Success,
                 modifier = Modifier.size(AppDimensions.IconSmall),
             )
             thinking.status == AssistantThinkingStatus.Failed -> Text(
@@ -505,27 +523,32 @@ private fun ThinkingProcessContent(
             isStreaming -> CircularProgressIndicator(
                 modifier = Modifier.size(AppDimensions.IconSmall),
                 strokeWidth = 2.dp,
-                color = AppColors.Primary,
+                color = ChatColors.WarmAccent,
             )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = AppTypography.TitleSmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
-            Text(
-                text = runningStage?.summary?.takeIf { it.isNotBlank() }
-                    ?: runningStage?.displayLabel
-                    ?: "已完成 $completedCount 个阶段",
-                style = AppTypography.BodySmall,
-                color = AppColors.TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (thinking.status != AssistantThinkingStatus.Done) {
+                Text(
+                    text = runningStage?.summary?.takeIf { it.isNotBlank() }
+                        ?: runningStage?.displayLabel
+                        ?: "已完成 $completedCount 个阶段",
+                    style = AppTypography.BodySmall,
+                    color = ChatColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         TextButton(onClick = onToggle) {
-            Text(if (expanded) "收起" else "展开")
+            Text(
+                text = if (expanded) "收起" else "展开",
+                color = ChatColors.WarmAccent,
+            )
         }
     }
     if (expanded) {
@@ -544,10 +567,10 @@ private fun ProcessStageRow(stage: AssistantProcessStageUiModel) {
         horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
     ) {
         val dotColor = when (stage.status) {
-            AssistantProcessStageStatus.Completed -> AppColors.Success
-            AssistantProcessStageStatus.Running -> AppColors.Primary
+            AssistantProcessStageStatus.Completed -> ChatColors.Success
+            AssistantProcessStageStatus.Running -> ChatColors.WarmAccent
             AssistantProcessStageStatus.Failed -> AppColors.Danger
-            AssistantProcessStageStatus.Pending -> AppColors.TextDisabled
+            AssistantProcessStageStatus.Pending -> ChatColors.TextTertiary
         }
         Box(
             modifier = Modifier
@@ -560,7 +583,7 @@ private fun ProcessStageRow(stage: AssistantProcessStageUiModel) {
             Text(
                 text = stage.displayLabel,
                 style = AppTypography.BodySmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -568,7 +591,7 @@ private fun ProcessStageRow(stage: AssistantProcessStageUiModel) {
                 Text(
                     text = it,
                     style = AppTypography.Caption,
-                    color = AppColors.TextSecondary,
+                    color = ChatColors.TextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -589,8 +612,8 @@ fun SpecSelectionCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = SmallPanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -600,18 +623,18 @@ fun SpecSelectionCard(
                 Text(
                     text = completedText,
                     style = AppTypography.BodyStrong,
-                    color = AppColors.Success,
+                    color = ChatColors.Success,
                 )
             } else {
                 Text(
                     text = "请选择规格",
                     style = AppTypography.TitleSmall,
-                    color = AppColors.TextPrimary,
+                    color = ChatColors.TextPrimary,
                 )
                 Text(
                     text = selection.productName,
                     style = AppTypography.BodySmall,
-                    color = AppColors.TextSecondary,
+                    color = ChatColors.TextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -630,7 +653,7 @@ fun SpecSelectionCard(
                     Text(
                         text = "点击规格后将直接加入购物车",
                         style = AppTypography.Caption,
-                        color = AppColors.TextTertiary,
+                        color = ChatColors.TextTertiary,
                     )
                 }
             }
@@ -648,8 +671,8 @@ private fun InlineSpecSelectionPanel(
             .fillMaxWidth()
             .padding(top = AppSpacing.Xs),
         shape = SmallPanelShape,
-        color = AppColors.SurfaceSoft,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.SurfaceSubtle,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -658,7 +681,7 @@ private fun InlineSpecSelectionPanel(
             Text(
                 text = "选择规格",
                 style = AppTypography.BodyStrong,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             selection.options.forEach { option ->
                 SpecOptionButton(
@@ -688,10 +711,10 @@ private fun SpecOptionButton(
         shape = RoundedCornerShape(AppRadius.Large),
         color = when {
             selected -> AppColors.Primary
-            enabled -> AppColors.Surface
-            else -> AppColors.SurfacePressed
+            enabled -> ChatColors.Surface
+            else -> ChatColors.SurfaceSubtle
         },
-        border = BorderStroke(1.dp, if (selected) AppColors.Primary else AppColors.BorderStrong),
+        border = BorderStroke(1.dp, if (selected) AppColors.Primary else ChatColors.Border),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
@@ -702,7 +725,7 @@ private fun SpecOptionButton(
                 Text(
                     text = option.specText,
                     style = AppTypography.BodyStrong,
-                    color = if (selected) AppColors.OnPrimary else AppColors.TextPrimary,
+                    color = if (selected) AppColors.OnPrimary else ChatColors.TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -710,14 +733,14 @@ private fun SpecOptionButton(
                     Text(
                         text = "暂时无库存",
                         style = AppTypography.Caption,
-                        color = if (selected) AppColors.OnPrimary else AppColors.TextSecondary,
+                        color = if (selected) AppColors.OnPrimary else ChatColors.TextSecondary,
                     )
                 }
             }
             Text(
                 text = if (selected) "已加入" else "¥${formatPrice(option.price)}",
                 style = AppTypography.CaptionStrong,
-                color = if (selected) AppColors.OnPrimary else AppColors.TextPrimary,
+                color = if (selected) AppColors.OnPrimary else ChatColors.TextPrimary,
                 maxLines = 1,
             )
         }
@@ -735,16 +758,22 @@ fun RecommendationSection(
     onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
 ) {
     val presentation = product.presentation
-    val roleLabel = presentation?.optionLabel?.takeIf { it.isNotBlank() } ?: "推荐 ${index + 1}"
+    val title = product.recommendationDisplayTitle
+        ?: product.recommendTitle
+        ?: presentation?.title
+        ?: presentation?.shortTitle
+    val reason = product.recommendReason.orEmpty()
     RecommendationSection(
         section = RecommendationSectionUiModel(
             turnId = "snapshot",
             sectionIndex = index + 1,
             skuId = product.skuId,
-            optionLabel = roleLabel,
-            text = product.displayReason,
-            displayText = product.displayReason,
-            reason = presentation?.reason,
+            optionLabel = presentation?.optionLabel.orEmpty(),
+            displayTitle = title.orEmpty(),
+            text = reason,
+            displayText = reason,
+            recommendReason = reason,
+            reason = product.reason ?: presentation?.reason,
             tradeOff = presentation?.tradeOff,
             productName = product.displayTitleShort,
             brand = product.brand,
@@ -773,79 +802,170 @@ fun RecommendationSection(
         selection.source == "product_card" &&
             selection.anchorRecommendationId == section.stableKey
     }
-    val roleLabel = section.optionLabel.ifBlank { "推荐 ${section.sectionIndex}" }
-    val reasonText = section.displayText
-        .ifBlank { section.reason.orEmpty() }
+    val reasonText = section.recommendReason
+        .ifBlank { section.displayText }
         .ifBlank { section.text }
-
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = SmallPanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
     ) {
-        Column(
-            modifier = Modifier.padding(AppSpacing.Md),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
-        ) {
-            TagChip(text = roleLabel, tone = if (section.sectionIndex == 1) TagChipTone.Warm else TagChipTone.Neutral)
-            reasonText
-                .takeIf { it.isNotBlank() }
-                ?.let { ParagraphText(text = it) }
-                ?: if (!section.done) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(AppDimensions.IconSmall),
-                            strokeWidth = 2.dp,
-                            color = AppColors.Primary,
-                        )
-                        Text(
-                            text = "正在生成推荐理由",
-                            style = AppTypography.BodySmall,
-                            color = AppColors.TextSecondary,
-                        )
-                    }
-                } else {
-                    null
-                }
-            section.tradeOff
-                ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
-                ?.let { tradeOff ->
-                    Surface(
-                        shape = RoundedCornerShape(AppRadius.Large),
-                        color = AppColors.SurfaceSoft,
-                    ) {
-                        Text(
-                            text = "需要注意：$tradeOff",
-                            modifier = Modifier.padding(AppSpacing.Md),
-                            style = AppTypography.BodySmall,
-                            color = AppColors.TextSecondary,
-                        )
-                    }
-                }
-            product?.let {
-                ProductCard(
-                    product = it,
-                    onClick = onProductClick,
-                    onAddToCart = { selectedProduct -> onAddToCart(selectedProduct, section.stableKey) },
-                    rank = section.sectionIndex,
-                    totalCount = totalCount,
-                    isPrimary = section.sectionIndex == 1,
-                    roleLabel = roleLabel,
-                    showRecommendationReason = false,
+        recommendationSectionTitleForRender(section)?.let { title ->
+            Text(
+                text = title,
+                style = AppTypography.TitleSmall,
+                color = ChatColors.TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        reasonText
+            .takeIf { it.isNotBlank() }
+            ?.let {
+                ExpandableRecommendationReason(
+                    text = it,
+                    collapsed = section.done,
                 )
             }
-            inlineSpecSelection?.let { selection ->
-                InlineSpecSelectionPanel(
-                    selection = selection,
-                    onOptionClick = { option -> onSpecOptionClick(selection, option) },
+            ?: if (!section.done) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(AppDimensions.IconSmall),
+                        strokeWidth = 2.dp,
+                        color = ChatColors.WarmAccent,
+                    )
+                    Text(
+                        text = "正在生成推荐理由",
+                        style = AppTypography.BodySmall,
+                        color = ChatColors.TextSecondary,
+                    )
+                }
+            } else {
+                null
+            }
+        section.tradeOff
+            ?.takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
+            ?.let { tradeOff ->
+                Surface(
+                    shape = RoundedCornerShape(AppRadius.Large),
+                    color = ChatColors.SurfaceSubtle,
+                ) {
+                    Text(
+                        text = "需要注意：$tradeOff",
+                        modifier = Modifier.padding(AppSpacing.Md),
+                        style = AppTypography.BodySmall,
+                        color = ChatColors.TextSecondary,
+                    )
+                }
+            }
+        product?.let {
+            ProductCard(
+                product = it,
+                onClick = onProductClick,
+                onAddToCart = { selectedProduct -> onAddToCart(selectedProduct, section.stableKey) },
+                rank = section.sectionIndex,
+                totalCount = totalCount,
+                isPrimary = false,
+                roleLabel = null,
+                showRecommendationReason = false,
+                useChatColors = true,
+            )
+        }
+        inlineSpecSelection?.let { selection ->
+            InlineSpecSelectionPanel(
+                selection = selection,
+                onOptionClick = { option -> onSpecOptionClick(selection, option) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExpandableRecommendationReason(
+    text: String,
+    collapsed: Boolean,
+) {
+    val normalizedText = text.lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .joinToString("\n\n")
+    val canCollapse = collapsed && (normalizedText.length > 180 || normalizedText.count { it == '\n' } >= 6)
+    var expanded by rememberSaveable(normalizedText) { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs)) {
+        Text(
+            text = normalizedText,
+            style = AppTypography.Body,
+            color = ChatColors.TextPrimary,
+            maxLines = if (canCollapse && !expanded) 7 else Int.MAX_VALUE,
+            overflow = if (canCollapse && !expanded) TextOverflow.Ellipsis else TextOverflow.Clip,
+        )
+        if (canCollapse) {
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(
+                    text = if (expanded) "收起" else "展开全文",
+                    color = ChatColors.WarmAccent,
                 )
             }
         }
     }
+}
+
+private fun ProductUiModel.recommendationFallbackTitle(): String {
+    val candidates = listOf(
+        presentation?.title,
+        presentation?.shortTitle,
+        shortTitle,
+        highlightShort,
+        matchedReasons.firstOrNull(),
+        spotlight.features.firstOrNull(),
+        suitableScenarios.firstOrNull(),
+    )
+    candidates.firstNotNullOfOrNull { it.cleanRecommendationTitle() }?.let { return it }
+    val context = listOf(
+        displayReason,
+        productHighlight,
+        highlightDetail,
+        tags.joinToString(" "),
+        matchedReasons.joinToString(" "),
+        suitableScenarios.joinToString(" "),
+        targetUserTags.joinToString(" "),
+        category,
+        subCategory,
+    ).joinToString(" ")
+    return when {
+        context.hasAny("敏感", "温和") -> "敏感肌更友好的温和选择"
+        context.hasAny("补涂", "便携", "随身") -> "适合随身补涂的便携款"
+        context.hasAny("通勤", "户外", "运动") -> "通勤户外兼顾的实用选择"
+        context.hasAny("清爽", "控油", "不黏") -> "清爽肤感优先的日常选择"
+        context.hasAny("预算", "性价比", "平价") -> "预算内更稳妥的选择"
+        category.isNotBlank() -> "${category}里的稳妥选择"
+        else -> "适合当前需求的稳妥选择"
+    }
+}
+
+private fun String?.cleanRecommendationTitle(): String? {
+    return asRecommendationTitleOrNull()
+    val value = this?.trim().orEmpty()
+    if (value.isBlank() || value.equals("null", ignoreCase = true)) {
+        return null
+    }
+    val normalized = value.replace(" ", "")
+    val mechanical = normalized.matches(Regex("""^方案[一二三四五六七八九十\d]+$""")) ||
+        normalized.matches(Regex("""^推荐[一二三四五六七八九十\d]+$""")) ||
+        normalized.matches(Regex("""^第[一二三四五六七八九十\d]+个?推荐$""")) ||
+        normalized == "首选方案" ||
+        normalized == "备选方案"
+    if (mechanical) {
+        return null
+    }
+    return value.takeIf { it.length <= 28 }
+}
+
+private fun String.hasAny(vararg keywords: String): Boolean {
+    return keywords.any { keyword -> contains(keyword, ignoreCase = true) }
 }
 
 @Composable
@@ -856,8 +976,8 @@ fun FinalComparisonSummary(products: List<ProductUiModel>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Lg),
@@ -866,13 +986,13 @@ fun FinalComparisonSummary(products: List<ProductUiModel>) {
             Text(
                 text = "商品概览",
                 style = AppTypography.TitleSmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             products.take(3).forEach { product ->
                 Text(
                     text = "${product.displayTitleShort} · ¥${formatPrice(product.price)}",
                     style = AppTypography.BodySmall,
-                    color = AppColors.TextSecondary,
+                    color = ChatColors.TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -882,12 +1002,39 @@ fun FinalComparisonSummary(products: List<ProductUiModel>) {
 }
 
 @Composable
+private fun RecommendationTagRow(tags: List<String>) {
+    val displayTags = tags
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinct()
+        .take(3)
+    if (displayTags.isEmpty()) {
+        return
+    }
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+    ) {
+        displayTags.forEach { tag ->
+            TagChip(
+                text = tag,
+                tone = TagChipTone.Warm,
+                containerColor = ChatColors.TagBackground,
+                contentColor = ChatColors.TagText,
+                borderColor = ChatColors.Border,
+            )
+        }
+    }
+}
+
+@Composable
 fun EmptyProductsCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Lg),
@@ -896,12 +1043,12 @@ fun EmptyProductsCard() {
             Text(
                 text = "暂时没有找到完全符合条件的商品",
                 style = AppTypography.TitleSmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             Text(
                 text = "可以尝试放宽预算或调整筛选条件。",
                 style = AppTypography.Body,
-                color = AppColors.TextSecondary,
+                color = ChatColors.TextSecondary,
             )
         }
     }
@@ -932,15 +1079,15 @@ private fun FollowUpChip(
 ) {
     Surface(
         shape = RoundedCornerShape(AppRadius.Pill),
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.BorderStrong),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
         modifier = Modifier.clickable(onClick = onClick),
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
             style = AppTypography.CaptionStrong,
-            color = AppColors.TextPrimary,
+            color = ChatColors.TextPrimary,
         )
     }
 }
@@ -953,8 +1100,8 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = PanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Column(
             modifier = Modifier.padding(AppSpacing.Lg),
@@ -963,20 +1110,20 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
             Text(
                 text = "核心字段对比",
                 style = AppTypography.TitleSmall,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             products.take(3).forEachIndexed { index, product ->
                 Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm)) {
                     Text(
                         text = "商品 ${index + 1}",
                         style = AppTypography.CaptionStrong,
-                        color = AppColors.TextSecondary,
+                        color = ChatColors.TextSecondary,
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = product.displayTitleShort,
                             style = AppTypography.BodyStrong,
-                            color = AppColors.TextPrimary,
+                            color = ChatColors.TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -985,7 +1132,7 @@ fun ProductCompareCard(products: List<ProductUiModel>) {
                                 .filter { it.isNotBlank() }
                                 .joinToString(" · "),
                             style = AppTypography.BodySmall,
-                            color = AppColors.TextSecondary,
+                            color = ChatColors.TextSecondary,
                             maxLines = 1,
                         )
                     }
@@ -1009,8 +1156,8 @@ fun CartCheckoutBar(
             .fillMaxWidth()
             .padding(bottom = AppSpacing.Sm),
         shape = PanelShape,
-        color = AppColors.Surface,
-        border = BorderStroke(1.dp, AppColors.Border),
+        color = ChatColors.Surface,
+        border = BorderStroke(1.dp, ChatColors.Border),
     ) {
         Row(
             modifier = Modifier.padding(AppSpacing.Md),
@@ -1021,7 +1168,7 @@ fun CartCheckoutBar(
                 text = "已选 $cartItemCount 件",
                 modifier = Modifier.weight(1f),
                 style = AppTypography.BodyStrong,
-                color = AppColors.TextPrimary,
+                color = ChatColors.TextPrimary,
             )
             SecondaryButton(text = "购物车", onClick = onCartClick)
             PrimaryButton(text = "结算", onClick = onCheckoutClick)
@@ -1039,7 +1186,7 @@ private fun ParagraphText(text: String) {
                 Text(
                     text = paragraph,
                     style = AppTypography.Body,
-                    color = AppColors.TextPrimary,
+                    color = ChatColors.TextPrimary,
                 )
             }
     }

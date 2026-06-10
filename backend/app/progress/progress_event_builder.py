@@ -202,6 +202,13 @@ class ProgressEventBuilder:
             if not templates:
                 continue
             text = self._progress_text(message=message, stage_key=stage_key, templates=templates, state=state)
+            detail_text = self._stage_detail_text(
+                stage_key=stage_key,
+                message=message,
+                is_old_user=bool(state.recent_messages or state.user_profile_summary_text),
+                cart_sub_action=cart_sub_action,
+                step=index,
+            )
             events.append(
                 {
                     "event_type": "progress_message",
@@ -210,7 +217,10 @@ class ProgressEventBuilder:
                     "stage": template_group.get("stage", stage_key),
                     "stage_key": stage_key,
                     "text": text,
+                    "detail_text": detail_text,
+                    "display_text": f"{text}\n{detail_text}" if detail_text else text,
                     "display_duration_ms": duration_ms,
+                    "display_duration_sec": round(duration_ms / 1000, 1),
                     "can_be_replaced": True,
                 }
             )
@@ -245,6 +255,13 @@ class ProgressEventBuilder:
                 text = "正在结合您的历史偏好和购买习惯筛选商品。"
             else:
                 text = templates[_stable_index(message, stage_key, len(templates))]
+            detail_text = self._stage_detail_text(
+                stage_key=stage_key,
+                message=message,
+                is_old_user=is_old_user,
+                cart_sub_action=cart_sub_action,
+                step=index,
+            )
             events.append(
                 {
                     "event_type": "progress_message",
@@ -253,11 +270,124 @@ class ProgressEventBuilder:
                     "stage": template_group.get("stage", stage_key),
                     "stage_key": stage_key,
                     "text": text,
+                    "detail_text": detail_text,
+                    "display_text": f"{text}\n{detail_text}" if detail_text else text,
                     "display_duration_ms": duration_ms,
+                    "display_duration_sec": round(duration_ms / 1000, 1),
                     "can_be_replaced": True,
                 }
             )
         return events
+
+    def _stage_detail_text(
+        self,
+        *,
+        stage_key: str,
+        message: str,
+        is_old_user: bool,
+        cart_sub_action: str | None,
+        step: int,
+    ) -> str | None:
+        """Build one short UI-facing processing note.
+
+        The note describes observable backend work, not model inner reasoning,
+        so it can be generated locally and emitted immediately.
+        """
+
+        if stage_key in {"cart_inventory_check", "cart_updating", "cart_checkout_processing"}:
+            if cart_sub_action == "cart_add":
+                return _progress_detail(
+                    "我会先核对商品和数量，再同步购物车状态。",
+                    "这一步会聚焦你明确要加购的商品，让购物车结果保持清楚准确。",
+                )
+            if cart_sub_action == "cart_remove":
+                return _progress_detail(
+                    "我会优先确认你要调整的商品，让购物车变化和你的表达保持一致。",
+                    "如果你用了“刚才那个”或“第二个”这样的说法，系统会先根据最近的商品记录准确定位目标。",
+                )
+            if cart_sub_action == "checkout":
+                return _progress_detail(
+                    "我会核对购物车商品、数量和金额，再生成可展示的结算信息。",
+                    "信息充足时会直接准备订单确认所需的数据，必要时也会给出清楚的下一步提示。",
+                )
+            return _progress_detail(
+                "我会只执行你明确要求的购物车动作。",
+                "商品、数量和操作结果都会从后端状态中确认后再返回给前端。",
+            )
+
+        if stage_key == "memory_context" and is_old_user:
+            return _progress_detail(
+                "历史偏好只作为软参考，本轮你明确说出的条件会优先执行。",
+                "系统会把你这次说的预算、品类和偏好放在最前面，再结合历史选择优化排序。",
+            )
+
+        if stage_key not in {"retrieval", "selection_rerank", "response_composition"}:
+            return None
+        if step > 5:
+            return None
+
+        domain = _domain_key(message)
+        if stage_key == "retrieval":
+            return {
+                "digital": _progress_detail(
+                    "我会重点看预算、核心功能和日常体验，优先寻找更贴近需求的数码商品。",
+                    "如果你提到拍照、续航、办公或游戏，我会把这些功能词转成更具体的检索条件。",
+                ),
+                "beauty": _progress_detail(
+                    "我会优先核对品类、肤质、功效和成分品牌偏好。",
+                    "像油皮、干皮、敏感肌这类信息会作为适配信号参与筛选，让推荐更贴近真实护肤需求。",
+                ),
+                "clothing": _progress_detail(
+                    "我会结合版型、材质和使用场景，优先找真正适合穿搭或出行的商品。",
+                    "如果你说的是通勤、旅行或运动，我会把场景拆成更稳定的商品筛选方向。",
+                ),
+                "food": _progress_detail(
+                    "我会留意口味、甜度、规格和适合分享/日常饮用的特点。",
+                    "如果你提到无糖、早餐、办公室或健身后补给，我会优先找更贴近这些场景的真实商品。",
+                ),
+            }.get(
+                domain,
+                _progress_detail(
+                    "我会先从真实商品库里找可展示的候选商品，再做筛选。",
+                    "商品名称、价格和推荐依据都会以数据库信息为准，让前端展示更稳定可靠。",
+                ),
+            )
+        if stage_key == "selection_rerank":
+            return {
+                "digital": _progress_detail(
+                    "排序时会更重视功能匹配、价格段和实际使用场景。",
+                    "我会优先展示和你需求更接近的设备，让预算、功能和场景一起参与选择。",
+                ),
+                "beauty": _progress_detail(
+                    "排序时会更重视功效贴合、肤质适配和评价反馈。",
+                    "如果你提出了成分或肤感偏好，我会把这些重点放进推荐优先级里一起考虑。",
+                ),
+                "clothing": _progress_detail(
+                    "排序时会更重视场景适配、舒适度和搭配实用性。",
+                    "同类商品里会优先展示更适合当前场景的款式，方便你直接对比卡片。",
+                ),
+                "food": _progress_detail(
+                    "排序时会更重视口味偏好、健康约束和规格价格。",
+                    "我会优先展示更贴近你口味和场景的选择，同时保留有参考价值的真实备选。",
+                ),
+            }.get(
+                domain,
+                _progress_detail(
+                    "排序时会优先保留更贴合你核心需求的商品。",
+                    "候选结果会按匹配度整理，方便你直接查看最值得关注的商品卡片。",
+                ),
+            )
+        if stage_key == "response_composition":
+            if is_old_user:
+                return _progress_detail(
+                    "我会把个性化重点自然放进语气、排序和推荐理由里。",
+                    "这些偏好只作为辅助参考，最终展示仍然以本轮需求和商品事实为准。",
+                )
+            return _progress_detail(
+                "我会把结论写短一点，更多细节交给商品卡片展示。",
+                "回复会优先给出可行动的推荐结果，让你能快速看到商品、价格和主要理由。",
+            )
+        return None
 
     @staticmethod
     def _progress_text(
@@ -361,3 +491,25 @@ def _stable_index(message: str, key: str, size: int) -> int:
         return 0
     value = sum(ord(ch) for ch in f"{message}:{key}")
     return value % size
+
+
+def _progress_detail(*sentences: str) -> str:
+    """Join 2-3 safe, user-facing progress detail sentences."""
+
+    cleaned = [str(item).strip().rstrip("。！？") for item in sentences if str(item or "").strip()]
+    if len(cleaned) < 2:
+        cleaned.append("系统会以商品库中的真实信息为准，整理成前端可以直接展示的结果")
+    return "。".join(cleaned[:3]) + "。"
+
+
+def _domain_key(message: str) -> str:
+    text = message or ""
+    if any(term in text for term in ["手机", "耳机", "电脑", "平板", "拍照", "续航", "数码", "充电", "降噪"]):
+        return "digital"
+    if any(term in text for term in ["护肤", "防晒", "面霜", "精华", "洁面", "洗面奶", "洁面乳", "爽肤水", "化妆水", "口红", "粉底", "眼线", "肤质", "控油", "保湿"]):
+        return "beauty"
+    if any(term in text for term in ["短袖", "外套", "背包", "鞋", "穿搭", "通勤", "旅行", "健身", "瑜伽", "跑步"]):
+        return "clothing"
+    if any(term in text for term in ["饮料", "零食", "早餐", "咖啡", "低糖", "无糖", "好吃", "好喝", "食品"]):
+        return "food"
+    return "general"

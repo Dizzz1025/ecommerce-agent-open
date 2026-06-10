@@ -19,6 +19,7 @@ class RecommendationPlanItem(BaseModel):
     option_label: str
     plan_type: str
     name: str
+    display_title: str | None = None
     brand: str
     category: str
     sub_category: str | None = None
@@ -46,12 +47,13 @@ class ParsedPresentationEvent:
     event_type: Literal["section_start", "text_delta", "section_end"]
     section_id: int
     text: str = ""
+    display_title: str | None = None
 
 
 class RecommendationPresentationParser:
     """Incrementally parse SECTION markers without waiting for the full answer."""
 
-    _start_re = re.compile(r"\[\[SECTION:(\d+)\]\]")
+    _start_re = re.compile(r"\[\[SECTION:(\d+)(?:\|TITLE:([^\]]+))?\]\]")
     _end_marker = "[[END_SECTION]]"
 
     def __init__(self) -> None:
@@ -75,11 +77,17 @@ class RecommendationPresentationParser:
                 if marker is None:
                     self._buffer = self._possible_marker_tail(self._buffer)
                     break
-                kind, start, end, section_id = marker
+                kind, start, end, section_id, display_title = marker
                 if kind == "start":
                     self._buffer = self._buffer[end:]
                     self._active_section_id = section_id
-                    events.append(ParsedPresentationEvent("section_start", section_id))
+                    events.append(
+                        ParsedPresentationEvent(
+                            "section_start",
+                            section_id,
+                            display_title=(display_title or "").strip() or None,
+                        )
+                    )
                     continue
                 self._buffer = self._buffer[end:]
                 continue
@@ -91,7 +99,7 @@ class RecommendationPresentationParser:
                 self._buffer = tail
                 break
 
-            kind, start, end, section_id = marker
+            kind, start, end, section_id, display_title = marker
             if start > 0:
                 text = self._buffer[:start]
                 if text:
@@ -103,7 +111,13 @@ class RecommendationPresentationParser:
                 continue
             events.append(ParsedPresentationEvent("section_end", self._active_section_id))
             self._active_section_id = section_id
-            events.append(ParsedPresentationEvent("section_start", section_id))
+            events.append(
+                ParsedPresentationEvent(
+                    "section_start",
+                    section_id,
+                    display_title=(display_title or "").strip() or None,
+                )
+            )
             self._buffer = self._buffer[end:]
 
         if final and self._active_section_id is not None and not self._buffer:
@@ -111,14 +125,22 @@ class RecommendationPresentationParser:
             self._active_section_id = None
         return events
 
-    def _next_marker(self) -> tuple[str, int, int, int] | None:
+    def _next_marker(self) -> tuple[str, int, int, int, str | None] | None:
         start_match = self._start_re.search(self._buffer)
         end_index = self._buffer.find(self._end_marker)
-        candidates: list[tuple[str, int, int, int]] = []
+        candidates: list[tuple[str, int, int, int, str | None]] = []
         if start_match is not None:
-            candidates.append(("start", start_match.start(), start_match.end(), int(start_match.group(1))))
+            candidates.append(
+                (
+                    "start",
+                    start_match.start(),
+                    start_match.end(),
+                    int(start_match.group(1)),
+                    start_match.group(2),
+                )
+            )
         if end_index >= 0:
-            candidates.append(("end", end_index, end_index + len(self._end_marker), -1))
+            candidates.append(("end", end_index, end_index + len(self._end_marker), -1, None))
         if not candidates:
             return None
         return min(candidates, key=lambda item: item[1])
@@ -167,6 +189,7 @@ def build_recommendation_plan(
                 option_label=(presentation.option_label if presentation else None) or _option_label(index),
                 plan_type=_plan_type(index=index, card=card, value_sku=value_sku),
                 name=card.name,
+                display_title=card.display_title,
                 brand=card.brand,
                 category=card.category,
                 sub_category=card.sub_category,
@@ -194,15 +217,18 @@ def recommendation_plan_prompt(plan: RecommendationPlan) -> str:
     return (
         "RECOMMENDATION_PRESENTATION_STREAM\n"
         "You are only the presentation layer. The backend has already selected and ranked products.\n"
-        "Write user-visible Chinese recommendation reasons for all sections in order.\n"
+        "Write one user-visible Chinese display_title and recommend_reason for all sections in order.\n"
         "Never change, invent, omit, or contradict product IDs, ranks, prices, stock, specs, parameters, or business results.\n"
         "Use only the facts in RecommendationPlan. Do not expose hidden reasoning.\n"
+        "Each section marker must include TITLE. TITLE is an 8-20 Chinese character need-oriented short title, not a bare category, tag, product name, plan number, or generic phrase.\n"
+        "The section body is recommend_reason only: 2-3 concise Chinese sentences highlighting verified selling points, user fit, scene, difference, or necessary caution.\n"
+        "Do not repeat TITLE in recommend_reason. Do not mention frontend card actions such as viewing card details, adding to candidates, adding to cart, or clicking cards.\n"
         "Output exactly this streaming protocol, with no text outside markers:\n"
-        "[[SECTION:0]]\n"
-        "section 0 recommendation text\n"
+        "[[SECTION:0|TITLE:section 0 display_title]]\n"
+        "section 0 recommend_reason text\n"
         "[[END_SECTION]]\n"
-        "[[SECTION:1]]\n"
-        "section 1 recommendation text\n"
+        "[[SECTION:1|TITLE:section 1 display_title]]\n"
+        "section 1 recommend_reason text\n"
         "[[END_SECTION]]\n"
         "Keep each section concise, natural, and grounded in the matching_points, facts, and cautions.\n"
         f"RecommendationPlan JSON:\n{json.dumps(plan.model_dump(), ensure_ascii=False, default=str)}"
@@ -227,6 +253,7 @@ def _facts(*, card: ProductCard, product: Product | None) -> dict[str, Any]:
         "price": card.price,
         "stock": card.stock,
         "brand": card.brand,
+        "display_title": card.display_title,
         "category": card.category,
         "sub_category": card.sub_category,
         "highlight_short": card.highlight_short,

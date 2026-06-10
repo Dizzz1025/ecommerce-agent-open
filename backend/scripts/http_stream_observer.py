@@ -34,6 +34,8 @@ def main() -> None:
     parser.add_argument("--resume_session_id", default=None, help="指定历史会话ID；传入后会自动触发恢复")
     parser.add_argument("--new_session", action="store_true", help="是否开启新会话")
     parser.add_argument("--image_path", default=None, help="本地图片路径，JSON 接口调试用")
+    parser.add_argument("--voice_file", default=None, help="本地语音文件路径；传入后调用 /api/chat/stream/voice")
+    parser.add_argument("--tts_response", action="store_true", help="语音对话时是否合成语音回复")
     parser.add_argument("--timeout", type=float, default=100.0, help="单轮最长等待秒数")
     args = parser.parse_args()
 
@@ -52,8 +54,9 @@ def main() -> None:
         "new_session": args.new_session,
         "metadata": metadata,
     }
-    url = args.base_url.rstrip("/") + "/api/chat/stream"
-    print(f"POST {url}")
+    use_voice = bool(args.voice_file)
+    url = args.base_url.rstrip("/") + ("/api/chat/stream/voice" if use_voice else "/api/chat/stream")
+    print(f"POST {url}", flush=True)
     print("提示：如果 progress 很快出现，说明真实 HTTP 流式输出正常；正式结果出现后前端应停止 progress。")
 
     stream_start = perf_counter()
@@ -63,42 +66,69 @@ def main() -> None:
     first_progress_ms: float | None = None
     first_formal_ms: float | None = None
 
-    with httpx.stream("POST", url, json=payload, timeout=args.timeout) as response:
-        response.raise_for_status()
-        for raw_line in response.iter_lines():
-            line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
-            if line.startswith("event:"):
-                current_event = line.split(":", 1)[1].strip()
-                continue
-            if line.startswith("data:"):
-                data_lines.append(line.split(":", 1)[1].strip())
-                continue
-            if line.strip() != "" or not data_lines:
-                continue
+    request_kwargs: dict[str, Any]
+    files = None
+    if use_voice:
+        voice_path = args.voice_file
+        files = {"audio": open(voice_path, "rb")}
+        request_kwargs = {
+            "data": {
+                "user_id": args.user_id,
+                "session_id": args.session_id,
+                "resume": str(args.resume).lower(),
+                "new_session": str(args.new_session).lower(),
+                "tts_response": str(args.tts_response).lower(),
+                **({"resume_session_id": args.resume_session_id} if args.resume_session_id else {}),
+            },
+            "files": files,
+        }
+    else:
+        request_kwargs = {"json": payload}
 
-            elapsed_ms = (perf_counter() - stream_start) * 1000
-            data = _parse_json(data_lines)
-            event_counts[current_event] = event_counts.get(current_event, 0) + 1
-            if current_event == "progress":
-                first_progress_ms = first_progress_ms if first_progress_ms is not None else elapsed_ms
-                progress_text = data.get("progress_message") or data.get("text") or data.get("message")
-                print(f"[{elapsed_ms:8.1f} ms] progress: {progress_text}")
-            elif current_event == "turn_result":
-                first_formal_ms = first_formal_ms if first_formal_ms is not None else elapsed_ms
-                _print_turn_result(elapsed_ms, data)
-            elif current_event in {"state", "token", "product_cards", "products", "frontend_action", "cart", "cart_update"}:
-                if first_formal_ms is None and current_event != "token":
-                    first_formal_ms = elapsed_ms
-                if current_event != "token":
-                    print(f"[{elapsed_ms:8.1f} ms] {current_event}")
-            elif current_event == "done":
-                print(f"[{elapsed_ms:8.1f} ms] done: {data.get('finish_reason')}")
-                break
-            elif current_event == "error":
-                print(f"[{elapsed_ms:8.1f} ms] error: {data}")
+    try:
+        with httpx.stream("POST", url, timeout=args.timeout, **request_kwargs) as response:
+            response.raise_for_status()
+            for raw_line in response.iter_lines():
+                line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
+                if line.startswith("event:"):
+                    current_event = line.split(":", 1)[1].strip()
+                    continue
+                if line.startswith("data:"):
+                    data_lines.append(line.split(":", 1)[1].strip())
+                    continue
+                if line.strip() != "" or not data_lines:
+                    continue
 
-            current_event = "message"
-            data_lines = []
+                elapsed_ms = (perf_counter() - stream_start) * 1000
+                data = _parse_json(data_lines)
+                event_counts[current_event] = event_counts.get(current_event, 0) + 1
+                if current_event == "progress":
+                    first_progress_ms = first_progress_ms if first_progress_ms is not None else elapsed_ms
+                    progress_text = data.get("display_text") or data.get("progress_message") or data.get("text") or data.get("message")
+                    print(f"[{elapsed_ms:8.1f} ms] progress: {progress_text}", flush=True)
+                elif current_event == "voice_transcript":
+                    print(f"[{elapsed_ms:8.1f} ms] voice_transcript: {data.get('text') or data.get('message')}", flush=True)
+                elif current_event == "voice_output":
+                    print(f"[{elapsed_ms:8.1f} ms] voice_output: {data.get('url') or data.get('message')}", flush=True)
+                elif current_event == "turn_result":
+                    first_formal_ms = first_formal_ms if first_formal_ms is not None else elapsed_ms
+                    _print_turn_result(elapsed_ms, data)
+                elif current_event in {"state", "token", "product_cards", "products", "frontend_action", "cart", "cart_update"}:
+                    if first_formal_ms is None and current_event != "token":
+                        first_formal_ms = elapsed_ms
+                    if current_event != "token":
+                        print(f"[{elapsed_ms:8.1f} ms] {current_event}", flush=True)
+                elif current_event == "done":
+                    print(f"[{elapsed_ms:8.1f} ms] done: {data.get('finish_reason')}", flush=True)
+                    break
+                elif current_event == "error":
+                    print(f"[{elapsed_ms:8.1f} ms] error: {data}", flush=True)
+
+                current_event = "message"
+                data_lines = []
+    finally:
+        if files:
+            files["audio"].close()
 
     total_ms = (perf_counter() - stream_start) * 1000
     print("\n--- 流式统计")

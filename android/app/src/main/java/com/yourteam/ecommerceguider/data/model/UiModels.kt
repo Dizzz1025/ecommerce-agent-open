@@ -24,6 +24,7 @@ data class ProductReviewUiModel(
 
 data class ProductPresentationUiModel(
     val type: String = "",
+    val title: String? = null,
     val shortTitle: String? = null,
     val optionLabel: String? = null,
     val reason: String? = null,
@@ -32,6 +33,12 @@ data class ProductPresentationUiModel(
     val summary: String? = null,
     val advantages: List<String> = emptyList(),
     val suitableFor: String? = null,
+    val keyFeatures: List<String> = emptyList(),
+    val matchedNeed: String? = null,
+    val usageAdvice: String? = null,
+    val bundleRole: String? = null,
+    val bundleReason: String? = null,
+    val usageScenario: String? = null,
     val contentSource: String = "",
 )
 
@@ -41,6 +48,7 @@ data class ProductUiModel(
     val name: String,
     val title: String? = null,
     val shortTitle: String? = null,
+    val recommendationDisplayTitle: String? = null,
     val category: String,
     val brand: String,
     val price: Double,
@@ -51,6 +59,8 @@ data class ProductUiModel(
     val imagePath: String? = null,
     val subCategory: String? = null,
     val reason: String? = null,
+    val recommendTitle: String? = null,
+    val recommendReason: String? = null,
     val highlightShort: String = "",
     val highlightDetail: String = "",
     val productHighlight: String = "",
@@ -92,10 +102,54 @@ data class ProductUiModel(
         ).firstOrNull().orEmpty()
 
     val displayTags: List<String>
-        get() = (tags + suitableScenarios + targetUserTags + matchedReasons)
+        get() = (tags + suitableScenarios + targetUserTags)
             .filter { it.isNotBlank() }
             .distinct()
             .take(5)
+
+    val recommendationTags: List<String>
+        get() = listOfNotNull(
+            presentation?.matchedNeed,
+            presentation?.usageScenario,
+            presentation?.suitableFor,
+            presentation?.bundleRole,
+        )
+            .plus(presentation?.keyFeatures.orEmpty())
+            .plus(presentation?.advantages.orEmpty())
+            .plus(tags)
+            .plus(suitableScenarios)
+            .plus(targetUserTags)
+            .plus(nonStandardQueryTags)
+            .plus(matchedReasons)
+            .mapNotNull { it.toRecommendationTagOrNull() }
+            .distinct()
+            .take(3)
+}
+
+private fun String.toRecommendationTagOrNull(): String? {
+    val normalized = trim()
+        .removePrefix("匹配")
+        .removePrefix("适合")
+        .removeSuffix("选择")
+        .trim(' ', '，', ',', '。', '.', '：', ':')
+    if (normalized.isBlank()) {
+        return null
+    }
+    val mechanicalTags = setOf(
+        "类目一致",
+        "已排除否定条件",
+        "已避开指定品牌",
+        "匹配度一般，作为备选",
+        "匹配度一般",
+        "作为备选",
+    )
+    if (normalized in mechanicalTags) {
+        return null
+    }
+    if (normalized.length > 12) {
+        return null
+    }
+    return normalized
 }
 
 data class CartItemUiModel(
@@ -171,7 +225,6 @@ data class AssistantProcessStageUiModel(
     val displayLabel: String,
     val status: AssistantProcessStageStatus = AssistantProcessStageStatus.Pending,
     val startedElapsedMs: Long? = null,
-    val durationMs: Long? = null,
     val summary: String? = null,
 )
 
@@ -191,6 +244,7 @@ data class ChatMessageUiModel(
     val content: String,
     val isUser: Boolean,
     val isStreaming: Boolean = false,
+    val thinking: AssistantThinkingUiModel? = null,
     val timestamp: Long = System.currentTimeMillis(),
 )
 
@@ -207,10 +261,13 @@ data class RecommendationSectionUiModel(
     val sectionIndex: Int,
     val skuId: String,
     val optionLabel: String,
+    val displayTitle: String = "",
     val text: String = "",
     val displayText: String = "",
+    val recommendReason: String = "",
     val reason: String? = null,
     val tradeOff: String? = null,
+    val recommendationTags: List<String> = emptyList(),
     val productName: String? = null,
     val brand: String? = null,
     val product: ProductUiModel? = null,
@@ -218,6 +275,26 @@ data class RecommendationSectionUiModel(
 ) {
     val stableKey: String
         get() = "$turnId-$sectionIndex-$skuId"
+}
+
+data class RecommendationCopyUiModel(
+    val title: String = "",
+    val reason: String = "",
+)
+
+sealed interface VoiceInputState {
+    data object Idle : VoiceInputState
+    data object Recording : VoiceInputState
+    data object Transcribing : VoiceInputState
+    data object Sending : VoiceInputState
+    data class Error(val message: String) : VoiceInputState
+}
+
+sealed interface TtsPlaybackState {
+    data object Idle : TtsPlaybackState
+    data object Preparing : TtsPlaybackState
+    data object Playing : TtsPlaybackState
+    data class Error(val message: String) : TtsPlaybackState
 }
 
 data class SpecSelectionOptionUiModel(
@@ -261,7 +338,6 @@ data class ChatStreamEvent(
     val progressStageId: String? = null,
     val progressDisplayLabel: String? = null,
     val progressSummary: String? = null,
-    val stageDurationMs: Long? = null,
     val totalDurationMs: Long? = null,
     val responseStreamSupported: Boolean? = null,
     val products: List<ProductUiModel> = emptyList(),

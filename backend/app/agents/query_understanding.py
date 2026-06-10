@@ -29,6 +29,7 @@ class QueryUnderstandingModule:
         "不甜", "无油", "非油炸", "小包装", "咸味", "儿童", "小朋友", "亲子", "分享",
         "基础款", "基础", "纯色", "无印花", "大Logo", "大logo",
         "发圈", "批量", "细头", "不防水", "办公文具", "文具", "收纳", "桌面", "职场新人",
+        "底妆", "卡粉", "服帖", "墨水屏", "看书", "备份", "存储", "散热", "补给", "办公室", "低负担",
     ]
     _feature_normalization = {
         "轻一点": "轻量",
@@ -39,7 +40,7 @@ class QueryUnderstandingModule:
         "不粘": "不黏",
         "不闷": "透气",
         "水感": "轻薄",
-        "低卡": "低脂",
+        "低卡": "低卡",
         "不甜": "低糖",
         "无油": "无油",
         "非油炸": "无油",
@@ -64,9 +65,15 @@ class QueryUnderstandingModule:
     _category_aliases = {
         "洗面奶": ("美妆护肤", "洁面"),
         "洁面": ("美妆护肤", "洁面"),
+        "男士洗面奶": ("美妆护肤", "男士洁面"),
+        "男士洁面": ("美妆护肤", "男士洁面"),
         "精华": ("美妆护肤", "精华"),
         "面霜": ("美妆护肤", "面霜"),
         "防晒": ("美妆护肤", "防晒"),
+        "防晒霜": ("美妆护肤", "防晒"),
+        "防晒乳": ("美妆护肤", "防晒"),
+        "防晒露": ("美妆护肤", "防晒"),
+        "防晒喷雾": ("美妆护肤", "防晒喷雾"),
         "眼霜": ("美妆护肤", "眼霜"),
         "粉底": ("美妆护肤", "粉底液"),
         "粉底液": ("美妆护肤", "粉底液"),
@@ -174,9 +181,15 @@ class QueryUnderstandingModule:
         "咖啡": ("食品饮料", "咖啡"),
         "早餐速食": ("食品饮料", "方便食品"),
         "速食早餐": ("食品饮料", "方便食品"),
-        "早餐": ("食品饮料", "方便食品"),
+        "早餐": ("食品饮料", "早餐"),
+        "无糖饮料": ("食品饮料", None),
+        "低糖饮料": ("食品饮料", None),
         "饮料": ("食品饮料", None),
+        "饮品": ("食品饮料", None),
+        "喝点什么": ("食品饮料", None),
+        "想喝": ("食品饮料", None),
         "喝的": ("食品饮料", None),
+        "喝点": ("食品饮料", None),
         "茶": ("食品饮料", "茶饮"),
         "茶饮": ("食品饮料", "茶饮"),
         "气泡水": ("食品饮料", "碳酸饮料"),
@@ -205,6 +218,75 @@ class QueryUnderstandingModule:
         "通勤小物件": ("日用百货", "通勤小物"),
         "通勤小物": ("日用百货", "通勤小物"),
         "礼物": (None, None),
+        "洁面乳": ("美妆护肤", "洁面"),
+        "洁面啫喱": ("美妆护肤", "洁面"),
+        "柔肤水": ("美妆护肤", "化妆水"),
+        "神仙水": ("美妆护肤", "化妆水"),
+        "乳霜": ("美妆护肤", "面霜"),
+        "修复霜": ("美妆护肤", "面霜"),
+        "保湿霜": ("美妆护肤", "面霜"),
+        "小棕瓶": ("美妆护肤", "精华"),
+        "小黑瓶": ("美妆护肤", "精华"),
+        "红腰子": ("美妆护肤", "精华"),
+        "双抗": ("美妆护肤", "精华"),
+        "安瓶": ("美妆护肤", "安瓶"),
+        "次抛": ("美妆护肤", "安瓶"),
+        "定妆粉": ("美妆护肤", "蜜粉"),
+        "粉饼": ("美妆护肤", "蜜粉"),
+        "底妆": ("美妆护肤", "底妆"),
+        "遮瑕": ("美妆护肤", "底妆"),
+        "bb": ("美妆护肤", "BB霜"),
+        "BB": ("美妆护肤", "BB霜"),
+        "BB霜": ("美妆护肤", "BB霜"),
+        "素颜霜": ("美妆护肤", "素颜霜"),
+        "隔离": ("美妆护肤", "隔离霜"),
+        "防晒隔离": ("美妆护肤", "防晒"),
+        "小金管": ("美妆护肤", "防晒"),
+        "下午困": ("食品饮料", "咖啡"),
+        "困了喝": ("食品饮料", "咖啡"),
+        "提神喝": ("食品饮料", "咖啡"),
+        "健身后": ("食品饮料", "健身补给"),
+        "运动后": ("食品饮料", "健身补给"),
+        "补充点东西": ("食品饮料", "健身补给"),
+        "运动补给": ("食品饮料", "健身补给"),
+        "办公室囤货": ("食品饮料", "坚果/零食"),
+        "办公室能囤": ("食品饮料", "坚果/零食"),
+        "办公室囤": ("食品饮料", "坚果/零食"),
+        "低负担零食": ("食品饮料", "蒟蒻果冻"),
+        "低负担": ("食品饮料", "蒟蒻果冻"),
+        "低卡零食": ("食品饮料", "蒟蒻果冻"),
+        "低卡": ("食品饮料", "蒟蒻果冻"),
+        "看书": ("数码电子", "电子书阅读器"),
+        "墨水屏": ("数码电子", "电子书阅读器"),
+        "不伤眼": ("数码电子", "电子书阅读器"),
+        "电子设备": ("数码电子", None),
+        "办公学习": ("数码电子", "办公设备"),
+        "办公的轻薄设备": ("数码电子", "笔记本电脑"),
+        "轻薄设备": ("数码电子", "笔记本电脑"),
+        "备份照片": ("数码电子", "移动硬盘"),
+        "备份很多照片": ("数码电子", "移动硬盘"),
+        "备份资料": ("数码电子", "移动硬盘"),
+        "存照片": ("数码电子", "移动硬盘"),
+        "移动硬盘": ("数码电子", "移动硬盘"),
+        "手机发烫": ("数码电子", "手机散热器"),
+        "发烫": ("数码电子", "手机散热器"),
+        "手机散热": ("数码电子", "手机散热器"),
+        "打游戏": ("数码电子", "手机散热器"),
+        "游戏手柄": ("数码电子", "游戏手柄"),
+        "游戏鼠标": ("数码电子", "游戏鼠标"),
+        "桌面音响": ("数码电子", "蓝牙音箱"),
+        "蓝牙音箱": ("数码电子", "蓝牙音箱"),
+        "出门充电": ("数码电子", "充电宝"),
+        "续航焦虑": ("数码电子", "充电宝"),
+        "外套": ("服饰运动", "外套"),
+        "休闲外套": ("服饰运动", "外套"),
+        "夹克": ("服饰运动", "外套"),
+        "运动外套": ("服饰运动", "外套"),
+        "裤子": ("服饰运动", "裤子"),
+        "瑜伽": ("服饰运动", "瑜伽裤"),
+        "包": ("服饰运动", "背包"),
+        "旅行穿搭": ("服饰运动", None),
+        "健身装备": ("服饰运动", None),
     }
     _brand_aliases = {
         "apple": ["Apple 苹果", "苹果"],
@@ -334,6 +416,7 @@ class QueryUnderstandingModule:
             sub_category=sub_category,
             message=target_text,
             positive_constraints=positive_constraints,
+            negative_constraints=negative_constraints,
             price_range=price_range,
         )
         rewritten_query = self._rewrite_query(
@@ -542,6 +625,7 @@ class QueryUnderstandingModule:
             sub_category=sub_category,
             message=normalized,
             positive_constraints=positive_constraints,
+            negative_constraints=negative_constraints,
             price_range=price_range,
         )
 
@@ -651,7 +735,7 @@ class QueryUnderstandingModule:
         sub_category = _none_if_empty(payload.get("sub_category") or payload.get("product_sub_category") or scope.get("sub_category"))
         intent_plan = self._intent_plan_from_payload(payload, intent, message)
         retrieval_step_source = self._last_retrieval_step_source(intent_plan)
-        local_scope_source = retrieval_step_source or message
+        local_scope_source = _combine_scope_text(retrieval_step_source, message)
 
         explicit_category, explicit_sub_category = self._extract_category(local_scope_source)
         new_explicit_scope = bool(
@@ -662,6 +746,11 @@ class QueryUnderstandingModule:
         )
         if explicit_category and (not category or category != explicit_category):
             category = explicit_category
+            sub_category = explicit_sub_category
+        elif explicit_category and explicit_sub_category and sub_category != explicit_sub_category:
+            # The user's own words are the hard scope. Doubao may generalize
+            # "手机发烫" to "智能手机", but inventory retrieval should keep the
+            # more specific local alias "手机散热器".
             sub_category = explicit_sub_category
         elif explicit_sub_category and not sub_category:
             sub_category = explicit_sub_category
@@ -692,6 +781,14 @@ class QueryUnderstandingModule:
             and any(term in message for term in ["推荐", "想要", "想买", "买", "选择", "挑", "找"])
         ):
             intent = IntentType.FILTER if (self._extract_price_range(message).min is not None or self._extract_price_range(message).max is not None) else IntentType.RECOMMEND
+        if (
+            intent == IntentType.CLARIFY
+            and category
+            and sub_category
+            and explicit_category
+            and any(term in message for term in ["推荐", "想要", "想买", "想看", "看看", "看一下", "买", "选择", "挑", "找"])
+        ):
+            intent = IntentType.REFINE if state and state.dialogue_state_tracking.current_category else IntentType.RECOMMEND
 
         price_range = self._price_range_from_payload(payload.get("price_range"))
         local_price = self._extract_price_range(local_scope_source)
@@ -701,14 +798,16 @@ class QueryUnderstandingModule:
             price_range = PriceRange()
 
         positive_constraints = _safe_str_list(payload.get("positive_constraints") or payload.get("features"))
-        negative_constraints = _safe_str_list(payload.get("negative_constraints"))
+        negative_constraints = _normalize_negative_constraints(_safe_str_list(payload.get("negative_constraints")))
         brands_include = _safe_str_list(payload.get("brands_include"))
         brands_exclude = _safe_str_list(payload.get("brands_exclude"))
         compare_targets = _safe_str_list(payload.get("compare_targets"))
         referents = _safe_str_list(payload.get("referents"))
         mentioned_products = _safe_str_list(payload.get("mentioned_products"))
 
-        negative_constraints = _merge_unique(negative_constraints, self._extract_negative_constraints(local_scope_source))
+        negative_constraints = _normalize_negative_constraints(
+            _merge_unique(negative_constraints, self._extract_negative_constraints(local_scope_source))
+        )
         local_include, local_exclude = self._extract_brands(local_scope_source)
         brands_include = _merge_unique(brands_include, local_include)
         brands_exclude = _merge_unique(brands_exclude, local_exclude)
@@ -719,10 +818,20 @@ class QueryUnderstandingModule:
             positive_constraints = local_positive_constraints
         elif not positive_constraints:
             positive_constraints = local_positive_constraints
+        elif local_positive_constraints:
+            positive_constraints = _merge_unique(positive_constraints, local_positive_constraints)
         if category is None or sub_category is None:
             rule_category, rule_sub_category = self._infer_category_from_feature_rules(local_scope_source, positive_constraints)
             category = category or rule_category
             sub_category = sub_category or rule_sub_category
+        if intent == IntentType.CHITCHAT and (
+            category
+            or sub_category
+            or positive_constraints
+            or negative_constraints
+            or _looks_like_shopping_recommendation(message)
+        ):
+            intent = IntentType.REFINE if state and state.dialogue_state_tracking.current_category and not explicit_category else IntentType.RECOMMEND
 
         inherit_context = bool(payload.get("inherit_context", False))
         if inherit_context and state:
@@ -792,12 +901,16 @@ class QueryUnderstandingModule:
                 sub_category=sub_category,
                 message=local_scope_source,
                 positive_constraints=positive_constraints,
+                negative_constraints=negative_constraints,
                 price_range=price_range,
             )
         if need_clarification and category and sub_category and set(clarification_slots).issubset({"category", "sub_category_or_scene"}):
             need_clarification = False
             clarification_slots = []
         if need_clarification and category and sub_category and intent in {IntentType.RECOMMEND, IntentType.FILTER, IntentType.REFINE}:
+            need_clarification = False
+            clarification_slots = []
+        if need_clarification and category and (positive_constraints or negative_constraints or scenario) and intent in {IntentType.RECOMMEND, IntentType.FILTER, IntentType.REFINE, IntentType.SCENE_BUNDLE}:
             need_clarification = False
             clarification_slots = []
 
@@ -995,12 +1108,24 @@ class QueryUnderstandingModule:
             for product in products
             if product.sub_category
         }
+        virtual_sub_to_main = {
+            "底妆": "美妆护肤",
+            "外套": "服饰运动",
+            "运动鞋": "服饰运动",
+            "裤子": "服饰运动",
+            "饮料": "食品饮料",
+            "早餐": "食品饮料",
+            "健身补给": "食品饮料",
+            "办公设备": "数码电子",
+        }
         if category in sub_to_main and sub_category is None:
             return sub_to_main[category], category
+        if category in virtual_sub_to_main and sub_category is None:
+            return virtual_sub_to_main[category], category
         if category is not None and category not in main_categories:
             category = None
         if sub_category is not None:
-            owner = sub_to_main.get(sub_category)
+            owner = sub_to_main.get(sub_category) or virtual_sub_to_main.get(sub_category)
             if owner is None:
                 sub_category = None
             elif category is None:
@@ -1329,11 +1454,33 @@ class QueryUnderstandingModule:
             found.append("性价比")
         if any(term in message for term in ["不能总吃糖", "少吃糖", "少喝甜", "不甜", "不要甜味", "别太甜", "甜的不好", "对身体不好"]):
             found.extend(["低糖", "无糖"])
+        if _is_beverage_request(message):
+            found.append("饮料")
         if any(term in message for term in ["皮肤干", "有点干", "干燥起皮", "缺水起皮", "缺水", "拔干"]):
             found.extend(["干皮", "补水", "保湿"])
+        if any(term in message for term in ["卡粉", "上妆总是卡粉", "上妆不服帖", "底妆"]):
+            found.extend(["底妆", "保湿", "服帖"])
+        if any(term in message for term in ["下午困", "困了", "犯困", "提神"]):
+            found.extend(["提神", "饮料"])
+        if any(term in message for term in ["健身后", "运动后", "补充点东西", "运动补给"]):
+            found.extend(["健身", "补给", "蛋白"])
+        if any(term in message for term in ["办公室囤", "办公室能囤", "囤点零食"]):
+            found.extend(["办公室", "囤货", "零食"])
+        if any(term in message for term in ["低负担", "不想长胖", "低卡零食", "低卡"]):
+            found.extend(["低卡", "低糖", "低负担"])
+        if any(term in message for term in ["看书", "墨水屏", "不伤眼"]):
+            found.extend(["看书", "护眼", "墨水屏"])
+        if any(term in message for term in ["备份照片", "备份很多照片", "备份资料", "存照片"]):
+            found.extend(["备份", "存储", "大容量"])
+        if any(term in message for term in ["手机发烫", "发烫", "散热"]):
+            found.append("散热")
+        if any(term in message for term in ["外套", "通勤的外套"]):
+            found.extend(["外套", "通勤"])
+        if any(term in message for term in ["三亚", "海边", "度假"]):
+            found.extend(["旅行", "度假", "防晒"])
         if any(term in message for term in ["屏障", "屏障修护", "屏障受损"]):
             found.append("修护")
-        if any(term in message for term in ["不想黏腻", "不想粘腻", "不要黏腻", "不要粘腻", "不黏腻", "不粘腻"]):
+        if any(term in message for term in ["不想黏腻", "不想粘腻", "不要黏腻", "不要粘腻", "不黏腻", "不粘腻", "不要太油", "别太油", "不想太油"]):
             found.extend(["清爽", "不油腻"])
         if any(term in message for term in ["小朋友", "四岁", "4岁", "宝宝", "孩子"]):
             found.extend(["儿童", "小包装"])
@@ -1342,6 +1489,8 @@ class QueryUnderstandingModule:
         return sorted(set(found))
 
     def _extract_category(self, message: str) -> tuple[str | None, str | None]:
+        if any(term in message for term in ["低负担", "不想长胖", "低卡零食", "低卡"]):
+            return "食品饮料", "蒟蒻果冻"
         specific_shoe_aliases = ["篮球鞋", "徒步鞋", "跑鞋", "跑步鞋", "板鞋", "帆布鞋", "拖鞋", "沙滩拖鞋", "训练鞋", "健身鞋"]
         if (
             "鞋" in message
@@ -1363,7 +1512,7 @@ class QueryUnderstandingModule:
     @staticmethod
     def _message_has_real_compare_signal(message: str) -> bool:
         return (
-            any(term in message for term in ["对比", "比较", "哪个更", "哪款更", "哪个好", "哪款好", "区别", "差别", "排一下", "排序", "最适合", "最好喝"])
+            any(term in message for term in ["对比", "比较一下", "帮我比较", "比较第", "比较这", "比较那", "哪个更", "哪款更", "哪个好", "哪款好", "区别", "差别", "排一下", "排序", "最适合", "最好喝"])
             or ("哪个" in message and "更" in message)
         )
 
@@ -1373,6 +1522,32 @@ class QueryUnderstandingModule:
             return "数码电子", "智能手机"
         if any(term in message for term in ["皮肤干", "干燥起皮", "缺水起皮", "屏障修护"]):
             return "美妆护肤", "面霜"
+        if any(term in message for term in ["卡粉", "底妆", "遮瑕", "上妆不服帖", "上妆总是"]):
+            return "美妆护肤", "底妆"
+        if any(term in message for term in ["下午困", "困了喝", "提神喝", "犯困"]):
+            return "食品饮料", "咖啡"
+        if any(term in message for term in ["健身后", "运动后", "补充点东西", "运动补给"]):
+            return "食品饮料", "健身补给"
+        if any(term in message for term in ["早餐", "早饭"]):
+            return "食品饮料", "早餐"
+        if any(term in message for term in ["办公室囤", "能囤的零食", "囤点零食"]):
+            return "食品饮料", "坚果/零食"
+        if any(term in message for term in ["低负担", "不想长胖", "低卡零食", "低卡"]):
+            return "食品饮料", "蒟蒻果冻"
+        if any(term in message for term in ["看书", "墨水屏", "不伤眼", "电子书"]):
+            return "数码电子", "电子书阅读器"
+        if any(term in message for term in ["备份照片", "备份很多照片", "备份资料", "存照片", "存很多照片"]):
+            return "数码电子", "移动硬盘"
+        if any(term in message for term in ["办公的轻薄设备", "办公学习", "轻薄设备", "适合办公"]):
+            return "数码电子", "办公设备"
+        if any(term in message for term in ["手机发烫", "发烫", "手机散热", "散热"]):
+            return "数码电子", "手机散热器"
+        if any(term in message for term in ["通勤的外套", "适合通勤的外套", "外套"]):
+            return "服饰运动", "外套"
+        if any(term in message for term in ["瑜伽的裤子", "瑜伽裤", "瑜伽"]):
+            return "服饰运动", "瑜伽裤"
+        if any(term in message for term in ["三亚", "海边", "度假"]):
+            return "服饰运动", None
         return None, None
 
     def _extract_cart_action(self, message: str, intent: IntentType, referents: list[str]) -> CartAction | None:
@@ -1591,6 +1766,7 @@ class QueryUnderstandingModule:
         message: str,
         positive_constraints: list[str],
         price_range: PriceRange,
+        negative_constraints: list[str] | None = None,
     ) -> tuple[bool, list[str]]:
         if intent in {IntentType.CART_ADD, IntentType.CART_REMOVE, IntentType.CART_UPDATE, IntentType.CART_CLEAR, IntentType.CART_VIEW, IntentType.CART_KEEP_ONLY, IntentType.CHECKOUT, IntentType.COMPARE, IntentType.CHITCHAT, IntentType.PREFERENCE, IntentType.DETAIL}:
             return False, []
@@ -1598,7 +1774,11 @@ class QueryUnderstandingModule:
             return False, []
         if category is None:
             return True, ["category"]
-        if sub_category is None and category in {"服饰运动", "食品饮料", "数码电子", "美妆护肤", "日用百货"} and not positive_constraints:
+        negative_constraints = negative_constraints or []
+        has_specific_constraints = bool(positive_constraints or negative_constraints or price_range.min is not None or price_range.max is not None)
+        if category == "食品饮料" and _is_beverage_request(message) and has_specific_constraints:
+            return False, []
+        if sub_category is None and category in {"服饰运动", "食品饮料", "数码电子", "美妆护肤", "日用百货"} and not has_specific_constraints:
             return True, ["sub_category_or_scene"]
         if any(term in message for term in ["手机", "护肤品", "运动装备", "礼物"]) and not positive_constraints and price_range.max is None:
             return True, ["priority"]
@@ -1695,6 +1875,8 @@ class QueryUnderstandingModule:
         if not label:
             return None, score
         inferred = IntentType(label)
+        if inferred == IntentType.COMPARE and not self._message_has_real_compare_signal(message):
+            return None, score
         if inferred == IntentType.SCENE_BUNDLE and not self._has_scene_bundle_command(message):
             return None, score
         if rule_intent == IntentType.RECOMMEND:
@@ -1715,6 +1897,40 @@ class QueryUnderstandingModule:
             return None, None, score
         category, sub_category = label.split("|", 1)
         return category or None, sub_category or None, score
+
+
+def _combine_scope_text(primary: str | None, full_message: str) -> str:
+    """Combine an LLM step source with the original user sentence.
+
+    Doubao may summarize a retrieval step as "具体单品" or "重新推荐".
+    The original sentence still contains hard facts like "饮料/防晒霜/背包",
+    so local deterministic correction must keep it visible.
+    """
+
+    parts = []
+    for item in [primary, full_message]:
+        text = str(item or "").strip()
+        if text and text not in parts:
+            parts.append(text)
+    return " ".join(parts)
+
+
+def _is_beverage_request(message: str) -> bool:
+    return any(
+        term in message
+        for term in ["饮料", "饮品", "喝的", "喝点", "喝点什么", "想喝", "口渴", "渴了", "一瓶喝"]
+    )
+
+
+def _looks_like_shopping_recommendation(message: str) -> bool:
+    return any(
+        term in message
+        for term in [
+            "想买", "想要", "推荐", "有没有", "有什么", "来点", "吃点", "喝什么", "喝点",
+            "买什么", "需要买什么", "准备什么", "适合用什么", "用什么", "怎么办",
+            "能囤", "囤点", "补充点东西", "电子设备", "装备", "底妆推荐", "具体单品",
+        ]
+    )
 
 
 def _parse_amount(value: str | None) -> float | None:
@@ -1771,15 +1987,32 @@ def _normalize_negative_value(value: str) -> str:
         return ""
     if cleaned in {"贵", "太贵"}:
         return "太贵"
-    if cleaned in {"粘腻", "黏腻", "油腻"}:
+    if cleaned in {"油", "太油", "粘腻", "黏腻", "油腻"}:
         return "油腻"
     if cleaned in {"酒精成分", "乙醇"}:
         return "酒精"
+    if cleaned in {"含酒精", "有酒精", "酒精的"}:
+        return "酒精"
+    if cleaned in {"含糖", "有糖", "糖分", "糖的"}:
+        return "糖"
+    if cleaned in {"糖的饮料", "糖饮料", "含糖饮料", "甜的饮料", "甜饮料"}:
+        return "糖"
     if cleaned in {"紧身款", "修身紧身"}:
         return "紧身"
     if cleaned in {"印花图案", "大Logo印花", "大logo印花", "大logo", "大Logo"}:
         return "印花"
     return cleaned[:8]
+
+
+def _normalize_negative_constraints(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        normalized_value = _normalize_negative_value(text)
+        normalized.append(normalized_value or text)
+    return sorted(set(item for item in normalized if item))
 
 
 def _safe_str_list(value: object) -> list[str]:

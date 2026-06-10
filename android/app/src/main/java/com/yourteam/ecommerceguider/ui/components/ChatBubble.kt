@@ -14,10 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.yourteam.ecommerceguider.data.model.ChatMessageUiModel
-import com.yourteam.ecommerceguider.theme.AppColors
 import com.yourteam.ecommerceguider.theme.AppRadius
 import com.yourteam.ecommerceguider.theme.AppSpacing
 import com.yourteam.ecommerceguider.theme.AppTypography
+import com.yourteam.ecommerceguider.theme.ChatColors
 
 @Composable
 fun ChatBubble(
@@ -40,20 +40,16 @@ fun ChatBubble(
         Surface(
             modifier = Modifier.widthIn(max = maxBubbleWidth),
             shape = shape,
-            color = if (message.isUser) AppColors.SurfaceSoft else AppColors.Surface,
-            border = if (message.isUser) {
-                BorderStroke(1.dp, AppColors.Border)
-            } else {
-                BorderStroke(1.dp, AppColors.Border)
-            },
+            color = if (message.isUser) ChatColors.SurfaceSubtle else ChatColors.Surface,
+            border = BorderStroke(1.dp, ChatColors.Border),
         ) {
             Box(
-                modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = AppSpacing.Sm),
+                modifier = Modifier.padding(horizontal = AppSpacing.Md, vertical = 6.dp),
             ) {
                 Text(
                     text = message.content,
                     style = AppTypography.Body,
-                    color = AppColors.TextPrimary,
+                    color = ChatColors.TextPrimary,
                 )
             }
         }

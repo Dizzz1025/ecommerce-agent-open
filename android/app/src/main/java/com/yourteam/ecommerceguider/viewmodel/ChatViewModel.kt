@@ -1,6 +1,8 @@
 package com.yourteam.ecommerceguider.viewmodel
 
 import android.content.ContentResolver
+import android.media.MediaPlayer
+import android.media.MediaRecorder
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
@@ -17,7 +19,13 @@ import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
+import com.yourteam.ecommerceguider.data.model.TtsPlaybackState
+import com.yourteam.ecommerceguider.data.model.VoiceInputState
+import com.yourteam.ecommerceguider.data.model.asRecommendationTitleOrNull
+import com.yourteam.ecommerceguider.data.model.mergeRecommendationDisplayTitle
+import com.yourteam.ecommerceguider.data.model.sanitizeRecommendReason
 import com.yourteam.ecommerceguider.data.repository.ShoppingRepository
+import java.io.File
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,6 +39,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val STREAM_DEBUG_TAG = "RecommendationStream"
+private const val MIN_VOICE_RECORDING_MS = 700L
+
+fun resolveDisplayName(userId: String?): String? {
+    return userId
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.substringBefore("_")
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+}
 
 class ChatViewModel(
     private val repository: ShoppingRepository = ShoppingRepository(),
@@ -66,8 +84,17 @@ class ChatViewModel(
     private val _cartItemCount = MutableStateFlow(0)
     val cartItemCount: StateFlow<Int> = _cartItemCount.asStateFlow()
 
+    private val _displayName = MutableStateFlow(resolveDisplayName(repository.currentUserId))
+    val displayName: StateFlow<String?> = _displayName.asStateFlow()
+
     private val _isStreaming = MutableStateFlow(false)
     val isStreaming: StateFlow<Boolean> = _isStreaming.asStateFlow()
+
+    private val _voiceInputState = MutableStateFlow<VoiceInputState>(VoiceInputState.Idle)
+    val voiceInputState: StateFlow<VoiceInputState> = _voiceInputState.asStateFlow()
+
+    private val _ttsPlaybackState = MutableStateFlow<TtsPlaybackState>(TtsPlaybackState.Idle)
+    val ttsPlaybackState: StateFlow<TtsPlaybackState> = _ttsPlaybackState.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -86,6 +113,13 @@ class ChatViewModel(
     private var currentAssistantMessageId: String? = null
     private var currentRequestStartElapsedMs: Long = 0L
     private var responseCompletedForCurrentTurn: Boolean = false
+    private var voiceRecorder: MediaRecorder? = null
+    private var voiceFile: File? = null
+    private var voiceTranscriptionJob: Job? = null
+    private var voiceRecordingStartedElapsedMs: Long = 0L
+    private var ttsPlayer: MediaPlayer? = null
+    private var ttsJob: Job? = null
+    private var speakResponseForCurrentTurn: Boolean = false
 
     init {
         refreshCartCount()
@@ -95,19 +129,30 @@ class ChatViewModel(
         stopElapsedTicker()
         cancelRecommendationTypewriters()
         streamJob?.cancel()
+        cancelVoiceInput()
+        stopTtsPlayback()
         super.onCleared()
     }
 
     fun sendMessage(message: String) {
-        if (message.isBlank() || _isStreaming.value) {
-            return
-        }
+        sendTextMessage(message = message, speakResponse = false)
+    }
 
+    private fun sendTextMessage(message: String, speakResponse: Boolean): Boolean {
+        val trimmedMessage = message.trim()
+        if (trimmedMessage.isBlank() || _isStreaming.value) {
+            return false
+        }
+        if (!speakResponse) {
+            stopTtsPlayback()
+        }
         startStream(
-            userMessage = message.trim(),
+            userMessage = trimmedMessage,
             initialThinking = "分析用户需求",
-            stream = repository.streamChat(message.trim()),
+            stream = repository.streamChat(trimmedMessage),
+            speakResponse = speakResponse,
         )
+        return true
     }
 
     fun uploadImageForRecommendation(
@@ -133,12 +178,160 @@ class ChatViewModel(
     fun stopStreaming() {
         streamJob?.cancel()
         streamJob = null
+        speakResponseForCurrentTurn = false
         stopElapsedTicker()
         markInterruptedSections()
         cancelRecommendationTypewritersForTurn(currentTurnId)
         markAssistantMessageDone()
         _isStreaming.value = false
+        if (_voiceInputState.value is VoiceInputState.Sending) {
+            _voiceInputState.value = VoiceInputState.Idle
+        }
         markThinkingFailed()
+    }
+
+    fun toggleVoiceRecording(cacheDir: File) {
+        when (_voiceInputState.value) {
+            VoiceInputState.Recording -> stopVoiceRecordingAndSend()
+            VoiceInputState.Transcribing,
+            VoiceInputState.Sending -> Unit
+
+            VoiceInputState.Idle,
+            is VoiceInputState.Error -> startVoiceRecording(cacheDir)
+        }
+    }
+
+    fun cancelVoiceInput() {
+        val recorder = voiceRecorder
+        voiceRecorder = null
+        voiceTranscriptionJob?.cancel()
+        voiceTranscriptionJob = null
+        runCatching { recorder?.release() }
+        voiceFile?.delete()
+        voiceFile = null
+        voiceRecordingStartedElapsedMs = 0L
+        if (_voiceInputState.value !is VoiceInputState.Idle) {
+            _voiceInputState.value = VoiceInputState.Idle
+        }
+    }
+
+    fun stopTtsPlayback() {
+        ttsJob?.cancel()
+        ttsJob = null
+        val player = ttsPlayer
+        ttsPlayer = null
+        runCatching {
+            if (player?.isPlaying == true) {
+                player.stop()
+            }
+        }
+        runCatching { player?.release() }
+        if (_ttsPlaybackState.value !is TtsPlaybackState.Idle) {
+            _ttsPlaybackState.value = TtsPlaybackState.Idle
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun startVoiceRecording(cacheDir: File) {
+        if (_isStreaming.value) {
+            _cartTip.tryEmit("请先等待当前回复结束")
+            return
+        }
+        stopTtsPlayback()
+        cancelVoiceInput()
+        val result = runCatching {
+            val voiceDir = File(cacheDir, "voice")
+            if (!voiceDir.exists()) {
+                voiceDir.mkdirs()
+            }
+            val file = File.createTempFile("voice_input_", ".m4a", voiceDir)
+            val recorder = MediaRecorder().apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioSamplingRate(44_100)
+                setAudioEncodingBitRate(128_000)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            voiceFile = file
+            voiceRecorder = recorder
+            voiceRecordingStartedElapsedMs = SystemClock.elapsedRealtime()
+        }
+        result
+            .onSuccess {
+                _voiceInputState.value = VoiceInputState.Recording
+                _cartTip.tryEmit("正在录音，再点一次发送")
+            }
+            .onFailure {
+                releaseVoiceRecordingFile()
+                showVoiceError("录音启动失败，请检查麦克风权限。")
+            }
+    }
+
+    private fun stopVoiceRecordingAndSend() {
+        val recorder = voiceRecorder
+        val file = voiceFile
+        val durationMs = SystemClock.elapsedRealtime() - voiceRecordingStartedElapsedMs
+        voiceRecorder = null
+        voiceFile = null
+        voiceRecordingStartedElapsedMs = 0L
+
+        val stopResult = runCatching { recorder?.stop() }
+        runCatching { recorder?.release() }
+        if (stopResult.isFailure || file == null || !file.exists() || file.length() <= 0L) {
+            file?.delete()
+            showVoiceError("录音保存失败，请重新录音。")
+            return
+        }
+        if (durationMs < MIN_VOICE_RECORDING_MS) {
+            file.delete()
+            showVoiceError("录音太短，请稍微说长一点。")
+            return
+        }
+
+        _voiceInputState.value = VoiceInputState.Transcribing
+        voiceTranscriptionJob?.cancel()
+        voiceTranscriptionJob = viewModelScope.launch {
+            try {
+                val result = repository.transcribeVoice(file)
+                result
+                    .onSuccess { transcript ->
+                        val text = transcript.trim()
+                        if (text.isBlank()) {
+                            showVoiceError("没有识别到语音内容，请再试一次。")
+                            return@onSuccess
+                        }
+                        _voiceInputState.value = VoiceInputState.Sending
+                        if (!sendTextMessage(message = text, speakResponse = true)) {
+                            showVoiceError("当前无法发送语音消息，请稍后再试。")
+                        }
+                    }
+                    .onFailure { error ->
+                        if (error is CancellationException) {
+                            return@onFailure
+                        }
+                        showVoiceError(error.message ?: "语音识别失败，请稍后再试。")
+                    }
+            } finally {
+                file.delete()
+                voiceTranscriptionJob = null
+            }
+        }
+    }
+
+    private fun releaseVoiceRecordingFile() {
+        runCatching { voiceRecorder?.release() }
+        voiceRecorder = null
+        voiceFile?.delete()
+        voiceFile = null
+        voiceRecordingStartedElapsedMs = 0L
+    }
+
+    private fun showVoiceError(message: String) {
+        _voiceInputState.value = VoiceInputState.Error(message)
+        _cartTip.tryEmit(message)
     }
 
     fun toggleThinkingExpanded() {
@@ -319,6 +512,7 @@ class ChatViewModel(
         userMessage: String,
         initialThinking: String,
         stream: Flow<ChatStreamEvent>,
+        speakResponse: Boolean = false,
     ) {
         flushRecommendationTypewriters()
         cancelRecommendationTypewriters()
@@ -329,6 +523,7 @@ class ChatViewModel(
         currentAssistantMessageId = null
         currentRequestStartElapsedMs = startedElapsed
         responseCompletedForCurrentTurn = false
+        speakResponseForCurrentTurn = speakResponse
         _activeTurnId.value = turnId
         _activeTurnAllowsEmptyProducts.value = shouldAllowEmptyProductsCard(userMessage)
         _products.value = emptyList()
@@ -366,6 +561,10 @@ class ChatViewModel(
                     finishThinking()
                     markAssistantMessageDone()
                     _isStreaming.value = false
+                    if (_voiceInputState.value is VoiceInputState.Sending) {
+                        _voiceInputState.value = VoiceInputState.Idle
+                    }
+                    speakResponseForCurrentTurn = false
                     return@onFailure
                 }
                 _errorMessage.value = "请求失败，请检查后端服务和真机端口转发。"
@@ -373,11 +572,16 @@ class ChatViewModel(
                 markThinkingFailed()
                 markAssistantMessageDone()
                 _isStreaming.value = false
+                if (_voiceInputState.value is VoiceInputState.Sending) {
+                    _voiceInputState.value = VoiceInputState.Error("请求失败，请检查后端服务和真机端口转发。")
+                }
+                speakResponseForCurrentTurn = false
             }
         }
     }
 
     private fun handleStreamEvent(event: ChatStreamEvent) {
+        logRecommendationVmReceive(event)
         when (event.event) {
             "progress", "process" -> handleProgressEvent(event)
             "generation_started" -> handleGenerationStarted(event)
@@ -479,6 +683,10 @@ class ChatViewModel(
                 markAssistantMessageDone()
                 stopElapsedTicker()
                 markThinkingFailed()
+                if (_voiceInputState.value is VoiceInputState.Sending) {
+                    _voiceInputState.value = VoiceInputState.Error(event.errorMessage ?: "请求失败，请检查后端服务。")
+                }
+                speakResponseForCurrentTurn = false
             }
             "done" -> {
                 _isStreaming.value = false
@@ -486,8 +694,33 @@ class ChatViewModel(
                 finishThinking()
                 markAssistantMessageDone()
                 refreshCartCount()
+                if (_voiceInputState.value is VoiceInputState.Sending) {
+                    _voiceInputState.value = VoiceInputState.Idle
+                }
+                if (speakResponseForCurrentTurn) {
+                    val spokenText = buildSpokenResponseText()
+                    speakResponseForCurrentTurn = false
+                    synthesizeAndPlay(spokenText)
+                }
             }
         }
+    }
+
+    private fun logRecommendationVmReceive(event: ChatStreamEvent) {
+        val section = event.recommendationSection ?: return
+        if (
+            event.event != "recommendation_section_start" &&
+            event.event != "recommendation_text_done" &&
+            event.event != "product_card"
+        ) {
+            return
+        }
+        Log.d(
+            STREAM_DEBUG_TAG,
+            "[recommendation_vm_receive] event=${event.event} sectionIndex=${section.sectionIndex} " +
+                "skuId=${section.skuId} productId=${section.product?.productId.orEmpty()} " +
+                "displayTitle='${section.displayTitle}' recommendReasonLength=${section.recommendReason.length}",
+        )
     }
 
     private fun normalizeSectionTurnId(section: RecommendationSectionUiModel): RecommendationSectionUiModel {
@@ -520,6 +753,7 @@ class ChatViewModel(
             message.copy(
                 content = message.content + chunk,
                 isStreaming = true,
+                thinking = snapshotCurrentThinking(),
             )
         }
         collapseThinking()
@@ -538,7 +772,102 @@ class ChatViewModel(
             message.copy(
                 content = text,
                 isStreaming = false,
+                thinking = snapshotCurrentThinking(),
             )
+        }
+    }
+
+    private fun buildSpokenResponseText(): String {
+        val activeTurn = currentTurnId
+        val sections = _recommendationSections.value
+            .filter { section -> activeTurn == null || section.turnId == activeTurn }
+            .sortedWith(compareBy<RecommendationSectionUiModel> { it.sectionIndex }.thenBy { it.skuId })
+            .take(3)
+            .flatMap { section ->
+                listOf(
+                    section.displayTitle,
+                    section.recommendReason
+                        .ifBlank { section.displayText }
+                        .ifBlank { section.text }
+                        .ifBlank { section.reason.orEmpty() },
+                )
+            }
+        return listOf(_answer.value)
+            .plus(sections)
+            .map { it.cleanForSpeech() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .joinToString("。")
+            .take(600)
+    }
+
+    private fun String.cleanForSpeech(): String {
+        return replace(Regex("""https?://\S+"""), "")
+            .replace(Regex("""\b[pPsS]_[A-Za-z0-9_]+\b"""), "")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+    }
+
+    private fun synthesizeAndPlay(text: String) {
+        if (text.isBlank()) {
+            return
+        }
+        _ttsPlaybackState.value = TtsPlaybackState.Preparing
+        ttsJob?.cancel()
+        ttsJob = viewModelScope.launch {
+            try {
+                repository.synthesizeVoice(text)
+                    .onSuccess { url -> playTtsUrl(url) }
+                    .onFailure {
+                        if (it is CancellationException) {
+                            return@onFailure
+                        }
+                        _ttsPlaybackState.value = TtsPlaybackState.Error("语音播放暂不可用")
+                        _cartTip.tryEmit("语音播放暂不可用")
+                    }
+            } finally {
+                ttsJob = null
+            }
+        }
+    }
+
+    private fun playTtsUrl(url: String) {
+        stopTtsPlayback()
+        _ttsPlaybackState.value = TtsPlaybackState.Preparing
+        val player = MediaPlayer()
+        ttsPlayer = player
+        runCatching {
+            player.setDataSource(url)
+            player.setOnPreparedListener { preparedPlayer ->
+                if (ttsPlayer === preparedPlayer) {
+                    _ttsPlaybackState.value = TtsPlaybackState.Playing
+                    preparedPlayer.start()
+                } else {
+                    preparedPlayer.release()
+                }
+            }
+            player.setOnCompletionListener { completedPlayer ->
+                if (ttsPlayer === completedPlayer) {
+                    ttsPlayer = null
+                }
+                runCatching { completedPlayer.release() }
+                _ttsPlaybackState.value = TtsPlaybackState.Idle
+            }
+            player.setOnErrorListener { erroredPlayer, _, _ ->
+                if (ttsPlayer === erroredPlayer) {
+                    ttsPlayer = null
+                }
+                runCatching { erroredPlayer.release() }
+                _ttsPlaybackState.value = TtsPlaybackState.Error("语音播放失败")
+                true
+            }
+            player.prepareAsync()
+        }.onFailure {
+            if (ttsPlayer === player) {
+                ttsPlayer = null
+            }
+            runCatching { player.release() }
+            _ttsPlaybackState.value = TtsPlaybackState.Error("语音播放失败")
         }
     }
 
@@ -618,6 +947,7 @@ class ChatViewModel(
             content = "",
             isUser = false,
             isStreaming = true,
+            thinking = snapshotCurrentThinking(),
         )
         return messageId
     }
@@ -638,7 +968,29 @@ class ChatViewModel(
     private fun markAssistantMessageDone() {
         currentAssistantMessageId?.let { messageId ->
             updateAssistantMessage(messageId) { message ->
-                message.copy(isStreaming = false)
+                message.copy(
+                    isStreaming = false,
+                    thinking = snapshotCurrentThinking(),
+                )
+            }
+        }
+    }
+
+    private fun snapshotCurrentThinking(): AssistantThinkingUiModel? {
+        val current = _thinking.value
+        if (current.status == AssistantThinkingStatus.Idle) {
+            return null
+        }
+        return current.copy(
+            expanded = false,
+            isGeneratingResponse = false,
+        )
+    }
+
+    private fun syncCurrentAssistantThinkingSnapshot() {
+        currentAssistantMessageId?.let { messageId ->
+            updateAssistantMessage(messageId) { message ->
+                message.copy(thinking = snapshotCurrentThinking())
             }
         }
     }
@@ -720,8 +1072,6 @@ class ChatViewModel(
         val completedElapsedMs = currentElapsedMs().takeIf { it > 0L } ?: event.totalDurationMs ?: 0L
         val stages = completeAllStages(
             stages = _thinking.value.stages.ifEmpty { defaultProcessStages() },
-            completedElapsedMs = completedElapsedMs,
-            finalStageDurationMs = null,
         )
         _thinking.value = _thinking.value.copy(
             status = AssistantThinkingStatus.Done,
@@ -754,7 +1104,7 @@ class ChatViewModel(
         }
         val updatedStages = stages.mapIndexed { index, stage ->
             when {
-                index < targetIndex -> stage.completeAt(elapsed)
+                index < targetIndex -> stage.complete()
                 index == targetIndex -> {
                     if (stage.status == AssistantProcessStageStatus.Completed) {
                         stage.copy(summary = summary ?: stage.summary)
@@ -783,6 +1133,7 @@ class ChatViewModel(
         val current = _thinking.value
         if (current.status != AssistantThinkingStatus.Idle && current.status != AssistantThinkingStatus.Failed) {
             _thinking.value = current.copy(expanded = false)
+            syncCurrentAssistantThinkingSnapshot()
         }
     }
 
@@ -793,6 +1144,7 @@ class ChatViewModel(
         }
         if (current.status == AssistantThinkingStatus.Done) {
             _thinking.value = current.copy(expanded = false)
+            syncCurrentAssistantThinkingSnapshot()
             return
         }
         val elapsed = current.totalElapsedMs.takeIf { it > 0 } ?: currentElapsedMs()
@@ -800,14 +1152,13 @@ class ChatViewModel(
             status = AssistantThinkingStatus.Done,
             stages = completeAllStages(
                 stages = current.stages.ifEmpty { defaultProcessStages() },
-                completedElapsedMs = elapsed,
-                finalStageDurationMs = null,
             ),
             expanded = false,
             previewText = "",
             totalElapsedMs = elapsed,
             isGeneratingResponse = false,
         )
+        syncCurrentAssistantThinkingSnapshot()
     }
 
     private fun markThinkingFailed() {
@@ -819,10 +1170,7 @@ class ChatViewModel(
         val stages = current.stages.ifEmpty { defaultProcessStages() }
         val failedStages = stages.map { stage ->
             if (stage.status == AssistantProcessStageStatus.Running) {
-                stage.copy(
-                    status = AssistantProcessStageStatus.Failed,
-                    durationMs = (elapsed - (stage.startedElapsedMs ?: elapsed)).coerceAtLeast(0L),
-                )
+                stage.copy(status = AssistantProcessStageStatus.Failed)
             } else {
                 stage
             }
@@ -835,6 +1183,7 @@ class ChatViewModel(
             totalElapsedMs = elapsed,
             isGeneratingResponse = false,
         )
+        syncCurrentAssistantThinkingSnapshot()
     }
 
     private fun mergeProductsBySku(
@@ -858,6 +1207,10 @@ class ChatViewModel(
         updateRecommendationSection(section) { current ->
             current.copy(
                 optionLabel = section.optionLabel.ifBlank { current.optionLabel },
+                displayTitle = mergeRecommendationDisplayTitle(current.displayTitle, section.displayTitle),
+                recommendReason = section.recommendReason.ifBlank { current.recommendReason },
+                reason = section.reason ?: current.reason,
+                recommendationTags = section.recommendationTags.ifEmpty { current.recommendationTags },
                 productName = section.productName ?: current.productName,
                 brand = section.brand ?: current.brand,
             )
@@ -874,17 +1227,25 @@ class ChatViewModel(
         }
         val updateAt = System.currentTimeMillis()
         updateRecommendationSection(section) { current ->
-            val nextText = current.text + delta
+            val rawReason = current.reason.orEmpty() + delta
+            val nextText = rawReason.sanitizeRecommendReason()
+            val nextDisplayText = alignedRecommendationDisplayText(nextText, current.displayText)
             Log.d(
                 STREAM_DEBUG_TAG,
                 "state recommendation_text_delta ts=$updateAt section=${section.sectionIndex} " +
-                    "sku=${section.skuId} delta_len=${delta.length} cumulative_len=${nextText.length}",
+                    "sku=${section.skuId} delta_len=${delta.length} cumulative_len=${rawReason.length}",
             )
-            current.copy(
+            val nextSection = current.copy(
+                reason = rawReason,
+                displayTitle = mergeRecommendationDisplayTitle(current.displayTitle, section.displayTitle),
+                recommendReason = nextText,
                 text = nextText,
+                displayText = nextDisplayText,
+                recommendationTags = section.recommendationTags.ifEmpty { current.recommendationTags },
                 productName = section.productName ?: current.productName,
                 brand = section.brand ?: current.brand,
             )
+            nextSection
         }
         advanceRecommendationDisplayText(section.stableKey)
         ensureRecommendationTypewriter(section.stableKey)
@@ -894,6 +1255,7 @@ class ChatViewModel(
         updateRecommendationSection(section) { current ->
             current.copy(
                 done = true,
+                recommendationTags = section.recommendationTags.ifEmpty { current.recommendationTags },
                 productName = section.productName ?: current.productName,
                 brand = section.brand ?: current.brand,
             )
@@ -903,15 +1265,25 @@ class ChatViewModel(
 
     private fun finishRecommendationSection(section: RecommendationSectionUiModel) {
         updateRecommendationSection(section) { current ->
-            val finalText = section.reason
+            val finalText = section.recommendReason
+                .ifBlank { section.text }
+                .ifBlank { current.recommendReason }
+                .ifBlank { current.text }
+                .ifBlank { section.reason.orEmpty() }
+                .ifBlank { current.reason.orEmpty() }
+                .sanitizeRecommendReason()
+            val rawReason = section.reason
                 ?.takeIf { it.isNotBlank() }
-                ?: section.text.takeIf { it.isNotBlank() }
-                ?: current.text
+                ?: finalText.takeIf { it.isNotBlank() }
+                ?: current.reason
             current.copy(
+                displayTitle = mergeRecommendationDisplayTitle(current.displayTitle, section.displayTitle),
+                recommendReason = finalText,
                 text = finalText,
                 displayText = alignedRecommendationDisplayText(finalText, current.displayText),
-                reason = section.reason ?: current.reason,
+                reason = rawReason?.takeIf { it.isNotBlank() } ?: current.reason,
                 tradeOff = section.tradeOff ?: current.tradeOff,
+                recommendationTags = section.recommendationTags.ifEmpty { current.recommendationTags },
                 productName = section.productName ?: current.productName,
                 brand = section.brand ?: current.brand,
                 done = true,
@@ -923,19 +1295,36 @@ class ChatViewModel(
     private fun attachRecommendationProduct(section: RecommendationSectionUiModel) {
         val product = section.product
         updateRecommendationSection(section) { current ->
-            val reason = section.reason
+            val rawReason = current.reason
+                ?: section.reason
+                ?: current.recommendReason.takeIf { it.isNotBlank() }
+                ?: section.recommendReason.takeIf { it.isNotBlank() }
+                ?: product?.recommendReason
                 ?: product?.presentation?.reason
-                ?: current.reason
-            val finalText = current.text.takeIf { it.isNotBlank() }
-                ?: reason.orEmpty()
+                ?: product?.reason
+            val finalText = current.text
+                .takeIf { it.isNotBlank() }
+                ?: current.recommendReason.takeIf { it.isNotBlank() }
+                ?: section.recommendReason.takeIf { it.isNotBlank() }
+                ?: section.text.takeIf { it.isNotBlank() }
+                ?: section.reason?.takeIf { it.isNotBlank() }
+                ?: product?.recommendReason.orEmpty()
+            val cleanFinalText = finalText.sanitizeRecommendReason()
+            val nextProduct = product ?: current.product
+            val nextSection = current.copy(product = nextProduct)
             current.copy(
-                text = finalText,
-                displayText = alignedRecommendationDisplayText(finalText, current.displayText),
-                reason = reason,
+                displayTitle = mergeRecommendationDisplayTitle(nextSection.displayTitle, section.displayTitle),
+                recommendReason = cleanFinalText,
+                text = cleanFinalText,
+                displayText = alignedRecommendationDisplayText(cleanFinalText, current.displayText),
+                reason = rawReason ?: current.reason,
                 tradeOff = section.tradeOff ?: product?.presentation?.tradeOff ?: current.tradeOff,
+                recommendationTags = section.recommendationTags
+                    .ifEmpty { product?.recommendationTags.orEmpty() }
+                    .ifEmpty { current.recommendationTags },
                 productName = section.productName ?: product?.displayTitleShort ?: current.productName,
                 brand = section.brand ?: product?.brand ?: current.brand,
-                product = product ?: current.product,
+                product = nextProduct,
                 done = true,
             )
         }
@@ -1037,7 +1426,8 @@ class ChatViewModel(
                 product = section.product ?: product,
                 productName = section.productName ?: product.displayTitleShort,
                 brand = section.brand ?: product.brand,
-            )
+                recommendationTags = section.recommendationTags.ifEmpty { product.recommendationTags },
+            ).withResolvedRecommendationTitle()
         }
     }
 
@@ -1047,15 +1437,148 @@ class ChatViewModel(
     ) {
         val current = _recommendationSections.value
         val index = current.indexOfFirst { it.stableKey == incoming.stableKey }
-        _recommendationSections.value = if (index >= 0) {
+        val nextSections = if (index >= 0) {
             current.mapIndexed { itemIndex, item ->
-                if (itemIndex == index) update(item) else item
+                if (itemIndex == index) {
+                    val updated = update(item)
+                    updated
+                        .copy(displayTitle = mergeRecommendationDisplayTitle(incoming.displayTitle, updated.displayTitle))
+                        .withResolvedRecommendationTitle()
+                } else {
+                    item
+                }
             }
         } else {
-            (current + update(incoming)).sortedWith(
+            (current + update(incoming).withResolvedRecommendationTitle()).sortedWith(
                 compareBy<RecommendationSectionUiModel> { it.sectionIndex }.thenBy { it.skuId }
             )
         }
+        _recommendationSections.value = nextSections
+        logRecommendationUiState(incoming)
+    }
+
+    private fun logRecommendationUiState(incoming: RecommendationSectionUiModel) {
+        if (incoming.product == null && !incoming.done) {
+            return
+        }
+        val section = _recommendationSections.value.firstOrNull { it.stableKey == incoming.stableKey } ?: return
+        Log.d(
+            STREAM_DEBUG_TAG,
+            "[recommendation_ui_state] stableKey=${section.stableKey} sectionIndex=${section.sectionIndex} " +
+                "skuId=${section.skuId} displayTitle='${section.displayTitle}' " +
+                "recommendReasonLength=${section.recommendReason.length} hasProduct=${section.product != null}",
+        )
+    }
+
+    private fun RecommendationSectionUiModel.withResolvedRecommendationTitle(): RecommendationSectionUiModel {
+        val resolvedTitle = resolveRecommendationDisplayTitle(this)
+        val resolvedReason = recommendReason
+            .ifBlank { text }
+            .ifBlank { reason.orEmpty() }
+            .ifBlank { product?.recommendReason.orEmpty() }
+            .sanitizeRecommendReason()
+        val resolvedText = text.ifBlank { resolvedReason }
+        val resolvedDisplayText = when {
+            displayText.isNotBlank() -> displayText
+            done -> resolvedText
+            else -> ""
+        }
+        return copy(
+            displayTitle = resolvedTitle,
+            recommendReason = resolvedReason,
+            text = resolvedText,
+            displayText = resolvedDisplayText,
+        )
+    }
+
+    private fun resolveRecommendationDisplayTitle(
+        section: RecommendationSectionUiModel,
+    ): String {
+        val product = section.product
+        val title = listOf(
+            section.displayTitle,
+            product?.recommendationDisplayTitle,
+            product?.recommendTitle,
+            product?.presentation?.title,
+            product?.presentation?.shortTitle,
+        ).firstNotNullOfOrNull { it.cleanRecommendationTitle(product) }
+        return title.orEmpty()
+    }
+
+    private fun String?.cleanRecommendationTitle(product: ProductUiModel?): String? {
+        val value = asRecommendationTitleOrNull() ?: return null
+        if (product != null && value == product.displayTitle && value.length > 18) {
+            return null
+        }
+        return value
+    }
+
+    private fun String.isMechanicalRecommendationTitle(): Boolean {
+        val normalized = trim().replace(" ", "")
+        return normalized.matches(Regex("""^方案[一二三四五六七八九十\d]+$""")) ||
+            normalized.matches(Regex("""^推荐[一二三四五六七八九十\d]+$""")) ||
+            normalized.matches(Regex("""^第[一二三四五六七八九十\d]+个?推荐$""")) ||
+            normalized == "首选方案" ||
+            normalized == "备选方案"
+    }
+
+    private fun String.isGeneratedRecommendationFallbackTitle(): Boolean {
+        return this == "稳妥选择" ||
+            this == "适合当前需求的稳妥选择" ||
+            this.endsWith("里的稳妥选择")
+    }
+
+    private fun buildRecommendationDisplayTitle(section: RecommendationSectionUiModel): String {
+        val product = section.product
+        val context = listOf(
+            _messages.value.lastOrNull { it.isUser && it.turnId == section.turnId }?.content,
+            section.text,
+            section.reason,
+            product?.displayReason,
+            product?.productHighlight,
+            product?.highlightDetail,
+            product?.tags?.joinToString(" "),
+            product?.matchedReasons?.joinToString(" "),
+            product?.suitableScenarios?.joinToString(" "),
+            product?.targetUserTags?.joinToString(" "),
+            product?.category,
+            product?.subCategory,
+            product?.brand,
+        )
+            .filterNotNull()
+            .joinToString(" ")
+            .lowercase()
+
+        val scenario = when {
+            context.hasAny("通勤", "上班", "日常") && context.hasAny("户外", "运动", "海边", "旅行", "军训") ->
+                "通勤户外兼顾"
+            context.hasAny("敏感", "敏感肌", "孕", "儿童", "温和") -> "敏感肌更友好"
+            context.hasAny("补涂", "便携", "随身", "小支", "小瓶") -> "随身补涂方便"
+            context.hasAny("预算", "性价比", "平价", "便宜", "学生") -> "预算内更稳妥"
+            context.hasAny("户外", "运动", "海边", "旅行", "军训") -> "户外防护更安心"
+            context.hasAny("通勤", "上班", "日常") -> "通勤日常适用"
+            context.hasAny("干皮", "保湿", "滋润") -> "干皮保湿兼顾"
+            context.hasAny("油皮", "混油", "控油", "清爽", "不黏") -> "清爽肤感优先"
+            else -> ""
+        }
+        val advantage = when {
+            context.hasAny("防水", "防汗", "耐汗", "遇水") -> "防水防汗选择"
+            context.hasAny("清爽", "控油", "不黏", "轻薄", "水感") -> "清爽肤感选择"
+            context.hasAny("温和", "敏感", "无酒精", "低刺激") -> "温和防护选择"
+            context.hasAny("高倍", "spf50", "pa++++", "长效", "强防护") -> "高倍防护选择"
+            context.hasAny("保湿", "滋润", "修护") -> "兼顾保湿选择"
+            product?.category?.isNotBlank() == true -> "${product.category}选择"
+            else -> "稳妥选择"
+        }
+        return if (scenario.isBlank() || advantage.startsWith(scenario)) {
+            advantage
+        } else {
+            "${scenario}的$advantage"
+        }
+    }
+
+    private fun String.hasAny(vararg keywords: String): Boolean {
+        return keywords.any { keyword -> contains(keyword, ignoreCase = true) }
     }
 
     private fun upsertSpecSelection(selection: SpecSelectionUiModel) {
@@ -1299,33 +1822,22 @@ class ChatViewModel(
         }
     }
 
-    private fun AssistantProcessStageUiModel.completeAt(completedElapsedMs: Long): AssistantProcessStageUiModel {
+    private fun AssistantProcessStageUiModel.complete(
+        summary: String? = null,
+    ): AssistantProcessStageUiModel {
         if (status == AssistantProcessStageStatus.Completed) {
-            return this
+            return copy(summary = summary ?: this.summary)
         }
-        val duration = startedElapsedMs?.let { start ->
-            (completedElapsedMs - start).coerceAtLeast(0L)
-        } ?: 0L
         return copy(
             status = AssistantProcessStageStatus.Completed,
-            durationMs = durationMs ?: duration,
+            summary = summary ?: this.summary,
         )
     }
 
     private fun completeAllStages(
         stages: List<AssistantProcessStageUiModel>,
-        completedElapsedMs: Long,
-        finalStageDurationMs: Long?,
     ): List<AssistantProcessStageUiModel> {
-        val responseIndex = stages.indexOfFirst { it.stageId == "response_generation" }
-        return stages.mapIndexed { index, stage ->
-            val completed = stage.completeAt(completedElapsedMs)
-            if (index == responseIndex && finalStageDurationMs != null) {
-                completed.copy(durationMs = finalStageDurationMs.coerceAtLeast(0L))
-            } else {
-                completed
-            }
-        }
+        return stages.map { stage -> stage.complete() }
     }
 
     private fun mapProgressStage(rawStageId: String?, fallbackText: String?): String {
@@ -1373,6 +1885,7 @@ class ChatViewModel(
             message.copy(
                 content = text,
                 isStreaming = false,
+                thinking = snapshotCurrentThinking(),
             )
         }
     }

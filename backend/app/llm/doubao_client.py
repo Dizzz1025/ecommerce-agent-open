@@ -237,7 +237,8 @@ class DoubaoClient(BaseLLMClient):
                         "没有完全匹配但有备选时，先说“我先为你挑了几款更接近需求的选择”，再简短说明差异。"
                         "只有完全超出商品库或没有任何可推荐方向时，才说明限制，并立即给出调整预算、放宽条件、换类目或补充需求的引导。"
                         "长度限制：普通推荐2-4句，比较最多5句，澄清只问1-2个关键问题，购物车反馈1-2句。"
-                        "个性化只自然影响语气、排序和解释重点，不要说“根据你的用户画像”。"
+                        "如果上下文中有明确历史选择、购物车同类商品或稳定偏好，可以自然说“基于你之前更关注…”或“基于你购物车里的…选择”。"
+                        "禁止说“根据你的用户画像/记忆”，也不要暴露memory、RAG、检索、状态机等内部术语。"
                     ),
                 },
                 {"role": "user", "content": context},
@@ -582,7 +583,7 @@ class DoubaoClient(BaseLLMClient):
         if not product_names:
             return "这个需求我需要再缩小一点范围。你可以补充预算、品牌或使用场景，我马上继续帮你挑。"
         names = "、".join(product_names[:3])
-        return f"我先为你挑了这几款：{names}。可以先看卡片细节，再决定要不要加入购物车。"
+        return f"我先为你挑了这几款：{names}。可以根据价格、规格和适用场景再做取舍。"
 
     def _new_call_debug(self, *, intent: IntentType, context: str, product_names: list[str]) -> dict[str, Any]:
         return {

@@ -24,6 +24,7 @@ class ProductQAModule:
         question = parsed_query.raw_message
         document = product.searchable_text
         evidence = self._collect_evidence(question, product)
+        candidate = next((item for item in candidates if item.sku_id == product.sku_id), None)
 
         if any(term in question for term in ["适合敏感肌", "敏感肌能用", "会刺激"]):
             return self._contains_answer(
@@ -74,7 +75,7 @@ class ProductQAModule:
             )
 
         if self._is_general_intro_question(question):
-            intro_evidence = self._build_intro_evidence(product, parsed_query)
+            intro_evidence = self._build_intro_evidence(product, parsed_query, candidate)
             return ProductQAResult(
                 answered=True,
                 answer=self._intro_answer(product, intro_evidence),
@@ -105,11 +106,24 @@ class ProductQAModule:
         ]
         return any(term in question for term in intro_terms)
 
-    def _build_intro_evidence(self, product: Product, parsed_query: ParsedQuery) -> list[str]:
-        dimensions = self._select_intro_dimensions(product, parsed_query)
+    def _build_intro_evidence(
+        self,
+        product: Product,
+        parsed_query: ParsedQuery,
+        candidate: CandidateProduct | None = None,
+    ) -> list[str]:
+        dimensions = self._select_intro_dimensions(product, parsed_query, candidate)
         evidence: list[str] = [
             f"基础信息：{product.name}，品牌 {product.brand}，价格 ¥{product.price:g}，类目 {product.category}/{product.sub_category or '未标注'}。",
         ]
+        if candidate and candidate.matched_reasons:
+            needs = [
+                _clean_need_text(item)
+                for item in candidate.matched_reasons
+                if _clean_need_text(item)
+            ][:4]
+            if needs:
+                evidence.append("匹配本轮需求：" + "、".join(needs) + "。")
         if product.highlight_short:
             evidence.append(f"一句话亮点：{product.highlight_short}")
         if product.suitable_scenarios:
@@ -137,15 +151,24 @@ class ProductQAModule:
             evidence.append("官方描述：" + re.sub(r"\s+", "", marketing)[:220])
         return list(dict.fromkeys(evidence))[:6]
 
-    def _select_intro_dimensions(self, product: Product, parsed_query: ParsedQuery) -> list[tuple[str, list[str]]]:
+    def _select_intro_dimensions(
+        self,
+        product: Product,
+        parsed_query: ParsedQuery,
+        candidate: CandidateProduct | None = None,
+    ) -> list[tuple[str, list[str]]]:
         question = parsed_query.raw_message
-        need_text = " ".join([question, *parsed_query.positive_constraints, product.searchable_text])
+        candidate_terms = candidate.matched_reasons if candidate else []
+        need_text = " ".join([question, *parsed_query.positive_constraints, *candidate_terms])
         dimension_terms: list[tuple[str, list[str]]] = []
         candidates = [
             ("影像/拍照", ["影像", "拍照", "主摄", "长焦", "夜拍", "人像", "自拍", "视频", "相机"]),
             ("续航/充电", ["续航", "电池", "快充", "充电", "满电", "一整天", "120W", "100W"]),
             ("屏幕/观感", ["屏幕", "2K", "高刷", "护眼", "PWM", "亮度", "色彩"]),
             ("性能/使用流畅度", ["处理器", "性能", "游戏", "高性能", "芯片", "LPDDR", "UFS"]),
+            ("肤质/适配人群", ["油皮", "混油皮", "干皮", "敏感肌", "学生党", "男士", "儿童", "小朋友", "肤质"]),
+            ("功效/肤感", ["保湿", "补水", "修护", "控油", "温和", "清爽", "轻薄", "不油腻", "不黏腻", "屏障", "提亮"]),
+            ("成分/配方", ["成分", "配方", "玻尿酸", "透明质酸", "烟酰胺", "神经酰胺", "A醇", "酒精", "香精"]),
             ("容量/收纳", ["容量", "尺寸", "电脑", "收纳", "大容量", "28L", "15寸", "14寸"]),
             ("材质/穿着体验", ["材质", "面料", "透气", "速干", "凉感", "棉", "针织"]),
             ("口味/配料", ["口味", "低糖", "无糖", "糖", "配料", "咖啡因", "甜"]),
@@ -166,6 +189,8 @@ class ProductQAModule:
                 preferred = ["容量/收纳", "材质/穿着体验", "适用场景"]
             elif product.category == "食品饮料":
                 preferred = ["口味/配料", "适用场景"]
+            elif product.category == "美妆护肤":
+                preferred = ["肤质/适配人群", "功效/肤感", "成分/配方"]
             else:
                 preferred = ["适用场景", "材质/穿着体验"]
             dimension_terms.extend([item for item in candidates if item[0] in preferred])
@@ -180,11 +205,17 @@ class ProductQAModule:
     @staticmethod
     def _intro_answer(product: Product, evidence: list[str]) -> str:
         useful_evidence = [item for item in evidence if not item.startswith("商品标签")]
-        lines = [f"可以的，这款是 {product.name}，售价 ¥{product.price:g}。"]
-        for index, item in enumerate(useful_evidence[1:4], start=1):
-            text = item.split("：", 1)[-1]
-            lines.append(f"{index}. {text}")
-        return "\n".join(lines)
+        details = [item.split("：", 1)[-1].strip("。") for item in useful_evidence[1:4]]
+        first = f"可以的，这款是 {product.name}，售价 ¥{product.price:g}。"
+        if len(useful_evidence) > 1 and useful_evidence[1].startswith("匹配本轮需求") and details:
+            second = f"它比较贴合你对{details[0]}的需求。"
+        else:
+            second = f"它的主要亮点是{details[0]}。" if details else "它属于当前商品库里和你刚才需求相关的候选商品。"
+        if len(details) >= 2:
+            third = f"另外，{details[1]}，你可以结合商品卡片里的图片和参数一起看。"
+        else:
+            third = "你可以结合商品卡片里的图片、参数和评价摘要一起判断是否适合。"
+        return "\n".join([first, second, third])
 
     def _field_answer(
         self,
@@ -290,3 +321,18 @@ class ProductQAModule:
             if any(term and term in compact for term in terms):
                 snippets.append(compact[:180] + ("..." if len(compact) > 180 else ""))
         return snippets[:3]
+
+
+def _clean_need_text(value: str | None) -> str:
+    if not value:
+        return ""
+    text = value.strip()
+    blocked = {"类目一致", "已排除否定条件", "已避开指定品牌", "匹配度一般，作为备选", "来自上一轮推荐或用户指代"}
+    if not text or text in blocked:
+        return ""
+    return (
+        text.removeprefix("匹配")
+        .removeprefix("贴合问题标签:")
+        .removeprefix("购物车偏好:")
+        .strip()
+    )

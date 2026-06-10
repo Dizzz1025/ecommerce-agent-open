@@ -1,0 +1,3444 @@
+{
+  "config": {
+    "use_mock_llm": false,
+    "enable_local_models": true,
+    "doubao_base_url_configured": true,
+    "doubao_api_key_configured": true,
+    "doubao_model": "ep-20260514111645-lmgt2",
+    "llm_client": "DoubaoClient",
+    "product_dataset_dir": "/Users/grsxsa/2026 Spring/ECOMMERCE-GUIDER-main/0603version 2/ecommerce_agent_dataset"
+  },
+  "single": [
+    {
+      "duration_s": 12.597,
+      "raw_event_names": [
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "state",
+        "generation_started",
+        "response_completed",
+        "token",
+        "token",
+        "generation_degraded",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "product_cards",
+        "products",
+        "frontend_action",
+        "turn_result",
+        "done"
+      ],
+      "frontend_events": [
+        "show_reply",
+        "show_products"
+      ],
+      "reply": "结合你的适合通勤、清爽需求，为你筛选了 3 款防晒：",
+      "analysis": {
+        "session_id": "real_single_S06_e1fd204c",
+        "user_id": "real_acceptance_user",
+        "意图": "recommend",
+        "业务流程": "exclusion",
+        "商品类别": "美妆护肤",
+        "商品子类": "防晒",
+        "价格约束": {
+          "min": null,
+          "max": null
+        },
+        "正向偏好": [
+          "适合通勤",
+          "清爽",
+          "不油腻",
+          "通勤",
+          "防晒"
+        ],
+        "否定约束": [
+          "油腻"
+        ],
+        "包含品牌": [],
+        "排除品牌": [],
+        "是否需要检索": true,
+        "是否调用大模型": true
+      },
+      "products": [
+        {
+          "rank": null,
+          "sku_id": "p_beauty_010",
+          "name": "安热沙金灿倍护防晒乳高倍防水防汗清爽户外面部身体防晒60ml",
+          "price": 118.0,
+          "category": "美妆护肤",
+          "sub_category": "防晒",
+          "reason": "这款比较贴合你对清爽、不油腻、通勤的要求，适合优先查看。",
+          "score": 0.7694
+        },
+        {
+          "rank": null,
+          "sku_id": "p_beauty_006",
+          "name": "巴黎欧莱雅新多重防护隔离露水感轻薄高倍防晒修护提亮30ml",
+          "price": 170.0,
+          "category": "美妆护肤",
+          "sub_category": "防晒",
+          "reason": "这款比较贴合你对清爽、不油腻、通勤的要求，适合优先查看。",
+          "score": 0.7681
+        },
+        {
+          "rank": null,
+          "sku_id": "p_beauty_023",
+          "name": "理肤泉特护清盈防晒乳高倍防晒清爽控油易敏肌适用面部防晒50ml",
+          "price": 268.0,
+          "category": "美妆护肤",
+          "sub_category": "防晒",
+          "reason": "这款比较贴合你对清爽、不油腻、通勤的要求，适合优先查看。",
+          "score": 0.7545
+        }
+      ],
+      "cart_state": {},
+      "system_debug": {
+        "本轮理解": {
+          "session_id": "real_single_S06_e1fd204c",
+          "user_id": "real_acceptance_user",
+          "意图": "recommend",
+          "业务流程": "exclusion",
+          "商品类别": "美妆护肤",
+          "商品子类": "防晒",
+          "价格约束": {
+            "min": null,
+            "max": null
+          },
+          "正向偏好": [
+            "适合通勤",
+            "清爽",
+            "不油腻",
+            "通勤",
+            "防晒"
+          ],
+          "否定约束": [
+            "油腻"
+          ],
+          "包含品牌": [],
+          "排除品牌": [],
+          "是否需要检索": true,
+          "是否调用大模型": true
+        },
+        "检索摘要": {
+          "检索方式": [
+            "结构化过滤",
+            "关键词匹配",
+            "属性/约束匹配"
+          ],
+          "召回商品数量": 4,
+          "召回商品ID": [
+            "p_beauty_010",
+            "p_beauty_006",
+            "p_beauty_023",
+            "p_beauty_034"
+          ],
+          "过滤商品数量": 147,
+          "过滤商品ID样例": [
+            "p_beauty_001",
+            "p_beauty_002",
+            "p_beauty_003",
+            "p_beauty_004",
+            "p_beauty_005",
+            "p_beauty_007",
+            "p_beauty_008",
+            "p_beauty_009",
+            "p_beauty_011",
+            "p_beauty_012",
+            "p_beauty_013",
+            "p_beauty_014",
+            "p_beauty_015",
+            "p_beauty_016",
+            "p_beauty_017",
+            "p_beauty_018",
+            "p_beauty_019",
+            "p_beauty_020",
+            "p_beauty_021",
+            "p_beauty_022"
+          ],
+          "最终推荐商品ID": [
+            "p_beauty_010",
+            "p_beauty_006",
+            "p_beauty_023"
+          ],
+          "检索评分摘要": [
+            {
+              "sku_id": "p_beauty_010",
+              "name": "安热沙金灿倍护防晒乳高倍防水防汗清爽户外面部身体防晒60ml",
+              "score": 0.7694,
+              "raw_scores": {
+                "keyword": 0.4,
+                "semantic": 0.1597,
+                "lexical_semantic": 0.1597,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.6667,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "清爽",
+                "不油腻",
+                "通勤",
+                "防晒",
+                "已排除否定条件"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            },
+            {
+              "sku_id": "p_beauty_006",
+              "name": "巴黎欧莱雅新多重防护隔离露水感轻薄高倍防晒修护提亮30ml",
+              "score": 0.7681,
+              "raw_scores": {
+                "keyword": 0.4,
+                "semantic": 0.1551,
+                "lexical_semantic": 0.1551,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.6667,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "清爽",
+                "不油腻",
+                "通勤",
+                "防晒",
+                "已排除否定条件"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            },
+            {
+              "sku_id": "p_beauty_023",
+              "name": "理肤泉特护清盈防晒乳高倍防晒清爽控油易敏肌适用面部防晒50ml",
+              "score": 0.7545,
+              "raw_scores": {
+                "keyword": 0.35,
+                "semantic": 0.1496,
+                "lexical_semantic": 0.1496,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.6667,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "清爽",
+                "不油腻",
+                "通勤",
+                "防晒",
+                "已排除否定条件"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            }
+          ]
+        },
+        "工具执行": [],
+        "模型调用": {
+          "LLM是否调用": true,
+          "Doubao是否真实调用": true,
+          "调用客户端": "DoubaoClient",
+          "调用目的": [
+            "generate_response",
+            "intent_plan_resolution",
+            "build_scene_presentation",
+            "frontend_action_decision"
+          ],
+          "模型调用次数": 4,
+          "模型调用总耗时_ms": 12244.41,
+          "planned_call_count": 4,
+          "attempted_call_count": 1,
+          "real_http_call_count": 1,
+          "successful_call_count": 1,
+          "failed_call_count": 0,
+          "mock_call_count": 0,
+          "fallback_count": 0,
+          "调用明细": [
+            {
+              "module": "query_understanding",
+              "provider": "DoubaoClient",
+              "purpose": "intent_plan_resolution",
+              "duration_ms": 12244.32,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "raw_output_preview": "{\n    \"primary_intent\": \"recommend\",\n    \"intent_plan\": {\n        \"primary_intent\": \"recommend\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"recommend\",\n                \"action\": \"recommend\",\n                \"source_text\": \"想要一个适合通勤的清爽防晒，不要太油\",\n                \"target_ref\": null,\n                \"quantity\": null,\n                \"sku_id\": null,\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": true,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 0.95,\n        \"reason\": \"用户明确提出需要适合通勤的清爽不油腻的防晒产品，属于单品类推荐需求\"\n    },\n    \"category\": \"美妆护肤\",\n    \"sub_category\": \"防晒\",\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"适合通勤\", \"清爽\", \"不油腻\"],\n    \"negative_constraints\": [\"油腻\"],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [],\n    \"mentioned_products\": [],\n    \"cart_action\": {\n        \"action\": null,\n        \"quantity\": null,\n        \"target_ref\": null,\n        \"sku_id\": null,\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": \"通勤\",\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": false,\n    \"rewritten_query\": \"适合通勤的清爽不油腻防晒产品\",\n    \"confidence\": 0.95,\n    \"uncertain_points\": []\n}",
+                "json_parse_succeeded": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "purpose": "intent_plan_resolution",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_keys": [
+                  "message",
+                  "available_intents",
+                  "available_categories",
+                  "supported_actions",
+                  "current_state",
+                  "last_recommendations",
+                  "cart_items",
+                  "rules"
+                ],
+                "context_length": 1839,
+                "attempt_count": 1,
+                "duration_ms": 12237.09
+              }
+            },
+            {
+              "module": "response_generation",
+              "provider": "DoubaoClient",
+              "purpose": "generate_response",
+              "duration_ms": 0.03,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "scene_presentation_build",
+              "provider": "DoubaoClient",
+              "purpose": "build_scene_presentation",
+              "duration_ms": 0.05,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "frontend_action_decision",
+              "provider": "DoubaoClient",
+              "purpose": "frontend_action_decision",
+              "duration_ms": 0.01,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            }
+          ],
+          "本地小模型任务": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "前端动作决策来源": "rule"
+        },
+        "耗时统计": {},
+        "回复策略": {
+          "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+          "匹配状态": "exact_match",
+          "是否启用积极回复": true,
+          "是否避免否定开头": true,
+          "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+          "使用的个性化参考": [
+            "领域导购风格",
+            "相关历史证据",
+            "few-shot风格示例",
+            "相似人群参考"
+          ],
+          "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+          "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+        }
+      },
+      "case_id": "S06",
+      "group": "美妆护肤",
+      "query": "想要一个适合通勤的清爽防晒，不要太油",
+      "expectation": "识别通勤、清爽肤感、防晒，不要太油作为肤感约束。",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "duration_s": 11.714,
+      "raw_event_names": [
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "state",
+        "generation_started",
+        "response_completed",
+        "token",
+        "token",
+        "generation_degraded",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "product_cards",
+        "products",
+        "frontend_action",
+        "turn_result",
+        "done"
+      ],
+      "frontend_events": [
+        "show_reply",
+        "show_products"
+      ],
+      "reply": "结合你的适合早餐食用、可搭配牛奶需求，为你筛选了 3 款早餐：",
+      "analysis": {
+        "session_id": "real_single_S12_449e7c8e",
+        "user_id": "real_acceptance_user",
+        "意图": "recommend",
+        "业务流程": "recommendation",
+        "商品类别": "食品饮料",
+        "商品子类": "早餐",
+        "价格约束": {
+          "min": null,
+          "max": null
+        },
+        "正向偏好": [
+          "适合早餐食用",
+          "可搭配牛奶",
+          "食用方便",
+          "早餐"
+        ],
+        "否定约束": [],
+        "包含品牌": [],
+        "排除品牌": [],
+        "是否需要检索": true,
+        "是否调用大模型": true
+      },
+      "products": [
+        {
+          "rank": null,
+          "sku_id": "p_food_030",
+          "name": "太平苏打饼干奶盐味全麦低糖轻负担400g独立小包装",
+          "price": 29.9,
+          "category": "食品饮料",
+          "sub_category": "苏打饼干",
+          "reason": "这款比较贴合你对可搭配牛奶、早餐、适合早餐的要求，适合优先查看。",
+          "score": 0.5249
+        },
+        {
+          "rank": null,
+          "sku_id": "p_food_032",
+          "name": "桂格即食燕麦片全谷物免煮早餐代餐1000g袋装",
+          "price": 49.9,
+          "category": "食品饮料",
+          "sub_category": "即食麦片",
+          "reason": "这款更适合作为备选参考，桂格即食燕麦片全谷物免煮早餐代餐1000g袋装在早餐、适合早餐方面仍然有可取之处。",
+          "score": 0.4909
+        },
+        {
+          "rank": null,
+          "sku_id": "p_food_007",
+          "name": "伊利 金典 有机纯牛奶250ml*12盒 甄选有机奶源常温盒装牛奶",
+          "price": 72.0,
+          "category": "食品饮料",
+          "sub_category": "牛奶",
+          "reason": "这款更适合作为备选参考，伊利 金典 有机纯牛奶250ml*12盒 甄选有机奶源常温盒装牛奶在早餐、适合早餐方面仍然有可取之处。",
+          "score": 0.4626
+        }
+      ],
+      "cart_state": {},
+      "system_debug": {
+        "本轮理解": {
+          "session_id": "real_single_S12_449e7c8e",
+          "user_id": "real_acceptance_user",
+          "意图": "recommend",
+          "业务流程": "recommendation",
+          "商品类别": "食品饮料",
+          "商品子类": "早餐",
+          "价格约束": {
+            "min": null,
+            "max": null
+          },
+          "正向偏好": [
+            "适合早餐食用",
+            "可搭配牛奶",
+            "食用方便",
+            "早餐"
+          ],
+          "否定约束": [],
+          "包含品牌": [],
+          "排除品牌": [],
+          "是否需要检索": true,
+          "是否调用大模型": true
+        },
+        "检索摘要": {
+          "检索方式": [
+            "结构化过滤",
+            "关键词匹配",
+            "属性/约束匹配"
+          ],
+          "召回商品数量": 14,
+          "召回商品ID": [
+            "p_food_030",
+            "p_food_032",
+            "p_food_007",
+            "p_food_008",
+            "p_food_002",
+            "p_food_016",
+            "p_food_017",
+            "p_food_022",
+            "p_food_012",
+            "p_food_011",
+            "p_food_020",
+            "p_food_021",
+            "p_food_001",
+            "p_food_023"
+          ],
+          "过滤商品数量": 137,
+          "过滤商品ID样例": [
+            "p_beauty_001",
+            "p_beauty_002",
+            "p_beauty_003",
+            "p_beauty_004",
+            "p_beauty_005",
+            "p_beauty_006",
+            "p_beauty_007",
+            "p_beauty_008",
+            "p_beauty_009",
+            "p_beauty_010",
+            "p_beauty_011",
+            "p_beauty_012",
+            "p_beauty_013",
+            "p_beauty_014",
+            "p_beauty_015",
+            "p_beauty_016",
+            "p_beauty_017",
+            "p_beauty_018",
+            "p_beauty_019",
+            "p_beauty_020"
+          ],
+          "最终推荐商品ID": [
+            "p_food_030",
+            "p_food_032",
+            "p_food_007"
+          ],
+          "检索评分摘要": [
+            {
+              "sku_id": "p_food_030",
+              "name": "太平苏打饼干奶盐味全麦低糖轻负担400g独立小包装",
+              "score": 0.5249,
+              "raw_scores": {
+                "keyword": 0.2143,
+                "semantic": 0.1552,
+                "lexical_semantic": 0.1552,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.4,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "可搭配牛奶",
+                "早餐",
+                "适合早餐"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "早餐"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合早餐"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_food_032",
+              "name": "桂格即食燕麦片全谷物免煮早餐代餐1000g袋装",
+              "score": 0.4909,
+              "raw_scores": {
+                "keyword": 0.2143,
+                "semantic": 0.1409,
+                "lexical_semantic": 0.1409,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.2,
+                "enhancement": 0.4667,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "早餐",
+                "适合早餐"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "早餐"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合早餐"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_food_007",
+              "name": "伊利 金典 有机纯牛奶250ml*12盒 甄选有机奶源常温盒装牛奶",
+              "score": 0.4626,
+              "raw_scores": {
+                "keyword": 0.1429,
+                "semantic": 0.1511,
+                "lexical_semantic": 0.1511,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.2,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "早餐",
+                "适合早餐"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "早餐"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合早餐"
+                ]
+              }
+            }
+          ]
+        },
+        "工具执行": [],
+        "模型调用": {
+          "LLM是否调用": true,
+          "Doubao是否真实调用": true,
+          "调用客户端": "DoubaoClient",
+          "调用目的": [
+            "generate_response",
+            "intent_plan_resolution",
+            "build_scene_presentation",
+            "frontend_action_decision"
+          ],
+          "模型调用次数": 4,
+          "模型调用总耗时_ms": 11394.44,
+          "planned_call_count": 4,
+          "attempted_call_count": 1,
+          "real_http_call_count": 1,
+          "successful_call_count": 1,
+          "failed_call_count": 0,
+          "mock_call_count": 0,
+          "fallback_count": 0,
+          "调用明细": [
+            {
+              "module": "query_understanding",
+              "provider": "DoubaoClient",
+              "purpose": "intent_plan_resolution",
+              "duration_ms": 11394.36,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "raw_output_preview": "{\n    \"primary_intent\": \"recommend\",\n    \"intent_plan\": {\n        \"primary_intent\": \"recommend\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"recommend\",\n                \"action\": \"recommend\",\n                \"source_text\": \"早餐想吃点方便的，最好能搭配牛奶\",\n                \"target_ref\": null,\n                \"quantity\": null,\n                \"sku_id\": null,\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": true,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 0.95,\n        \"reason\": \"用户明确提出需要适合早餐食用、可搭配牛奶的方便类食品，执行对应推荐动作\"\n    },\n    \"category\": \"食品饮料\",\n    \"sub_category\": \"方便食品\",\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"适合早餐食用\", \"可搭配牛奶\", \"食用方便\"],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [],\n    \"mentioned_products\": [],\n    \"cart_action\": {\n        \"action\": null,\n        \"quantity\": null,\n        \"target_ref\": null,\n        \"sku_id\": null,\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": \"早餐食用场景\",\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": false,\n    \"rewritten_query\": \"适合早餐食用、可搭配牛奶的方便食品推荐\",\n    \"confidence\": 0.95,\n    \"uncertain_points\": []\n}",
+                "json_parse_succeeded": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "purpose": "intent_plan_resolution",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_keys": [
+                  "message",
+                  "available_intents",
+                  "available_categories",
+                  "supported_actions",
+                  "current_state",
+                  "last_recommendations",
+                  "cart_items",
+                  "rules"
+                ],
+                "context_length": 1837,
+                "attempt_count": 1,
+                "duration_ms": 11391.51
+              }
+            },
+            {
+              "module": "response_generation",
+              "provider": "DoubaoClient",
+              "purpose": "generate_response",
+              "duration_ms": 0.03,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "scene_presentation_build",
+              "provider": "DoubaoClient",
+              "purpose": "build_scene_presentation",
+              "duration_ms": 0.04,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "frontend_action_decision",
+              "provider": "DoubaoClient",
+              "purpose": "frontend_action_decision",
+              "duration_ms": 0.01,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            }
+          ],
+          "本地小模型任务": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "前端动作决策来源": "rule"
+        },
+        "耗时统计": {},
+        "回复策略": {
+          "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+          "匹配状态": "partial_match",
+          "是否启用积极回复": true,
+          "是否避免否定开头": true,
+          "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+          "使用的个性化参考": [
+            "领域导购风格",
+            "相关历史证据",
+            "few-shot风格示例",
+            "相似人群参考"
+          ],
+          "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+          "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+        }
+      },
+      "case_id": "S12",
+      "group": "食品饮料",
+      "query": "早餐想吃点方便的，最好能搭配牛奶",
+      "expectation": "识别早餐便利场景，给组合推荐。",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "duration_s": 0.17,
+      "raw_event_names": [
+        "progress",
+        "state",
+        "generation_started",
+        "response_completed",
+        "token",
+        "token",
+        "generation_degraded",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "recommendation_section_start",
+        "recommendation_text_delta",
+        "recommendation_text_done",
+        "product_card",
+        "recommendation_section_done",
+        "product_cards",
+        "products",
+        "frontend_action",
+        "turn_result",
+        "done"
+      ],
+      "frontend_events": [
+        "show_reply",
+        "show_products"
+      ],
+      "reply": "结合你的低卡、低糖需求，为你筛选了 3 款坚果/零食：",
+      "analysis": {
+        "session_id": "real_single_S13_d93b59c4",
+        "user_id": "real_acceptance_user",
+        "意图": "recommend",
+        "业务流程": "recommendation",
+        "商品类别": "食品饮料",
+        "商品子类": "坚果/零食",
+        "价格约束": {
+          "min": null,
+          "max": null
+        },
+        "正向偏好": [
+          "低卡",
+          "低糖",
+          "低负担"
+        ],
+        "否定约束": [],
+        "包含品牌": [],
+        "排除品牌": [],
+        "是否需要检索": true,
+        "是否调用大模型": false
+      },
+      "products": [
+        {
+          "rank": null,
+          "sku_id": "p_food_009",
+          "name": "三只松鼠 每日坚果750g/30袋 混合坚果仁干果礼盒独立小包装",
+          "price": 59.0,
+          "category": "食品饮料",
+          "sub_category": "坚果/零食",
+          "reason": "这款比较贴合你对低糖的要求，适合优先查看。",
+          "score": 0.6518
+        },
+        {
+          "rank": null,
+          "sku_id": "p_food_019",
+          "name": "百草味 每日坚果A款 750g/30袋 混合坚果零食礼盒",
+          "price": 111.0,
+          "category": "食品饮料",
+          "sub_category": "坚果/零食",
+          "reason": "这款比较贴合你对适合零食的要求，适合优先查看。",
+          "score": 0.5768
+        },
+        {
+          "rank": null,
+          "sku_id": "p_food_010",
+          "name": "良品铺子 肉松饼1000g/箱 松软糕点休闲零食早餐代餐点心",
+          "price": 32.0,
+          "category": "食品饮料",
+          "sub_category": "坚果/零食",
+          "reason": "这款比较贴合你对适合零食的要求，适合优先查看。",
+          "score": 0.5763
+        }
+      ],
+      "cart_state": {},
+      "system_debug": {
+        "本轮理解": {
+          "session_id": "real_single_S13_d93b59c4",
+          "user_id": "real_acceptance_user",
+          "意图": "recommend",
+          "业务流程": "recommendation",
+          "商品类别": "食品饮料",
+          "商品子类": "坚果/零食",
+          "价格约束": {
+            "min": null,
+            "max": null
+          },
+          "正向偏好": [
+            "低卡",
+            "低糖",
+            "低负担"
+          ],
+          "否定约束": [],
+          "包含品牌": [],
+          "排除品牌": [],
+          "是否需要检索": true,
+          "是否调用大模型": false
+        },
+        "检索摘要": {
+          "检索方式": [
+            "结构化过滤",
+            "关键词匹配",
+            "属性/约束匹配"
+          ],
+          "召回商品数量": 3,
+          "召回商品ID": [
+            "p_food_009",
+            "p_food_019",
+            "p_food_010"
+          ],
+          "过滤商品数量": 148,
+          "过滤商品ID样例": [
+            "p_beauty_001",
+            "p_beauty_002",
+            "p_beauty_003",
+            "p_beauty_004",
+            "p_beauty_005",
+            "p_beauty_006",
+            "p_beauty_007",
+            "p_beauty_008",
+            "p_beauty_009",
+            "p_beauty_010",
+            "p_beauty_011",
+            "p_beauty_012",
+            "p_beauty_013",
+            "p_beauty_014",
+            "p_beauty_015",
+            "p_beauty_016",
+            "p_beauty_017",
+            "p_beauty_018",
+            "p_beauty_019",
+            "p_beauty_020"
+          ],
+          "最终推荐商品ID": [
+            "p_food_009",
+            "p_food_019",
+            "p_food_010"
+          ],
+          "检索评分摘要": [
+            {
+              "sku_id": "p_food_009",
+              "name": "三只松鼠 每日坚果750g/30袋 混合坚果仁干果礼盒独立小包装",
+              "score": 0.6518,
+              "raw_scores": {
+                "keyword": 0.4167,
+                "semantic": 0.1029,
+                "lexical_semantic": 0.1029,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.25,
+                "enhancement": 0.2333,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "低糖"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            },
+            {
+              "sku_id": "p_food_019",
+              "name": "百草味 每日坚果A款 750g/30袋 混合坚果零食礼盒",
+              "score": 0.5768,
+              "raw_scores": {
+                "keyword": 0.3333,
+                "semantic": 0.103,
+                "lexical_semantic": 0.103,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.2333,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "适合零食"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "零食"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [],
+                "enhancement_boost_basis": [
+                  "适合零食"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_food_010",
+              "name": "良品铺子 肉松饼1000g/箱 松软糕点休闲零食早餐代餐点心",
+              "score": 0.5763,
+              "raw_scores": {
+                "keyword": 0.3333,
+                "semantic": 0.101,
+                "lexical_semantic": 0.101,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.2333,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "适合零食"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "零食"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [],
+                "enhancement_boost_basis": [
+                  "适合零食"
+                ]
+              }
+            }
+          ]
+        },
+        "工具执行": [],
+        "模型调用": {
+          "LLM是否调用": false,
+          "Doubao是否真实调用": false,
+          "调用客户端": "DoubaoClient",
+          "调用目的": [
+            "generate_response",
+            "build_scene_presentation",
+            "frontend_action_decision"
+          ],
+          "模型调用次数": 3,
+          "模型调用总耗时_ms": 0.07,
+          "planned_call_count": 3,
+          "attempted_call_count": 0,
+          "real_http_call_count": 0,
+          "successful_call_count": 0,
+          "failed_call_count": 0,
+          "mock_call_count": 0,
+          "fallback_count": 0,
+          "调用明细": [
+            {
+              "module": "response_generation",
+              "provider": "DoubaoClient",
+              "purpose": "generate_response",
+              "duration_ms": 0.02,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "scene_presentation_build",
+              "provider": "DoubaoClient",
+              "purpose": "build_scene_presentation",
+              "duration_ms": 0.04,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "frontend_action_decision",
+              "provider": "DoubaoClient",
+              "purpose": "frontend_action_decision",
+              "duration_ms": 0.01,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            }
+          ],
+          "本地小模型任务": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "前端动作决策来源": "rule"
+        },
+        "耗时统计": {},
+        "回复策略": {
+          "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+          "匹配状态": "partial_match",
+          "是否启用积极回复": true,
+          "是否避免否定开头": true,
+          "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+          "使用的个性化参考": [
+            "领域导购风格",
+            "相关历史证据",
+            "few-shot风格示例",
+            "相似人群参考"
+          ],
+          "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+          "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+        }
+      },
+      "case_id": "S13",
+      "group": "食品饮料",
+      "query": "想要低卡一点的零食",
+      "expectation": "非标准标签匹配低卡零食，避免减肥和医疗承诺。",
+      "ok": false,
+      "issues": [
+        "未命中关键SKU，实际=['p_food_009', 'p_food_010', 'p_food_019']，期望任一=['p_food_029', 'p_food_030', 'p_food_037']"
+      ]
+    },
+    {
+      "duration_s": 23.261,
+      "raw_event_names": [
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "state",
+        "generation_started",
+        "scenario",
+        "response_completed",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "product_cards",
+        "products",
+        "frontend_action",
+        "turn_result",
+        "done"
+      ],
+      "frontend_events": [
+        "show_reply",
+        "show_products"
+      ],
+      "reply": "我为你挑了几款特别适配三亚度假的实用好物哦~\n海边紫外线很强，优先安排这款巴黎欧莱雅高倍防晒隔离露，水感轻薄上脸清爽，全肤质友好能给你足够的面部防护。\n蕉下凉感防晒衣连帽护颈，原纱凉感材质透气不闷汗，长时间在户外逛景点能完整护住肩颈手臂不被晒到。\n哈瓦那进口橡胶人字拖防滑轻便，沙滩踩水、酒店往返穿都舒服不累脚。\n速比涛女士连体泳衣遮肚速干抗氯，下海玩水或者泡泳池都很实用。\n北面轻量速干遮阳帽透气不闷头，能补足头面部的防晒缺口，出门逛景点戴超合适。",
+      "analysis": {
+        "session_id": "real_single_S19_8f00f4c8",
+        "user_id": "real_acceptance_user",
+        "意图": "scene_bundle",
+        "业务流程": "scene_bundle",
+        "商品类别": "服饰运动",
+        "商品子类": null,
+        "价格约束": {
+          "min": null,
+          "max": null
+        },
+        "正向偏好": [
+          "三亚",
+          "度假",
+          "旅行",
+          "防晒"
+        ],
+        "否定约束": [],
+        "包含品牌": [],
+        "排除品牌": [],
+        "是否需要检索": true,
+        "是否调用大模型": true
+      },
+      "products": [
+        {
+          "rank": null,
+          "sku_id": "p_beauty_006",
+          "name": "巴黎欧莱雅新多重防护隔离露水感轻薄高倍防晒修护提亮30ml",
+          "price": 170.0,
+          "category": "美妆护肤",
+          "sub_category": "防晒",
+          "reason": "这款比较贴合你对清爽防晒、海边紫外线强，优先准备面部防晒、防晒的要求，适合优先查看。",
+          "score": 0.922
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_032",
+          "name": "蕉下冰薄系列防晒衣男女款UPF100+原纱凉感透气披肩防晒外套连帽护颈",
+          "price": 199.0,
+          "category": "服饰运动",
+          "sub_category": "防晒衣",
+          "reason": "这款比较贴合你对防晒衣、三亚户外时间长，防晒衣能覆盖手臂和肩颈、防晒衣的要求，适合优先查看。",
+          "score": 0.9156
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_037",
+          "name": "Havaianas哈瓦那人字拖巴西进口橡胶防滑沙滩拖鞋男女同款经典凉拖",
+          "price": 169.0,
+          "category": "服饰运动",
+          "sub_category": "沙滩拖鞋",
+          "reason": "这款比较贴合你对沙滩拖鞋、海边和酒店往返需要轻便防滑拖鞋、适合运动的要求，适合优先查看。",
+          "score": 0.9461
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_029",
+          "name": "速比涛连体泳衣女士保守款遮肚速干抗氯专业训练泳衣中高领",
+          "price": 299.0,
+          "category": "服饰运动",
+          "sub_category": "泳衣",
+          "reason": "这款比较贴合你对泳衣、度假游泳或海边玩水时更方便、适合运动的要求，适合优先查看。",
+          "score": 0.9404
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_024",
+          "name": "The North Face Horizon 轻量速干运动鸭舌帽防晒透气户外遮阳帽",
+          "price": 199.0,
+          "category": "服饰运动",
+          "sub_category": "帽子",
+          "reason": "这款比较贴合你对遮阳帽、遮阳帽能补足头面部防晒、帽子的要求，适合优先查看。",
+          "score": 0.9131
+        }
+      ],
+      "cart_state": {},
+      "system_debug": {
+        "本轮理解": {
+          "session_id": "real_single_S19_8f00f4c8",
+          "user_id": "real_acceptance_user",
+          "意图": "scene_bundle",
+          "业务流程": "scene_bundle",
+          "商品类别": "服饰运动",
+          "商品子类": null,
+          "价格约束": {
+            "min": null,
+            "max": null
+          },
+          "正向偏好": [
+            "三亚",
+            "度假",
+            "旅行",
+            "防晒"
+          ],
+          "否定约束": [],
+          "包含品牌": [],
+          "排除品牌": [],
+          "是否需要检索": true,
+          "是否调用大模型": true
+        },
+        "检索摘要": {
+          "检索方式": [
+            "结构化过滤",
+            "关键词匹配",
+            "属性/约束匹配"
+          ],
+          "召回商品数量": 5,
+          "召回商品ID": [
+            "p_beauty_006",
+            "p_clothes_032",
+            "p_clothes_037",
+            "p_clothes_029",
+            "p_clothes_024"
+          ],
+          "过滤商品数量": 0,
+          "过滤商品ID样例": [],
+          "最终推荐商品ID": [
+            "p_beauty_006",
+            "p_clothes_032",
+            "p_clothes_037",
+            "p_clothes_029",
+            "p_clothes_024"
+          ],
+          "检索评分摘要": [
+            {
+              "sku_id": "p_beauty_006",
+              "name": "巴黎欧莱雅新多重防护隔离露水感轻薄高倍防晒修护提亮30ml",
+              "score": 0.922,
+              "raw_scores": {
+                "keyword": 0.6,
+                "semantic": 0.1644,
+                "lexical_semantic": 0.1644,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "清爽防晒",
+                "海边紫外线强，优先准备面部防晒",
+                "匹配防晒",
+                "类目一致"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            },
+            {
+              "sku_id": "p_clothes_032",
+              "name": "蕉下冰薄系列防晒衣男女款UPF100+原纱凉感透气披肩防晒外套连帽护颈",
+              "score": 0.9156,
+              "raw_scores": {
+                "keyword": 0.6,
+                "semantic": 0.1414,
+                "lexical_semantic": 0.1414,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "防晒衣",
+                "三亚户外时间长，防晒衣能覆盖手臂和肩颈",
+                "匹配防晒衣",
+                "类目一致"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            },
+            {
+              "sku_id": "p_clothes_037",
+              "name": "Havaianas哈瓦那人字拖巴西进口橡胶防滑沙滩拖鞋男女同款经典凉拖",
+              "score": 0.9461,
+              "raw_scores": {
+                "keyword": 0.625,
+                "semantic": 0.1289,
+                "lexical_semantic": 0.1289,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.5833,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "沙滩拖鞋",
+                "海边和酒店往返需要轻便防滑拖鞋",
+                "适合运动"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "运动"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合运动"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_clothes_029",
+              "name": "速比涛连体泳衣女士保守款遮肚速干抗氯专业训练泳衣中高领",
+              "score": 0.9404,
+              "raw_scores": {
+                "keyword": 0.625,
+                "semantic": 0.1087,
+                "lexical_semantic": 0.1087,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.5833,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "泳衣",
+                "度假游泳或海边玩水时更方便",
+                "适合运动"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "运动"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合运动"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_clothes_024",
+              "name": "The North Face Horizon 轻量速干运动鸭舌帽防晒透气户外遮阳帽",
+              "score": 0.9131,
+              "raw_scores": {
+                "keyword": 0.625,
+                "semantic": 0.1111,
+                "lexical_semantic": 0.1111,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "遮阳帽",
+                "遮阳帽能补足头面部防晒",
+                "匹配帽子",
+                "类目一致"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            }
+          ]
+        },
+        "工具执行": [],
+        "模型调用": {
+          "LLM是否调用": true,
+          "Doubao是否真实调用": true,
+          "调用客户端": "DoubaoClient",
+          "调用目的": [
+            "scene_explanation",
+            "generate_response",
+            "intent_plan_resolution",
+            "build_scene_presentation",
+            "frontend_action_decision"
+          ],
+          "模型调用次数": 4,
+          "模型调用总耗时_ms": 22983.43,
+          "planned_call_count": 4,
+          "attempted_call_count": 2,
+          "real_http_call_count": 2,
+          "successful_call_count": 2,
+          "failed_call_count": 0,
+          "mock_call_count": 0,
+          "fallback_count": 0,
+          "调用明细": [
+            {
+              "module": "query_understanding",
+              "provider": "DoubaoClient",
+              "purpose": "intent_plan_resolution",
+              "duration_ms": 11658.64,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "raw_output_preview": "{\n    \"primary_intent\": \"scene_bundle\",\n    \"intent_plan\": {\n        \"primary_intent\": \"scene_bundle\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"scene_bundle\",\n                \"action\": \"scene_bundle\",\n                \"source_text\": \"去三亚度假需要买什么\",\n                \"target_ref\": null,\n                \"quantity\": null,\n                \"sku_id\": null,\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": true,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 0.95,\n        \"reason\": \"用户询问三亚度假所需采购的物品清单，属于跨类目组合搭配的场景化采购需求，符合scene_bundle触发条件\"\n    },\n    \"category\": null,\n    \"sub_category\": null,\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [],\n    \"mentioned_products\": [],\n    \"cart_action\": {\n        \"action\": null,\n        \"quantity\": null,\n        \"target_ref\": null,\n        \"sku_id\": null,\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": \"三亚度假采购\",\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": true,\n    \"rewritten_query\": \"三亚度假所需采购物品全套搭配清单\",\n    \"confidence\": 0.95,\n    \"uncertain_points\": []\n}",
+                "json_parse_succeeded": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "purpose": "intent_plan_resolution",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_keys": [
+                  "message",
+                  "available_intents",
+                  "available_categories",
+                  "supported_actions",
+                  "current_state",
+                  "last_recommendations",
+                  "cart_items",
+                  "rules"
+                ],
+                "context_length": 1831,
+                "attempt_count": 1,
+                "duration_ms": 11654.92
+              }
+            },
+            {
+              "module": "response_generation",
+              "provider": "DoubaoClient",
+              "purpose": "generate_response",
+              "duration_ms": 11324.62,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "intent": "scene_bundle",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_length": 13862,
+                "product_name_count": 5,
+                "raw_output_preview": "我为你挑了几款特别适配三亚度假的实用好物哦~\n海边紫外线很强，优先安排这款巴黎欧莱雅高倍防晒隔离露，水感轻薄上脸清爽，全肤质友好能给你足够的面部防护。\n蕉下凉感防晒衣连帽护颈，原纱凉感材质透气不闷汗，长时间在户外逛景点能完整护住肩颈手臂不被晒到。\n哈瓦那进口橡胶人字拖防滑轻便，沙滩踩水、酒店往返穿都舒服不累脚。\n速比涛女士连体泳衣遮肚速干抗氯，下海玩水或者泡泳池都很实用。\n北面轻量速干遮阳帽透气不闷头，能补足头面部的防晒缺口，出门逛景点戴超合适。",
+                "duration_ms": 11322.41
+              }
+            },
+            {
+              "module": "scene_presentation_build",
+              "provider": "DoubaoClient",
+              "purpose": "build_scene_presentation",
+              "duration_ms": 0.02,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "frontend_action_decision",
+              "provider": "DoubaoClient",
+              "purpose": "frontend_action_decision",
+              "duration_ms": 0.15,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            }
+          ],
+          "本地小模型任务": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "前端动作决策来源": "rule"
+        },
+        "耗时统计": {},
+        "回复策略": {
+          "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+          "匹配状态": "exact_match",
+          "是否启用积极回复": true,
+          "是否避免否定开头": true,
+          "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+          "使用的个性化参考": [
+            "领域导购风格",
+            "相关历史证据",
+            "few-shot风格示例",
+            "相似人群参考"
+          ],
+          "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+          "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+        }
+      },
+      "case_id": "S19",
+      "group": "场景组合",
+      "query": "去三亚度假需要买什么",
+      "expectation": "场景组合推荐，考虑防晒、防晒衣、帽子、拖鞋、泳衣、背包等。",
+      "ok": true,
+      "issues": []
+    },
+    {
+      "duration_s": 61.542,
+      "raw_event_names": [
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "progress",
+        "state",
+        "generation_started",
+        "scenario",
+        "response_completed",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "product_cards",
+        "products",
+        "frontend_action",
+        "turn_result",
+        "done"
+      ],
+      "frontend_events": [
+        "show_reply",
+        "show_products"
+      ],
+      "reply": "我为你挑了几款特别适配健身房新手的入门实用装备哦~\n优先选这件迪卡侬入门速干T恤，只要79元性价比超高，轻薄透气的材质运动出汗也不会黏在身上，新手日常训练穿很合适。\n这款优衣库DRY速干运动短裤售价149元，透气速干面料活动完全不受限，不管是练器械还是做有氧都很舒服。\n这套安踏5双装运动袜只要49元，透气吸汗还防臭，能有效减少运动时磨脚闷汗的问题，日常换穿也很方便。\n还有这款Swisse香草味乳清蛋白粉，低糖低脂，训练后来一杯补充蛋白，帮你更好地完成增肌塑形的目标哦。",
+      "analysis": {
+        "session_id": "real_single_S20_450a3b40",
+        "user_id": "real_acceptance_user",
+        "意图": "scene_bundle",
+        "业务流程": "scene_bundle",
+        "商品类别": "服饰运动",
+        "商品子类": null,
+        "价格约束": {
+          "min": null,
+          "max": null
+        },
+        "正向偏好": [
+          "适合健身房新手使用",
+          "健身",
+          "新手"
+        ],
+        "否定约束": [],
+        "包含品牌": [],
+        "排除品牌": [],
+        "是否需要检索": true,
+        "是否调用大模型": true
+      },
+      "products": [
+        {
+          "rank": null,
+          "sku_id": "p_clothes_020",
+          "name": "迪卡侬 KALENJI 男子跑步速干T恤轻薄透气基础训练短袖上衣",
+          "price": 79.0,
+          "category": "服饰运动",
+          "sub_category": "速干T恤",
+          "reason": "这款比较贴合你对基础速干上衣、新手训练先准备一件基础速干上衣，出汗后不容易黏身、适合健身的要求，适合优先查看。",
+          "score": 0.9962
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_023",
+          "name": "优衣库 男装 DRY 速干运动短裤 轻薄透气训练裤",
+          "price": 149.0,
+          "category": "服饰运动",
+          "sub_category": "运动短裤",
+          "reason": "这款比较贴合你对运动短裤、健身房训练需要活动方便的轻薄下装、适合训练的要求，适合优先查看。",
+          "score": 1.0
+        },
+        {
+          "rank": null,
+          "sku_id": "p_clothes_028",
+          "name": "安踏运动袜中筒透气吸汗防臭跑步篮球训练袜5双装男女同款",
+          "price": 49.0,
+          "category": "服饰运动",
+          "sub_category": "运动袜",
+          "reason": "这款比较贴合你对运动袜、运动袜能减少磨脚和闷汗、适合跑步的要求，适合优先查看。",
+          "score": 1.0
+        },
+        {
+          "rank": null,
+          "sku_id": "p_food_028",
+          "name": "Swisse乳清蛋白粉香草味450g运动健身增肌塑形",
+          "price": 239.0,
+          "category": "食品饮料",
+          "sub_category": "蛋白粉",
+          "reason": "这款比较贴合你对蛋白补给、训练后可以准备蛋白类补给、蛋白粉的要求，适合优先查看。",
+          "score": 0.9238
+        }
+      ],
+      "cart_state": {},
+      "system_debug": {
+        "本轮理解": {
+          "session_id": "real_single_S20_450a3b40",
+          "user_id": "real_acceptance_user",
+          "意图": "scene_bundle",
+          "业务流程": "scene_bundle",
+          "商品类别": "服饰运动",
+          "商品子类": null,
+          "价格约束": {
+            "min": null,
+            "max": null
+          },
+          "正向偏好": [
+            "适合健身房新手使用",
+            "健身",
+            "新手"
+          ],
+          "否定约束": [],
+          "包含品牌": [],
+          "排除品牌": [],
+          "是否需要检索": true,
+          "是否调用大模型": true
+        },
+        "检索摘要": {
+          "检索方式": [
+            "结构化过滤",
+            "关键词匹配",
+            "属性/约束匹配"
+          ],
+          "召回商品数量": 4,
+          "召回商品ID": [
+            "p_clothes_020",
+            "p_clothes_023",
+            "p_clothes_028",
+            "p_food_028"
+          ],
+          "过滤商品数量": 0,
+          "过滤商品ID样例": [],
+          "最终推荐商品ID": [
+            "p_clothes_020",
+            "p_clothes_023",
+            "p_clothes_028",
+            "p_food_028"
+          ],
+          "检索评分摘要": [
+            {
+              "sku_id": "p_clothes_020",
+              "name": "迪卡侬 KALENJI 男子跑步速干T恤轻薄透气基础训练短袖上衣",
+              "score": 0.9962,
+              "raw_scores": {
+                "keyword": 0.75,
+                "semantic": 0.2008,
+                "lexical_semantic": 0.2008,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.5833,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "基础速干上衣",
+                "新手训练先准备一件基础速干上衣，出汗后不容易黏身",
+                "适合健身"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "健身"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合健身"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_clothes_023",
+              "name": "优衣库 男装 DRY 速干运动短裤 轻薄透气训练裤",
+              "score": 1.0,
+              "raw_scores": {
+                "keyword": 0.7,
+                "semantic": 0.1967,
+                "lexical_semantic": 0.1967,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.8167,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "运动短裤",
+                "健身房训练需要活动方便的轻薄下装",
+                "适合训练",
+                "适合健身"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags",
+                  "non_standard_query_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "训练",
+                  "健身"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合训练",
+                  "适合健身"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_clothes_028",
+              "name": "安踏运动袜中筒透气吸汗防臭跑步篮球训练袜5双装男女同款",
+              "score": 1.0,
+              "raw_scores": {
+                "keyword": 0.7273,
+                "semantic": 0.1741,
+                "lexical_semantic": 0.1741,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 1.0,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "运动袜",
+                "运动袜能减少磨脚和闷汗",
+                "适合跑步",
+                "适合训练",
+                "适合健身"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [
+                  "跑步",
+                  "训练",
+                  "健身"
+                ],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": [
+                  "适合跑步",
+                  "适合训练",
+                  "适合健身"
+                ]
+              }
+            },
+            {
+              "sku_id": "p_food_028",
+              "name": "Swisse乳清蛋白粉香草味450g运动健身增肌塑形",
+              "score": 0.9238,
+              "raw_scores": {
+                "keyword": 0.6,
+                "semantic": 0.1709,
+                "lexical_semantic": 0.1709,
+                "bge_embedding": 0.0,
+                "text2vec_embedding": 0.0,
+                "bge_reranker": 0.0,
+                "constraint": 0.0,
+                "enhancement": 0.35,
+                "preference": 0.0,
+                "price_fit": 0.4
+              },
+              "matched_reasons": [
+                "蛋白补给",
+                "训练后可以准备蛋白类补给",
+                "匹配蛋白粉",
+                "类目一致"
+              ],
+              "enhancement_matches": {
+                "used_fields": [
+                  "product_highlight",
+                  "highlight_short",
+                  "highlight_detail",
+                  "suitable_scenarios",
+                  "target_user_tags"
+                ],
+                "matched_non_standard_query_tags": [],
+                "matched_suitable_scenarios": [],
+                "matched_target_user_tags": [],
+                "matched_highlight_fields": [
+                  "highlight_short",
+                  "highlight_detail",
+                  "product_highlight"
+                ],
+                "enhancement_boost_basis": []
+              }
+            }
+          ]
+        },
+        "工具执行": [],
+        "模型调用": {
+          "LLM是否调用": true,
+          "Doubao是否真实调用": true,
+          "调用客户端": "DoubaoClient",
+          "调用目的": [
+            "scene_explanation",
+            "generate_response",
+            "intent_plan_resolution",
+            "build_scene_presentation",
+            "frontend_action_decision"
+          ],
+          "模型调用次数": 4,
+          "模型调用总耗时_ms": 61201.82,
+          "planned_call_count": 4,
+          "attempted_call_count": 2,
+          "real_http_call_count": 2,
+          "successful_call_count": 2,
+          "failed_call_count": 0,
+          "mock_call_count": 0,
+          "fallback_count": 0,
+          "调用明细": [
+            {
+              "module": "query_understanding",
+              "provider": "DoubaoClient",
+              "purpose": "intent_plan_resolution",
+              "duration_ms": 48992.29,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "raw_output_preview": "{\n    \"primary_intent\": \"scene_bundle\",\n    \"intent_plan\": {\n        \"primary_intent\": \"scene_bundle\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"scene_bundle\",\n                \"action\": \"scene_bundle\",\n                \"source_text\": \"健身房新手需要买什么装备\",\n                \"target_ref\": null,\n                \"quantity\": null,\n                \"sku_id\": null,\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": true,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 0.9,\n        \"reason\": \"用户询问健身房新手所需的全套装备，属于跨多品类的组合场景推荐，符合scene_bundle触发规则\"\n    },\n    \"category\": null,\n    \"sub_category\": null,\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"适合健身房新手使用\"],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [],\n    \"mentioned_products\": [],\n    \"cart_action\": {\n        \"action\": null,\n        \"quantity\": null,\n        \"target_ref\": null,\n        \"sku_id\": null,\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": \"健身房新手装备采购\",\n    \"target_user\": \"健身房新手\",\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": false,\n    \"rewritten_query\": \"健身房新手适用全套装备组合推荐\",\n    \"confidence\": 0.9,\n    \"uncertain_points\": []\n}",
+                "json_parse_succeeded": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "purpose": "intent_plan_resolution",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_keys": [
+                  "message",
+                  "available_intents",
+                  "available_categories",
+                  "supported_actions",
+                  "current_state",
+                  "last_recommendations",
+                  "cart_items",
+                  "rules"
+                ],
+                "context_length": 1833,
+                "attempt_count": 2,
+                "duration_ms": 48989.01
+              }
+            },
+            {
+              "module": "response_generation",
+              "provider": "DoubaoClient",
+              "purpose": "generate_response",
+              "duration_ms": 12209.49,
+              "llm_call_attempted": true,
+              "llm_is_mock": false,
+              "http_request_sent": true,
+              "http_request_succeeded": true,
+              "http_status_code": 200,
+              "raw_output_received": true,
+              "fallback_triggered": false,
+              "fallback_reason": null,
+              "call_succeeded": true,
+              "call_debug": {
+                "llm_provider": "doubao",
+                "llm_is_mock": false,
+                "llm_call_attempted": true,
+                "http_request_sent": true,
+                "http_request_succeeded": true,
+                "http_status_code": 200,
+                "raw_output_received": true,
+                "fallback_triggered": false,
+                "fallback_reason": null,
+                "intent": "scene_bundle",
+                "model": "ep-20260514111645-lmgt2",
+                "base_url_configured": true,
+                "api_key_configured": true,
+                "context_length": 13398,
+                "product_name_count": 4,
+                "raw_output_preview": "我为你挑了几款特别适配健身房新手的入门实用装备哦~\n优先选这件迪卡侬入门速干T恤，只要79元性价比超高，轻薄透气的材质运动出汗也不会黏在身上，新手日常训练穿很合适。\n这款优衣库DRY速干运动短裤售价149元，透气速干面料活动完全不受限，不管是练器械还是做有氧都很舒服。\n这套安踏5双装运动袜只要49元，透气吸汗还防臭，能有效减少运动时磨脚闷汗的问题，日常换穿也很方便。\n还有这款Swisse香草味乳清蛋白粉，低糖低脂，训练后来一杯补充蛋白，帮你更好地完成增肌塑形的目标哦。",
+                "duration_ms": 12207.22
+              }
+            },
+            {
+              "module": "scene_presentation_build",
+              "provider": "DoubaoClient",
+              "purpose": "build_scene_presentation",
+              "duration_ms": 0.02,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            },
+            {
+              "module": "frontend_action_decision",
+              "provider": "DoubaoClient",
+              "purpose": "frontend_action_decision",
+              "duration_ms": 0.02,
+              "llm_call_attempted": false,
+              "llm_is_mock": false,
+              "http_request_sent": false,
+              "http_request_succeeded": false,
+              "http_status_code": null,
+              "raw_output_received": false,
+              "fallback_triggered": false,
+              "fallback_reason": "skipped_by_policy",
+              "call_succeeded": false,
+              "skipped_by_policy": true
+            }
+          ],
+          "本地小模型任务": [
+            "bge_embedding_recall",
+            "text2vec_semantic_recall",
+            "bge_reranker"
+          ],
+          "前端动作决策来源": "rule"
+        },
+        "耗时统计": {},
+        "回复策略": {
+          "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+          "匹配状态": "exact_match",
+          "是否启用积极回复": true,
+          "是否避免否定开头": true,
+          "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+          "使用的个性化参考": [
+            "领域导购风格",
+            "相关历史证据",
+            "few-shot风格示例",
+            "相似人群参考"
+          ],
+          "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+          "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+        }
+      },
+      "case_id": "S20",
+      "group": "场景组合",
+      "query": "健身房新手需要买什么装备",
+      "expectation": "场景拆解为速干T恤、运动短裤、跑鞋、运动袜、蛋白粉等。",
+      "ok": true,
+      "issues": []
+    }
+  ],
+  "multi": [
+    {
+      "case_id": "M-B",
+      "name": "多轮详情与购物车测试",
+      "expectation": "第二/三轮均解析第一轮推荐列表；第四轮加入购物车的是第一轮第二个短袖。",
+      "ok": false,
+      "issues": [
+        "购物车未加入第一轮第二个商品，期望=p_clothes_003，实际=[]"
+      ],
+      "turns": [
+        {
+          "duration_s": 0.24,
+          "raw_event_names": [
+            "progress",
+            "state",
+            "generation_started",
+            "response_completed",
+            "token",
+            "generation_degraded",
+            "recommendation_section_start",
+            "recommendation_text_delta",
+            "recommendation_text_done",
+            "product_card",
+            "recommendation_section_done",
+            "recommendation_section_start",
+            "recommendation_text_delta",
+            "recommendation_text_done",
+            "product_card",
+            "recommendation_section_done",
+            "recommendation_section_start",
+            "recommendation_text_delta",
+            "recommendation_text_done",
+            "product_card",
+            "recommendation_section_done",
+            "product_cards",
+            "products",
+            "frontend_action",
+            "turn_result",
+            "done"
+          ],
+          "frontend_events": [
+            "show_reply",
+            "show_products"
+          ],
+          "reply": "结合你的跑步需求，为你筛选了 3 款短袖T恤：",
+          "analysis": {
+            "session_id": "real_multi_M-B_54b8f1d6",
+            "user_id": "real_acceptance_M-B",
+            "意图": "recommend",
+            "业务流程": "recommendation",
+            "商品类别": "服饰运动",
+            "商品子类": "短袖T恤",
+            "价格约束": {
+              "min": null,
+              "max": null
+            },
+            "正向偏好": [
+              "跑步"
+            ],
+            "否定约束": [],
+            "包含品牌": [],
+            "排除品牌": [],
+            "是否需要检索": true,
+            "是否调用大模型": false
+          },
+          "products": [
+            {
+              "rank": null,
+              "sku_id": "p_clothes_002",
+              "name": "优衣库 DRY-EX 超快干圆领短袖T恤 男装 运动训练上衣",
+              "price": 129.0,
+              "category": "服饰运动",
+              "sub_category": "短袖T恤",
+              "reason": "这款比较贴合你对跑步、适合跑步的要求，适合优先查看。",
+              "score": 0.7269
+            },
+            {
+              "rank": null,
+              "sku_id": "p_clothes_003",
+              "name": "Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣",
+              "price": 199.0,
+              "category": "服饰运动",
+              "sub_category": "短袖T恤",
+              "reason": "这款比较贴合你对跑步、适合跑步的要求，适合优先查看。",
+              "score": 0.7222
+            },
+            {
+              "rank": null,
+              "sku_id": "p_clothes_021",
+              "name": "Nike Dri-FIT Miler 男子速干短袖跑步上衣轻薄透气公路训练T恤",
+              "price": 249.0,
+              "category": "服饰运动",
+              "sub_category": "速干T恤",
+              "reason": "这款比较贴合你对跑步、适合跑步的要求，适合优先查看。",
+              "score": 0.5955
+            }
+          ],
+          "cart_state": {},
+          "system_debug": {
+            "本轮理解": {
+              "session_id": "real_multi_M-B_54b8f1d6",
+              "user_id": "real_acceptance_M-B",
+              "意图": "recommend",
+              "业务流程": "recommendation",
+              "商品类别": "服饰运动",
+              "商品子类": "短袖T恤",
+              "价格约束": {
+                "min": null,
+                "max": null
+              },
+              "正向偏好": [
+                "跑步"
+              ],
+              "否定约束": [],
+              "包含品牌": [],
+              "排除品牌": [],
+              "是否需要检索": true,
+              "是否调用大模型": false
+            },
+            "检索摘要": {
+              "检索方式": [
+                "结构化过滤",
+                "关键词匹配",
+                "属性/约束匹配"
+              ],
+              "召回商品数量": 5,
+              "召回商品ID": [
+                "p_clothes_002",
+                "p_clothes_003",
+                "p_clothes_021",
+                "p_clothes_020",
+                "p_clothes_001"
+              ],
+              "过滤商品数量": 146,
+              "过滤商品ID样例": [
+                "p_beauty_001",
+                "p_beauty_002",
+                "p_beauty_003",
+                "p_beauty_004",
+                "p_beauty_005",
+                "p_beauty_006",
+                "p_beauty_007",
+                "p_beauty_008",
+                "p_beauty_009",
+                "p_beauty_010",
+                "p_beauty_011",
+                "p_beauty_012",
+                "p_beauty_013",
+                "p_beauty_014",
+                "p_beauty_015",
+                "p_beauty_016",
+                "p_beauty_017",
+                "p_beauty_018",
+                "p_beauty_019",
+                "p_beauty_020"
+              ],
+              "最终推荐商品ID": [
+                "p_clothes_002",
+                "p_clothes_003",
+                "p_clothes_021"
+              ],
+              "检索评分摘要": [
+                {
+                  "sku_id": "p_clothes_002",
+                  "name": "优衣库 DRY-EX 超快干圆领短袖T恤 男装 运动训练上衣",
+                  "score": 0.7269,
+                  "raw_scores": {
+                    "keyword": 0.4,
+                    "semantic": 0.1389,
+                    "lexical_semantic": 0.1389,
+                    "bge_embedding": 0.0,
+                    "text2vec_embedding": 0.0,
+                    "bge_reranker": 0.0,
+                    "constraint": 0.5,
+                    "enhancement": 0.35,
+                    "preference": 0.0,
+                    "price_fit": 0.4
+                  },
+                  "matched_reasons": [
+                    "跑步",
+                    "适合跑步"
+                  ],
+                  "enhancement_matches": {
+                    "used_fields": [
+                      "product_highlight",
+                      "highlight_short",
+                      "highlight_detail",
+                      "suitable_scenarios",
+                      "target_user_tags",
+                      "non_standard_query_tags"
+                    ],
+                    "matched_non_standard_query_tags": [],
+                    "matched_suitable_scenarios": [
+                      "跑步"
+                    ],
+                    "matched_target_user_tags": [],
+                    "matched_highlight_fields": [
+                      "product_highlight"
+                    ],
+                    "enhancement_boost_basis": [
+                      "适合跑步"
+                    ]
+                  }
+                },
+                {
+                  "sku_id": "p_clothes_003",
+                  "name": "Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣",
+                  "score": 0.7222,
+                  "raw_scores": {
+                    "keyword": 0.4,
+                    "semantic": 0.1222,
+                    "lexical_semantic": 0.1222,
+                    "bge_embedding": 0.0,
+                    "text2vec_embedding": 0.0,
+                    "bge_reranker": 0.0,
+                    "constraint": 0.5,
+                    "enhancement": 0.35,
+                    "preference": 0.0,
+                    "price_fit": 0.4
+                  },
+                  "matched_reasons": [
+                    "跑步",
+                    "适合跑步"
+                  ],
+                  "enhancement_matches": {
+                    "used_fields": [
+                      "product_highlight",
+                      "highlight_short",
+                      "highlight_detail",
+                      "suitable_scenarios",
+                      "target_user_tags",
+                      "non_standard_query_tags"
+                    ],
+                    "matched_non_standard_query_tags": [],
+                    "matched_suitable_scenarios": [
+                      "跑步"
+                    ],
+                    "matched_target_user_tags": [],
+                    "matched_highlight_fields": [
+                      "product_highlight"
+                    ],
+                    "enhancement_boost_basis": [
+                      "适合跑步"
+                    ]
+                  }
+                },
+                {
+                  "sku_id": "p_clothes_021",
+                  "name": "Nike Dri-FIT Miler 男子速干短袖跑步上衣轻薄透气公路训练T恤",
+                  "score": 0.5955,
+                  "raw_scores": {
+                    "keyword": 0.4,
+                    "semantic": 0.1195,
+                    "lexical_semantic": 0.1195,
+                    "bge_embedding": 0.0,
+                    "text2vec_embedding": 0.0,
+                    "bge_reranker": 0.0,
+                    "constraint": 0.5,
+                    "enhancement": 0.4667,
+                    "preference": 0.0,
+                    "price_fit": 0.4
+                  },
+                  "matched_reasons": [
+                    "跑步",
+                    "适合跑步"
+                  ],
+                  "enhancement_matches": {
+                    "used_fields": [
+                      "product_highlight",
+                      "highlight_short",
+                      "highlight_detail",
+                      "suitable_scenarios",
+                      "target_user_tags",
+                      "non_standard_query_tags"
+                    ],
+                    "matched_non_standard_query_tags": [],
+                    "matched_suitable_scenarios": [
+                      "跑步"
+                    ],
+                    "matched_target_user_tags": [],
+                    "matched_highlight_fields": [
+                      "highlight_detail",
+                      "product_highlight"
+                    ],
+                    "enhancement_boost_basis": [
+                      "适合跑步"
+                    ]
+                  }
+                }
+              ]
+            },
+            "工具执行": [],
+            "模型调用": {
+              "LLM是否调用": false,
+              "Doubao是否真实调用": false,
+              "调用客户端": "DoubaoClient",
+              "调用目的": [
+                "generate_response",
+                "build_scene_presentation",
+                "frontend_action_decision"
+              ],
+              "模型调用次数": 3,
+              "模型调用总耗时_ms": 0.07,
+              "planned_call_count": 3,
+              "attempted_call_count": 0,
+              "real_http_call_count": 0,
+              "successful_call_count": 0,
+              "failed_call_count": 0,
+              "mock_call_count": 0,
+              "fallback_count": 0,
+              "调用明细": [
+                {
+                  "module": "response_generation",
+                  "provider": "DoubaoClient",
+                  "purpose": "generate_response",
+                  "duration_ms": 0.02,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                },
+                {
+                  "module": "scene_presentation_build",
+                  "provider": "DoubaoClient",
+                  "purpose": "build_scene_presentation",
+                  "duration_ms": 0.04,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                },
+                {
+                  "module": "frontend_action_decision",
+                  "provider": "DoubaoClient",
+                  "purpose": "frontend_action_decision",
+                  "duration_ms": 0.01,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                }
+              ],
+              "本地小模型任务": [
+                "bge_embedding_recall",
+                "text2vec_semantic_recall",
+                "bge_reranker"
+              ],
+              "前端动作决策来源": "rule"
+            },
+            "耗时统计": {},
+            "回复策略": {
+              "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+              "匹配状态": "partial_match",
+              "是否启用积极回复": true,
+              "是否避免否定开头": true,
+              "长度策略": "普通推荐 2-4 句，商品细节主要交给商品卡片。",
+              "使用的个性化参考": [
+                "领域导购风格",
+                "用户画像摘要",
+                "相关历史证据",
+                "few-shot风格示例",
+                "相似人群参考"
+              ],
+              "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+              "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+            }
+          },
+          "turn": 1,
+          "query": "推荐三款适合跑步的短袖"
+        },
+        {
+          "duration_s": 18.143,
+          "raw_event_names": [
+            "progress",
+            "progress",
+            "progress",
+            "progress",
+            "state",
+            "product_detail",
+            "generation_started",
+            "response_completed",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "frontend_action",
+            "turn_result",
+            "done"
+          ],
+          "frontend_events": [
+            "show_reply",
+            "show_product_detail"
+          ],
+          "reply": "这款是优衣库DRY-EX超快干圆领男士短袖运动训练上衣，售价129元哦。\n它主打高效排汗的速干材质，运动出汗后不会黏在身上，跑步、训练、健身还有日常通勤都能适配。\n要提醒你这款版型偏窄，选码的时候可以多留意下尺寸参考，很适合跑步爱好者、健身人群还有兼顾运动和通勤的上班族选购。",
+          "analysis": {
+            "session_id": "real_multi_M-B_54b8f1d6",
+            "user_id": "real_acceptance_M-B",
+            "意图": "detail",
+            "业务流程": "product_qa",
+            "商品类别": "服饰运动",
+            "商品子类": "短袖T恤",
+            "价格约束": {
+              "min": null,
+              "max": null
+            },
+            "正向偏好": [
+              "跑步"
+            ],
+            "否定约束": [],
+            "包含品牌": [],
+            "排除品牌": [],
+            "是否需要检索": true,
+            "是否调用大模型": true
+          },
+          "products": [],
+          "cart_state": {},
+          "system_debug": {
+            "本轮理解": {
+              "session_id": "real_multi_M-B_54b8f1d6",
+              "user_id": "real_acceptance_M-B",
+              "意图": "detail",
+              "业务流程": "product_qa",
+              "商品类别": "服饰运动",
+              "商品子类": "短袖T恤",
+              "价格约束": {
+                "min": null,
+                "max": null
+              },
+              "正向偏好": [
+                "跑步"
+              ],
+              "否定约束": [],
+              "包含品牌": [],
+              "排除品牌": [],
+              "是否需要检索": true,
+              "是否调用大模型": true
+            },
+            "检索摘要": {
+              "检索方式": [
+                "结构化过滤",
+                "关键词匹配",
+                "属性/约束匹配"
+              ],
+              "召回商品数量": 1,
+              "召回商品ID": [
+                "p_clothes_002"
+              ],
+              "过滤商品数量": 0,
+              "过滤商品ID样例": [],
+              "最终推荐商品ID": [
+                "p_clothes_002"
+              ],
+              "检索评分摘要": [
+                {
+                  "sku_id": "p_clothes_002",
+                  "name": "优衣库 DRY-EX 超快干圆领短袖T恤 男装 运动训练上衣",
+                  "score": 1.0,
+                  "raw_scores": {
+                    "reference_memory": 1.0
+                  },
+                  "matched_reasons": [
+                    "来自上一轮推荐或用户指代",
+                    "跑步",
+                    "适合跑步"
+                  ],
+                  "enhancement_matches": {}
+                }
+              ]
+            },
+            "工具执行": [],
+            "模型调用": {
+              "LLM是否调用": true,
+              "Doubao是否真实调用": true,
+              "调用客户端": "DoubaoClient",
+              "调用目的": [
+                "generate_response",
+                "intent_plan_resolution",
+                "frontend_action_decision"
+              ],
+              "模型调用次数": 3,
+              "模型调用总耗时_ms": 17850.6,
+              "planned_call_count": 3,
+              "attempted_call_count": 2,
+              "real_http_call_count": 2,
+              "successful_call_count": 2,
+              "failed_call_count": 0,
+              "mock_call_count": 0,
+              "fallback_count": 0,
+              "调用明细": [
+                {
+                  "module": "query_understanding",
+                  "provider": "DoubaoClient",
+                  "purpose": "intent_plan_resolution",
+                  "duration_ms": 10742.93,
+                  "llm_call_attempted": true,
+                  "llm_is_mock": false,
+                  "http_request_sent": true,
+                  "http_request_succeeded": true,
+                  "http_status_code": 200,
+                  "raw_output_received": true,
+                  "fallback_triggered": false,
+                  "fallback_reason": null,
+                  "call_succeeded": true,
+                  "call_debug": {
+                    "llm_provider": "doubao",
+                    "llm_is_mock": false,
+                    "llm_call_attempted": true,
+                    "http_request_sent": true,
+                    "http_request_succeeded": true,
+                    "http_status_code": 200,
+                    "raw_output_received": true,
+                    "raw_output_preview": "{\n    \"primary_intent\": \"detail\",\n    \"intent_plan\": {\n        \"primary_intent\": \"detail\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"detail\",\n                \"action\": \"detail\",\n                \"source_text\": \"第一个给我介绍一下\",\n                \"target_ref\": \"第一个\",\n                \"quantity\": null,\n                \"sku_id\": \"p_clothes_002\",\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": false,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 1.0,\n        \"reason\": \"用户明确要求介绍最近推荐列表中的第一个商品，属于查看商品详情的detail意图\"\n    },\n    \"category\": \"服饰运动\",\n    \"sub_category\": \"短袖T恤\",\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"跑步\"],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [\"第一个\"],\n    \"mentioned_products\": [\"优衣库 DRY-EX 超快干圆领短袖T恤 男装 运动训练上衣\"],\n    \"cart_action\": {\n        \"action\": null,\n        \"quantity\": null,\n        \"target_ref\": null,\n        \"sku_id\": null,\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": null,\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": true,\n    \"rewritten_query\": \"查看第一个推荐的跑步相关短袖T恤的商品详情\",\n    \"confidence\": 1.0,\n    \"uncertain_points\": []\n}",
+                    "json_parse_succeeded": true,
+                    "fallback_triggered": false,
+                    "fallback_reason": null,
+                    "purpose": "intent_plan_resolution",
+                    "model": "ep-20260514111645-lmgt2",
+                    "base_url_configured": true,
+                    "api_key_configured": true,
+                    "context_keys": [
+                      "message",
+                      "available_intents",
+                      "available_categories",
+                      "supported_actions",
+                      "current_state",
+                      "last_recommendations",
+                      "cart_items",
+                      "rules"
+                    ],
+                    "context_length": 2341,
+                    "attempt_count": 1,
+                    "duration_ms": 10738.15
+                  }
+                },
+                {
+                  "module": "response_generation",
+                  "provider": "DoubaoClient",
+                  "purpose": "generate_response",
+                  "duration_ms": 7107.62,
+                  "llm_call_attempted": true,
+                  "llm_is_mock": false,
+                  "http_request_sent": true,
+                  "http_request_succeeded": true,
+                  "http_status_code": 200,
+                  "raw_output_received": true,
+                  "fallback_triggered": false,
+                  "fallback_reason": null,
+                  "call_succeeded": true,
+                  "call_debug": {
+                    "llm_provider": "doubao",
+                    "llm_is_mock": false,
+                    "llm_call_attempted": true,
+                    "http_request_sent": true,
+                    "http_request_succeeded": true,
+                    "http_status_code": 200,
+                    "raw_output_received": true,
+                    "fallback_triggered": false,
+                    "fallback_reason": null,
+                    "intent": "detail",
+                    "model": "ep-20260514111645-lmgt2",
+                    "base_url_configured": true,
+                    "api_key_configured": true,
+                    "context_length": 10141,
+                    "product_name_count": 1,
+                    "raw_output_preview": "这款是优衣库DRY-EX超快干圆领男士短袖运动训练上衣，售价129元哦。\n它主打高效排汗的速干材质，运动出汗后不会黏在身上，跑步、训练、健身还有日常通勤都能适配。\n要提醒你这款版型偏窄，选码的时候可以多留意下尺寸参考，很适合跑步爱好者、健身人群还有兼顾运动和通勤的上班族选购。",
+                    "duration_ms": 7105.19
+                  }
+                },
+                {
+                  "module": "frontend_action_decision",
+                  "provider": "DoubaoClient",
+                  "purpose": "frontend_action_decision",
+                  "duration_ms": 0.05,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                }
+              ],
+              "本地小模型任务": [
+                "bge_embedding_recall",
+                "text2vec_semantic_recall",
+                "bge_reranker"
+              ],
+              "前端动作决策来源": "rule"
+            },
+            "耗时统计": {},
+            "回复策略": {
+              "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+              "匹配状态": "exact_match",
+              "是否启用积极回复": true,
+              "是否避免否定开头": true,
+              "长度策略": "商品详情 2-4 句，介绍 2-3 个关键维度。",
+              "使用的个性化参考": [
+                "领域导购风格",
+                "用户画像摘要",
+                "相关历史证据",
+                "few-shot风格示例",
+                "相似人群参考"
+              ],
+              "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+              "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+            }
+          },
+          "turn": 2,
+          "query": "第一个给我介绍一下"
+        },
+        {
+          "duration_s": 23.56,
+          "raw_event_names": [
+            "progress",
+            "progress",
+            "progress",
+            "progress",
+            "state",
+            "product_detail",
+            "generation_started",
+            "response_completed",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "frontend_action",
+            "turn_result",
+            "done"
+          ],
+          "frontend_events": [
+            "show_reply",
+            "show_product_detail"
+          ],
+          "reply": "这款是Nike Dri-FIT 男子训练速干透气运动短袖T恤，售价199元哦。\n它的Dri-FIT速干面料吸湿排汗效果很不错，运动出汗后不会粘在身上，完全适配跑步场景穿着。\n跑步、健身、日常训练都能穿，收货时可以先检查下衣身侧边有没有小瑕疵，有任何情况随时联系客服处理就好。",
+          "analysis": {
+            "session_id": "real_multi_M-B_54b8f1d6",
+            "user_id": "real_acceptance_M-B",
+            "意图": "detail",
+            "业务流程": "product_qa",
+            "商品类别": "服饰运动",
+            "商品子类": "短袖T恤",
+            "价格约束": {
+              "min": null,
+              "max": null
+            },
+            "正向偏好": [
+              "跑步"
+            ],
+            "否定约束": [],
+            "包含品牌": [],
+            "排除品牌": [],
+            "是否需要检索": true,
+            "是否调用大模型": true
+          },
+          "products": [],
+          "cart_state": {},
+          "system_debug": {
+            "本轮理解": {
+              "session_id": "real_multi_M-B_54b8f1d6",
+              "user_id": "real_acceptance_M-B",
+              "意图": "detail",
+              "业务流程": "product_qa",
+              "商品类别": "服饰运动",
+              "商品子类": "短袖T恤",
+              "价格约束": {
+                "min": null,
+                "max": null
+              },
+              "正向偏好": [
+                "跑步"
+              ],
+              "否定约束": [],
+              "包含品牌": [],
+              "排除品牌": [],
+              "是否需要检索": true,
+              "是否调用大模型": true
+            },
+            "检索摘要": {
+              "检索方式": [
+                "结构化过滤",
+                "关键词匹配",
+                "属性/约束匹配"
+              ],
+              "召回商品数量": 1,
+              "召回商品ID": [
+                "p_clothes_003"
+              ],
+              "过滤商品数量": 0,
+              "过滤商品ID样例": [],
+              "最终推荐商品ID": [
+                "p_clothes_003"
+              ],
+              "检索评分摘要": [
+                {
+                  "sku_id": "p_clothes_003",
+                  "name": "Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣",
+                  "score": 1.0,
+                  "raw_scores": {
+                    "reference_memory": 1.0
+                  },
+                  "matched_reasons": [
+                    "来自上一轮推荐或用户指代",
+                    "跑步",
+                    "适合跑步"
+                  ],
+                  "enhancement_matches": {}
+                }
+              ]
+            },
+            "工具执行": [],
+            "模型调用": {
+              "LLM是否调用": true,
+              "Doubao是否真实调用": true,
+              "调用客户端": "DoubaoClient",
+              "调用目的": [
+                "generate_response",
+                "intent_plan_resolution",
+                "frontend_action_decision"
+              ],
+              "模型调用次数": 3,
+              "模型调用总耗时_ms": 23208.08,
+              "planned_call_count": 3,
+              "attempted_call_count": 2,
+              "real_http_call_count": 2,
+              "successful_call_count": 2,
+              "failed_call_count": 0,
+              "mock_call_count": 0,
+              "fallback_count": 0,
+              "调用明细": [
+                {
+                  "module": "query_understanding",
+                  "provider": "DoubaoClient",
+                  "purpose": "intent_plan_resolution",
+                  "duration_ms": 12105.29,
+                  "llm_call_attempted": true,
+                  "llm_is_mock": false,
+                  "http_request_sent": true,
+                  "http_request_succeeded": true,
+                  "http_status_code": 200,
+                  "raw_output_received": true,
+                  "fallback_triggered": false,
+                  "fallback_reason": null,
+                  "call_succeeded": true,
+                  "call_debug": {
+                    "llm_provider": "doubao",
+                    "llm_is_mock": false,
+                    "llm_call_attempted": true,
+                    "http_request_sent": true,
+                    "http_request_succeeded": true,
+                    "http_status_code": 200,
+                    "raw_output_received": true,
+                    "raw_output_preview": "{\n    \"primary_intent\": \"detail\",\n    \"intent_plan\": {\n        \"primary_intent\": \"detail\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"detail\",\n                \"action\": \"detail\",\n                \"source_text\": \"第二个呢\",\n                \"target_ref\": \"第二个\",\n                \"quantity\": null,\n                \"sku_id\": \"p_clothes_003\",\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": false,\n                \"requires_retrieval\": true\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 0.98,\n        \"reason\": \"用户询问最近推荐列表中第二个商品的详情，符合detail意图触发规则\"\n    },\n    \"category\": \"服饰运动\",\n    \"sub_category\": \"短袖T恤\",\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"跑步\"],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [\"第二个\"],\n    \"mentioned_products\": [\"Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣\"],\n    \"cart_action\": null,\n    \"scenario\": null,\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": true,\n    \"rewritten_query\": \"查看最近推荐的第二个短袖T恤商品详情\",\n    \"confidence\": 0.98,\n    \"uncertain_points\": []\n}",
+                    "json_parse_succeeded": true,
+                    "fallback_triggered": false,
+                    "fallback_reason": null,
+                    "purpose": "intent_plan_resolution",
+                    "model": "ep-20260514111645-lmgt2",
+                    "base_url_configured": true,
+                    "api_key_configured": true,
+                    "context_keys": [
+                      "message",
+                      "available_intents",
+                      "available_categories",
+                      "supported_actions",
+                      "current_state",
+                      "last_recommendations",
+                      "cart_items",
+                      "rules"
+                    ],
+                    "context_length": 2336,
+                    "attempt_count": 1,
+                    "duration_ms": 12103.39
+                  }
+                },
+                {
+                  "module": "response_generation",
+                  "provider": "DoubaoClient",
+                  "purpose": "generate_response",
+                  "duration_ms": 11102.68,
+                  "llm_call_attempted": true,
+                  "llm_is_mock": false,
+                  "http_request_sent": true,
+                  "http_request_succeeded": true,
+                  "http_status_code": 200,
+                  "raw_output_received": true,
+                  "fallback_triggered": false,
+                  "fallback_reason": null,
+                  "call_succeeded": true,
+                  "call_debug": {
+                    "llm_provider": "doubao",
+                    "llm_is_mock": false,
+                    "llm_call_attempted": true,
+                    "http_request_sent": true,
+                    "http_request_succeeded": true,
+                    "http_status_code": 200,
+                    "raw_output_received": true,
+                    "fallback_triggered": false,
+                    "fallback_reason": null,
+                    "intent": "detail",
+                    "model": "ep-20260514111645-lmgt2",
+                    "base_url_configured": true,
+                    "api_key_configured": true,
+                    "context_length": 10136,
+                    "product_name_count": 1,
+                    "raw_output_preview": "这款是Nike Dri-FIT 男子训练速干透气运动短袖T恤，售价199元哦。\n它的Dri-FIT速干面料吸湿排汗效果很不错，运动出汗后不会粘在身上，完全适配跑步场景穿着。\n跑步、健身、日常训练都能穿，收货时可以先检查下衣身侧边有没有小瑕疵，有任何情况随时联系客服处理就好。",
+                    "duration_ms": 11100.47
+                  }
+                },
+                {
+                  "module": "frontend_action_decision",
+                  "provider": "DoubaoClient",
+                  "purpose": "frontend_action_decision",
+                  "duration_ms": 0.11,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                }
+              ],
+              "本地小模型任务": [
+                "bge_embedding_recall",
+                "text2vec_semantic_recall",
+                "bge_reranker"
+              ],
+              "前端动作决策来源": "rule"
+            },
+            "耗时统计": {},
+            "回复策略": {
+              "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+              "匹配状态": "exact_match",
+              "是否启用积极回复": true,
+              "是否避免否定开头": true,
+              "长度策略": "商品详情 2-4 句，介绍 2-3 个关键维度。",
+              "使用的个性化参考": [
+                "领域导购风格",
+                "用户画像摘要",
+                "相关历史证据",
+                "few-shot风格示例",
+                "相似人群参考"
+              ],
+              "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+              "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+            }
+          },
+          "turn": 3,
+          "query": "第二个呢"
+        },
+        {
+          "duration_s": 12.151,
+          "raw_event_names": [
+            "progress",
+            "progress",
+            "progress",
+            "progress",
+            "state",
+            "cart_update",
+            "cart",
+            "generation_started",
+            "response_completed",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "token",
+            "frontend_action",
+            "turn_result",
+            "done"
+          ],
+          "frontend_events": [
+            "show_reply",
+            "update_cart"
+          ],
+          "reply": "已把 Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣（M码 · 白色） 加入购物车，数量 1。\n\n如果确定要买「Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣」的话，告诉我收货地址和联系方式，我就可以帮你生成订单预览啦。还想加其他商品也可以继续说哦～",
+          "analysis": {
+            "session_id": "real_multi_M-B_54b8f1d6",
+            "user_id": "real_acceptance_M-B",
+            "意图": "cart_add",
+            "业务流程": "cart_action",
+            "商品类别": "服饰运动",
+            "商品子类": "短袖T恤",
+            "价格约束": {
+              "min": null,
+              "max": null
+            },
+            "正向偏好": [
+              "跑步"
+            ],
+            "否定约束": [],
+            "包含品牌": [],
+            "排除品牌": [],
+            "是否需要检索": false,
+            "是否调用大模型": true
+          },
+          "products": [],
+          "cart_state": {
+            "中文说明": "购物车工具执行后的真实购物车状态。",
+            "tool_ok": true,
+            "tool_name": "add_to_cart",
+            "message": "已把 Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣（M码 · 白色） 加入购物车，数量 1。",
+            "cart": {
+              "items": [
+                {
+                  "cart_item_id": "p_clothes_003::s_p_clothes_003_1",
+                  "sku_id": "p_clothes_003",
+                  "selected_sku_id": "s_p_clothes_003_1",
+                  "selected_specs": {
+                    "尺码": "M码",
+                    "颜色": "白色"
+                  },
+                  "spec_summary": "M码 · 白色",
+                  "name": "Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣",
+                  "price": 199.0,
+                  "quantity": 1,
+                  "image_url": "/static/dataset/3_%E9%8F%88%E5%B6%89%E3%82%AF%E3%82%99%E6%9D%A9%E6%84%AC%E5%A7%A9/images/p_clothes_003_live.jpg"
+                }
+              ],
+              "total_price": 199.0,
+              "total_items": 1
+            }
+          },
+          "system_debug": {
+            "本轮理解": {
+              "session_id": "real_multi_M-B_54b8f1d6",
+              "user_id": "real_acceptance_M-B",
+              "意图": "cart_add",
+              "业务流程": "cart_action",
+              "商品类别": "服饰运动",
+              "商品子类": "短袖T恤",
+              "价格约束": {
+                "min": null,
+                "max": null
+              },
+              "正向偏好": [
+                "跑步"
+              ],
+              "否定约束": [],
+              "包含品牌": [],
+              "排除品牌": [],
+              "是否需要检索": false,
+              "是否调用大模型": true
+            },
+            "检索摘要": {
+              "检索方式": [
+                "本轮未执行商品检索"
+              ],
+              "召回商品数量": 0,
+              "召回商品ID": [],
+              "过滤商品数量": 0,
+              "过滤商品ID样例": [],
+              "最终推荐商品ID": [],
+              "检索评分摘要": []
+            },
+            "工具执行": [
+              {
+                "ok": true,
+                "tool_name": "add_to_cart",
+                "message": "已把 Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣（M码 · 白色） 加入购物车，数量 1。",
+                "payload": {
+                  "items": [
+                    {
+                      "cart_item_id": "p_clothes_003::s_p_clothes_003_1",
+                      "sku_id": "p_clothes_003",
+                      "selected_sku_id": "s_p_clothes_003_1",
+                      "selected_specs": {
+                        "尺码": "M码",
+                        "颜色": "白色"
+                      },
+                      "spec_summary": "M码 · 白色",
+                      "name": "Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣",
+                      "price": 199.0,
+                      "quantity": 1,
+                      "image_url": "/static/dataset/3_%E9%8F%88%E5%B6%89%E3%82%AF%E3%82%99%E6%9D%A9%E6%84%AC%E5%A7%A9/images/p_clothes_003_live.jpg"
+                    }
+                  ],
+                  "total_price": 199.0,
+                  "total_items": 1
+                },
+                "error_code": null
+              }
+            ],
+            "模型调用": {
+              "LLM是否调用": true,
+              "Doubao是否真实调用": true,
+              "调用客户端": "DoubaoClient",
+              "调用目的": [
+                "intent_plan_resolution",
+                "generate_response",
+                "frontend_action_decision"
+              ],
+              "模型调用次数": 3,
+              "模型调用总耗时_ms": 11864.23,
+              "planned_call_count": 3,
+              "attempted_call_count": 1,
+              "real_http_call_count": 1,
+              "successful_call_count": 1,
+              "failed_call_count": 0,
+              "mock_call_count": 0,
+              "fallback_count": 0,
+              "调用明细": [
+                {
+                  "module": "query_understanding",
+                  "provider": "DoubaoClient",
+                  "purpose": "intent_plan_resolution",
+                  "duration_ms": 11864.2,
+                  "llm_call_attempted": true,
+                  "llm_is_mock": false,
+                  "http_request_sent": true,
+                  "http_request_succeeded": true,
+                  "http_status_code": 200,
+                  "raw_output_received": true,
+                  "fallback_triggered": false,
+                  "fallback_reason": null,
+                  "call_succeeded": true,
+                  "call_debug": {
+                    "llm_provider": "doubao",
+                    "llm_is_mock": false,
+                    "llm_call_attempted": true,
+                    "http_request_sent": true,
+                    "http_request_succeeded": true,
+                    "http_status_code": 200,
+                    "raw_output_received": true,
+                    "raw_output_preview": "{\n    \"primary_intent\": \"cart_add\",\n    \"intent_plan\": {\n        \"primary_intent\": \"cart_add\",\n        \"steps\": [\n            {\n                \"step\": 1,\n                \"intent\": \"cart_add\",\n                \"action\": \"cart_add\",\n                \"source_text\": \"把第二个加入购物车\",\n                \"target_ref\": \"第二个\",\n                \"quantity\": 1,\n                \"sku_id\": \"p_clothes_003\",\n                \"keep_categories\": [],\n                \"keep_sub_categories\": [],\n                \"exclude_sku_ids\": [],\n                \"requires_tool\": true,\n                \"requires_retrieval\": false\n            }\n        ],\n        \"is_multi_intent\": false,\n        \"confidence\": 1.0,\n        \"reason\": \"用户明确要求将最近推荐列表中排名第二的商品加入购物车\"\n    },\n    \"category\": \"服饰运动\",\n    \"sub_category\": \"短袖T恤\",\n    \"price_range\": {\n        \"min\": null,\n        \"max\": null\n    },\n    \"positive_constraints\": [\"跑步\"],\n    \"negative_constraints\": [],\n    \"brands_include\": [],\n    \"brands_exclude\": [],\n    \"compare_targets\": [],\n    \"referents\": [\"第二个\"],\n    \"mentioned_products\": [\"p_clothes_003\", \"Nike Dri-FIT 男子训练短袖T恤 速干透气运动上衣\"],\n    \"cart_action\": {\n        \"action\": \"cart_add\",\n        \"quantity\": 1,\n        \"target_ref\": \"第二个\",\n        \"sku_id\": \"p_clothes_003\",\n        \"keep_categories\": [],\n        \"keep_sub_categories\": []\n    },\n    \"scenario\": null,\n    \"target_user\": null,\n    \"need_clarification\": false,\n    \"clarification_slots\": [],\n    \"inherit_context\": true,\n    \"rewritten_query\": \"\",\n    \"confidence\": 1.0,\n    \"uncertain_points\": []\n}",
+                    "json_parse_succeeded": true,
+                    "fallback_triggered": false,
+                    "fallback_reason": null,
+                    "purpose": "intent_plan_resolution",
+                    "model": "ep-20260514111645-lmgt2",
+                    "base_url_configured": true,
+                    "api_key_configured": true,
+                    "context_keys": [
+                      "message",
+                      "available_intents",
+                      "available_categories",
+                      "supported_actions",
+                      "current_state",
+                      "last_recommendations",
+                      "cart_items",
+                      "rules"
+                    ],
+                    "context_length": 2342,
+                    "attempt_count": 1,
+                    "duration_ms": 11860.3
+                  }
+                },
+                {
+                  "module": "response_generation",
+                  "provider": "DoubaoClient",
+                  "purpose": "generate_response",
+                  "duration_ms": 0.01,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                },
+                {
+                  "module": "frontend_action_decision",
+                  "provider": "DoubaoClient",
+                  "purpose": "frontend_action_decision",
+                  "duration_ms": 0.02,
+                  "llm_call_attempted": false,
+                  "llm_is_mock": false,
+                  "http_request_sent": false,
+                  "http_request_succeeded": false,
+                  "http_status_code": null,
+                  "raw_output_received": false,
+                  "fallback_triggered": false,
+                  "fallback_reason": "skipped_by_policy",
+                  "call_succeeded": false,
+                  "skipped_by_policy": true
+                }
+              ],
+              "本地小模型任务": [],
+              "前端动作决策来源": "rule"
+            },
+            "耗时统计": {},
+            "回复策略": {
+              "中文说明": "记录本轮回复采用的导购话术策略，用于检查是否积极、简短、grounded。",
+              "匹配状态": "exact_match",
+              "是否启用积极回复": true,
+              "是否避免否定开头": true,
+              "长度策略": "购物车和结算反馈 1-2 句。",
+              "使用的个性化参考": [
+                "领域导购风格",
+                "用户画像摘要",
+                "相关历史证据",
+                "few-shot风格示例",
+                "相似人群参考"
+              ],
+              "当前轮需求优先级": "当前明确需求为硬约束，用户画像和历史偏好为软约束。",
+              "事实约束": "商品名、价格、品牌、库存、参数必须来自数据库/RAG。"
+            }
+          },
+          "turn": 4,
+          "query": "那把第二个加入购物车"
+        }
+      ]
+    }
+  ]
+}

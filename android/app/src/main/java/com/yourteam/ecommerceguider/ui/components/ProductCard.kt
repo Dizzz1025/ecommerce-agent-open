@@ -63,6 +63,7 @@ fun ProductCard(
     val displayRoleLabel = roleLabel
         ?.takeIf { it.isNotBlank() && !it.isMechanicalRecommendationLabel() }
         ?: backendOptionLabel?.takeUnless { it.isMechanicalRecommendationLabel() }
+    val planRole = product.displayPlanRole
     val imageWidth = if (isPrimary) AppDimensions.RecommendationImageHeight else 96.dp
     val imageHeight = if (isPrimary) AppDimensions.RecommendationImageHeight else 96.dp
     val cardShape = RoundedCornerShape(AppRadius.Card)
@@ -131,6 +132,26 @@ fun ProductCard(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
+                        }
+                    }
+                    if (planRole.isNotBlank()) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(AppSpacing.Xxs),
+                        ) {
+                            Text(
+                                text = "方案作用",
+                                style = AppTypography.CaptionStrong,
+                                color = if (useChatColors) ChatColors.WarmAccent else AppColors.Primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = planRole,
+                                style = AppTypography.BodySmall,
+                                color = cardTextSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                     Text(

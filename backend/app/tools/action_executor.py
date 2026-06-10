@@ -431,13 +431,12 @@ class ActionExecutor:
                 if event.event_type == "cart_action" and event.related_product_ids:
                     return event.related_product_ids[0]
 
-        latest_recommendation = next(
-            (event for event in reversed(state.memory_events) if event.event_type == "recommendation"),
-            None,
-        )
-        if latest_recommendation:
-            alias_map = latest_recommendation.payload.get("reference_alias_to_sku") or {}
-            rank_map = latest_recommendation.payload.get("rank_to_sku") or {}
+        for rec_event in (
+            event for event in reversed(state.memory_events)
+            if event.event_type == "recommendation"
+        ):
+            alias_map = rec_event.payload.get("reference_alias_to_sku") or {}
+            rank_map = rec_event.payload.get("rank_to_sku") or {}
             for ref in references:
                 sku_id = alias_map.get(ref)
                 if sku_id:

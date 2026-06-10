@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 import threading
 import traceback as _traceback
+from typing import Any
 
 from app.retrieval.fallback import RetrievalFallback, FallbackResult
 from app.agents.closing_guide import ClosingGuide
@@ -46,10 +47,21 @@ from app.models.agent import (
     PreferenceUpdateResult,
     ProductQAResult,
     ScenePlan,
+    SceneSubQuery,
     ToolExecutionResult,
     ValidationResult,
 )
-from app.models.domain import BehaviourRecord, IntentType, Product, ProductCard, ProductPresentation, SessionState
+from app.models.domain import (
+    BehaviourRecord,
+    IntentType,
+    Product,
+    ProductCard,
+    ProductPresentation,
+    ScenarioBundleData,
+    ScenarioBundleItem,
+    ScenarioBundlePlanItem,
+    SessionState,
+)
 from app.models.events import SSEEvent
 from app.progress.progress_event_builder import ProgressEventBuilder
 from app.repositories.product_repository import ProductRepository
@@ -552,6 +564,7 @@ class ShoppingAgent:
         cart_personalization_context: dict = {}
         fallback_result: FallbackResult | None = None
         comparison_data = None
+        scenario_bundle: ScenarioBundleData | None = None
         recommendation_plan: RecommendationPlan | None = None
         recommendation_stream_texts: dict[int, str] = {}
         recommendation_stream_used = False
@@ -924,6 +937,13 @@ class ShoppingAgent:
                         candidates=candidates,
                         use_llm=model_route.need_llm and decision.flow == DialogueFlow.COMPARISON,
                     )
+                    if decision.flow == DialogueFlow.SCENE_BUNDLE:
+                        cards, scenario_bundle = self._build_scenario_bundle(
+                            parsed_query=parsed_query,
+                            scene_plan=scene_plan,
+                            cards=cards,
+                            candidates=candidates,
+                        )
                 timer.mark_model_call(
                     module="scene_presentation_build",
                     provider=self.response_generator.llm_client.__class__.__name__,
@@ -936,10 +956,13 @@ class ShoppingAgent:
                     **self.scene_presentation_builder.last_debug,
                     "llm_called": self.scene_presentation_builder.last_llm_called,
                     "comparison_data": comparison_data.model_dump() if comparison_data else None,
+                    "scenario_bundle": scenario_bundle.model_dump() if scenario_bundle else None,
                     "display_title_usage": self._display_title_usage(cards, alternatives),
                 }
                 if decision.flow == DialogueFlow.COMPARISON:
                     response_text = self.scene_presentation_builder.comparison_intro(parsed_query, cards)
+                elif scenario_bundle is not None:
+                    response_text = f"我按「{scenario_bundle.title}」整理成一套方案，下面按场景作用展示商品卡片。"
                 elif self.scene_presentation_builder.scene_type(decision.flow) == "recommendation" and not recommendation_stream_used:
                     response_text = self.scene_presentation_builder.recommendation_intro(parsed_query, cards)
                 trace.llm_called = trace.llm_called or self.scene_presentation_builder.last_llm_called
@@ -1031,6 +1054,15 @@ class ShoppingAgent:
                     for section_event in self._recommendation_section_events(cards, query_id, timer=timer):
                         yield section_event
                         trace.legacy_sse_events.append(section_event.event)
+                        await asyncio.sleep(0)
+                if scenario_bundle is not None:
+                    for bundle_event in self._scenario_bundle_events(
+                        scenario_bundle=scenario_bundle,
+                        query_id=query_id,
+                        timer=timer,
+                    ):
+                        yield bundle_event
+                        trace.legacy_sse_events.append(bundle_event.event)
                         await asyncio.sleep(0)
                 product_payload = {"products": [card.model_dump() for card in cards]}
                 yield SSEEvent(event="product_cards", data=product_payload)
@@ -1173,6 +1205,7 @@ class ShoppingAgent:
                     frontend_action=frontend_action,
                     trace_payload=trace.model_dump(),
                     comparison_data=comparison_data,
+                    scenario_bundle=scenario_bundle,
                     history_restored=history_restored,
                     restored_from_session_id=restored_from_session_id,
                     legacy_sse_events=trace.legacy_sse_events,
@@ -1468,6 +1501,125 @@ class ShoppingAgent:
                     all_candidates.append(candidate)
                     seen.add(candidate.sku_id)
         return all_candidates[:6]
+
+    def _build_scenario_bundle(
+        self,
+        *,
+        parsed_query: ParsedQuery,
+        scene_plan: ScenePlan | None,
+        cards: list[ProductCard],
+        candidates: list[CandidateProduct],
+    ) -> tuple[list[ProductCard], ScenarioBundleData]:
+        sub_queries = scene_plan.sub_queries if scene_plan else []
+        candidates_by_sku = {candidate.sku_id: candidate for candidate in candidates}
+        used_sub_query_indices: set[int] = set()
+        ordered_items: list[tuple[int, ScenarioBundleItem]] = []
+
+        for card in cards:
+            sub_query = self._match_bundle_sub_query(
+                card=card,
+                candidate=candidates_by_sku.get(card.sku_id),
+                sub_queries=sub_queries,
+                used_indices=used_sub_query_indices,
+            )
+            role_name = _scenario_bundle_role(sub_query, card)
+            category_name = _scenario_bundle_category_name(sub_query, card, role_name)
+            plan_role = _scenario_bundle_short_reason(sub_query, card)
+            order_index = _scenario_bundle_order_index(sub_query, sub_queries, len(ordered_items))
+            presentation = ProductPresentation(
+                type="bundle",
+                option_label=role_name,
+                reason=plan_role,
+                bundle_role=role_name,
+                bundle_reason=plan_role,
+                plan_role=plan_role,
+                scheme_role=plan_role,
+                usage_scenario=(scene_plan.scenario if scene_plan else parsed_query.scenario),
+                content_source="backend",
+            )
+            product = card.model_copy(
+                update={
+                    "presentation": presentation,
+                    "reason": plan_role,
+                    "recommend_reason": plan_role,
+                    "plan_role": plan_role,
+                    "scheme_role": plan_role,
+                    "plan_role_name": role_name,
+                    "plan_category_name": category_name,
+                }
+            )
+            ordered_items.append(
+                (
+                    order_index,
+                    ScenarioBundleItem(
+                        role=role_name,
+                        short_reason=plan_role,
+                        product=product,
+                        role_name=role_name,
+                        category_name=category_name,
+                        sku_id=product.sku_id,
+                        plan_role=plan_role,
+                    ),
+                )
+            )
+
+        items = [item for _, item in sorted(ordered_items, key=lambda pair: pair[0])]
+        title = _scenario_bundle_title(parsed_query, scene_plan)
+        summary = _scenario_bundle_summary(parsed_query, scene_plan, items)
+        bundle = ScenarioBundleData(
+            title=title,
+            summary=summary,
+            items=items,
+            plan_title=title,
+            plan_summary=summary,
+            plan_items=[
+                ScenarioBundlePlanItem(
+                    role_name=item.role_name or item.role,
+                    category_name=item.category_name or item.product.sub_category or item.product.category,
+                    sku_id=item.sku_id or item.product.sku_id,
+                    plan_role=item.plan_role or item.short_reason,
+                )
+                for item in items
+            ],
+        )
+        return [item.product for item in items], bundle
+
+    @staticmethod
+    def _match_bundle_sub_query(
+        *,
+        card: ProductCard,
+        candidate: CandidateProduct | None,
+        sub_queries: list[SceneSubQuery],
+        used_indices: set[int],
+    ) -> SceneSubQuery | None:
+        if not sub_queries:
+            return None
+        matched_labels = [
+            item
+            for item in [
+                *(candidate.matched_reasons if candidate else []),
+                *card.matched_reasons,
+            ]
+            if item
+        ]
+        for label in matched_labels:
+            for index, sub_query in enumerate(sub_queries):
+                if index not in used_indices and label == sub_query.label:
+                    used_indices.add(index)
+                    return sub_query
+        for index, sub_query in enumerate(sub_queries):
+            if index in used_indices:
+                continue
+            category_matches = not sub_query.category or sub_query.category == card.category
+            sub_category_matches = not sub_query.sub_category or sub_query.sub_category == card.sub_category
+            if category_matches and sub_category_matches:
+                used_indices.add(index)
+                return sub_query
+        for index, sub_query in enumerate(sub_queries):
+            if index not in used_indices:
+                used_indices.add(index)
+                return sub_query
+        return None
 
     def _retrieve_alternatives(self, parsed_query: ParsedQuery, state) -> tuple[list[CandidateProduct], FallbackResult]:
         """Progressive fallback retrieval when strict matching yields no results.
@@ -1984,6 +2136,100 @@ class ShoppingAgent:
             stream_state["first_delta_ms"] = first_delta_ms
             stream_state["completed_section_count"] = len(completed_sections)
             stream_state["last_sequence"] = sequence
+
+    def _scenario_bundle_events(
+        self,
+        *,
+        scenario_bundle: ScenarioBundleData,
+        query_id: str,
+        timer: RuntimeTimer,
+    ) -> list[SSEEvent]:
+        request_id = f"turn_{query_id}"
+        title = scenario_bundle.plan_title or scenario_bundle.title
+        summary = scenario_bundle.plan_summary or scenario_bundle.summary
+        plan_items = [
+            item.model_dump()
+            for item in (scenario_bundle.plan_items or [])
+        ]
+
+        def common(seq: int) -> dict[str, Any]:
+            return {
+                "recommendation_type": "scenario_bundle",
+                "request_id": request_id,
+                "turn_id": request_id,
+                "sequence": seq,
+                "duration_ms": timer.elapsed_ms(),
+            }
+
+        overview_payload = {
+            "plan_title": title,
+            "plan_summary": summary,
+            "plan_items": plan_items,
+            "title": title,
+            "summary": summary,
+        }
+        sequence = 1
+        events = [
+            SSEEvent(
+                event="plan_overview_start",
+                data={
+                    **common(sequence),
+                    "event_id": f"{request_id}:plan_overview_start:{sequence}",
+                    "plan_title": title,
+                },
+            )
+        ]
+        sequence += 1
+        events.append(
+            SSEEvent(
+                event="plan_overview",
+                data={
+                    **common(sequence),
+                    "event_id": f"{request_id}:plan_overview:{sequence}",
+                    **overview_payload,
+                },
+            )
+        )
+        sequence += 1
+        events.append(
+            SSEEvent(
+                event="plan_overview_done",
+                data={
+                    **common(sequence),
+                    "event_id": f"{request_id}:plan_overview_done:{sequence}",
+                    **overview_payload,
+                },
+            )
+        )
+
+        for index, item in enumerate(scenario_bundle.items, start=1):
+            product = item.product
+            plan_role = item.plan_role or item.short_reason
+            role_name = item.role_name or item.role
+            category_name = item.category_name or product.sub_category or product.category
+            sequence += 1
+            events.append(
+                SSEEvent(
+                    event="product_card",
+                    data={
+                        **common(sequence),
+                        "event_id": f"{request_id}:scenario_bundle_product_card:{sequence}",
+                        "section_id": index - 1,
+                        "section_index": index,
+                        "product_id": product.product_id,
+                        "sku_id": product.sku_id,
+                        "display_title": product.display_title,
+                        "product_name": product.name,
+                        "brand": product.brand,
+                        "plan_role": plan_role,
+                        "scheme_role": plan_role,
+                        "role_name": role_name,
+                        "category_name": category_name,
+                        "product": product.model_dump(),
+                    },
+                )
+            )
+        return events
 
     def _recommendation_section_events(
         self,
@@ -2912,6 +3158,120 @@ class ShoppingAgent:
 
 def _merge_lists(old: list, new: list) -> list:
     return list(dict.fromkeys([*old, *new]))
+
+
+def _scenario_bundle_role(sub_query: SceneSubQuery | None, card: ProductCard) -> str:
+    text = " ".join(
+        item
+        for item in [
+            sub_query.label if sub_query else "",
+            sub_query.sub_category if sub_query else "",
+            card.sub_category or "",
+            card.category or "",
+        ]
+        if item
+    )
+    if "防晒衣" in text:
+        return "穿搭防晒"
+    if "沙滩" in text or "拖鞋" in text:
+        return "海边出行"
+    if "泳衣" in text or "游泳" in text:
+        return "下水活动"
+    if "帽" in text or "遮阳" in text:
+        return "面部遮阳"
+    if "防晒" in text:
+        return "身体防晒"
+    if sub_query and sub_query.label:
+        return sub_query.label
+    return card.sub_category or card.category or "方案单品"
+
+
+def _scenario_bundle_category_name(sub_query: SceneSubQuery | None, card: ProductCard, role: str) -> str:
+    category_by_role = {
+        "身体防晒": "防晒喷雾",
+        "穿搭防晒": "防晒衣",
+        "海边出行": "沙滩鞋",
+        "下水活动": "速干泳衣",
+        "面部遮阳": "遮阳帽",
+    }
+    if role in category_by_role:
+        return category_by_role[role]
+    if sub_query and sub_query.sub_category:
+        return sub_query.sub_category
+    if sub_query and sub_query.label:
+        return sub_query.label
+    return card.sub_category or card.category or "方案单品"
+
+
+def _scenario_bundle_order_index(
+    sub_query: SceneSubQuery | None,
+    sub_queries: list[SceneSubQuery],
+    fallback: int,
+) -> int:
+    if sub_query is None:
+        return len(sub_queries) + fallback
+    for index, candidate in enumerate(sub_queries):
+        if candidate is sub_query:
+            return index
+    return len(sub_queries) + fallback
+
+
+def _scenario_bundle_short_reason(sub_query: SceneSubQuery | None, card: ProductCard) -> str:
+    role = _scenario_bundle_role(sub_query, card)
+    fixed_reasons = {
+        "身体防晒": "负责手臂、腿部等裸露皮肤的日常防晒和外出补涂",
+        "穿搭防晒": "提供长时间户外活动需要的物理遮挡，覆盖肩颈手臂",
+        "海边出行": "适合沙滩、酒店及短距离步行场景，兼顾轻便防滑",
+        "下水活动": "适合游泳、浮潜等下水和水上活动，方便速干换穿",
+        "面部遮阳": "补充面部、头部及颈部区域的遮阳防护，减少直晒",
+    }
+    if role in fixed_reasons:
+        return fixed_reasons[role]
+    if sub_query and sub_query.reason:
+        return _short_bundle_text(sub_query.reason)
+    for value in [card.highlight_short, *(card.suitable_scenarios or []), *(card.matched_reasons or [])]:
+        if value:
+            return _short_bundle_text(value)
+    return "补齐这套方案中的对应使用场景"
+
+
+def _scenario_bundle_title(parsed_query: ParsedQuery, scene_plan: ScenePlan | None) -> str:
+    text = f"{parsed_query.raw_message} {scene_plan.scenario if scene_plan else ''}"
+    if "三亚" in text and ("海边" in text or "度假" in text or "旅行" in text):
+        return "三亚海边度假全场景防晒穿搭方案"
+    if scene_plan and scene_plan.scenario:
+        return f"{scene_plan.scenario.replace('/', '·')}组合搭配方案"
+    if parsed_query.scenario:
+        return f"{parsed_query.scenario}组合搭配方案"
+    return "场景化组合搭配方案"
+
+
+def _scenario_bundle_summary(
+    parsed_query: ParsedQuery,
+    scene_plan: ScenePlan | None,
+    items: list[ScenarioBundleItem],
+) -> str:
+    text = f"{parsed_query.raw_message} {scene_plan.scenario if scene_plan else ''}"
+    if "三亚" in text and ("海边" in text or "度假" in text or "旅行" in text):
+        return (
+            "考虑到三亚紫外线较强、户外停留时间长，且行程包含海边游玩、城市散步、"
+            "酒店休闲和下水活动，本方案通过化学防晒与物理遮挡相结合，兼顾防晒覆盖、"
+            "穿着舒适度和不同场景下的活动需求。"
+        )
+    roles = "、".join(dict.fromkeys(item.role for item in items if item.role))
+    scenario = scene_plan.scenario if scene_plan else parsed_query.scenario or "当前场景"
+    if roles:
+        return f"针对{scenario}，这套方案覆盖{roles}，下方商品分别承担对应场景作用。"
+    return f"针对{scenario}，我把可购买商品整理成一套组合方案，方便按场景直接查看。"
+
+
+def _short_bundle_text(text: str, limit: int = 34) -> str:
+    value = str(text or "").strip()
+    for prefix in ["这款可以帮助你解决", "可以帮助你解决", "用于", "适合"]:
+        if value.startswith(prefix):
+            value = value.removeprefix(prefix).strip()
+    value = value.replace("这个需求", "").replace("需要", "负责").strip(" ，,。；;")
+    return value if len(value) <= limit else value[: limit - 1] + "…"
 
 
 def _recommendation_record_reasons(sku_id: str, state) -> list[str]:

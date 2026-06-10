@@ -13,7 +13,7 @@ from app.models.agent import (
     ToolExecutionResult,
     UnifiedTurnOutput,
 )
-from app.models.domain import ComparisonData, Product, ProductCard, SessionState
+from app.models.domain import ComparisonData, Product, ProductCard, ScenarioBundleData, SessionState
 
 
 class FrontendEventBuilder:
@@ -22,6 +22,7 @@ class FrontendEventBuilder:
     _event_meanings = {
         "show_reply": "展示系统回复",
         "show_products": "展示推荐商品卡片或商品图片",
+        "show_scene_bundle": "展示场景化组合方案",
         "show_product_detail": "展示某个商品详情信息",
         "navigate": "按照用户提示跳转页面",
         "update_cart": "更新购物车状态",
@@ -61,6 +62,7 @@ class FrontendEventBuilder:
         frontend_action: FrontendActionDecision,
         trace_payload: dict[str, Any],
         comparison_data: ComparisonData | None = None,
+        scenario_bundle: ScenarioBundleData | None = None,
         history_restored: bool = False,
         restored_from_session_id: str | None = None,
         legacy_sse_events: list[str] | None = None,
@@ -80,6 +82,13 @@ class FrontendEventBuilder:
         if decision.flow == DialogueFlow.CLARIFICATION:
             data["clarification_options"] = self._build_clarification_options(response_text, decision)
             self._add_event(events, "show_clarification_options", "clarification_options")
+
+        if scenario_bundle is not None:
+            data["scenario_bundle"] = {
+                "recommendation_type": "scenario_bundle",
+                "bundle": scenario_bundle.model_dump(),
+            }
+            self._add_event(events, "show_scene_bundle", "scenario_bundle")
 
         if cards and not qa_result:
             data["recommended_products"] = {

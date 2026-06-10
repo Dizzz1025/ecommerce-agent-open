@@ -22,6 +22,10 @@ from app.models.domain import (
 class SessionMemory:
     _rank_aliases = ["一", "二", "三", "四", "五"]
 
+    _PRONOUN_REFS = frozenset({
+        "这个", "这款", "这一款", "它", "那个", "那款", "刚才那个", "刚才那款",
+    })
+
     def __init__(self, store: MemoryStore[SessionState] | None = None) -> None:
         self.store = store or InMemoryStore()
 
@@ -419,6 +423,33 @@ class SessionMemory:
                 return event
         return None
 
+    def _iter_recommendation_events(
+        self, state: SessionState, max_events: int = 10,
+    ) -> list[MemoryEventRecord]:
+        """Return recommendation events from memory_events, newest first."""
+        return [
+            ev for ev in reversed(state.memory_events)
+            if ev.event_type == "recommendation"
+        ][:max_events]
+
+    @staticmethod
+    def _event_products_match_query(event: MemoryEventRecord, query: str) -> bool:
+        """Check whether *query* contains Chinese text that appears in any product name."""
+        products = (event.payload or {}).get("products", [])
+        if not products:
+            return False
+        for product in products:
+            if isinstance(product, dict):
+                name = product.get("name", "")
+                if not name:
+                    continue
+                if name in query:
+                    return True
+                chinese_chars = "".join(c for c in name if "一" <= c <= "鿿")
+                if chinese_chars and len(chinese_chars) >= 2 and chinese_chars in query:
+                    return True
+        return False
+
     def latest_recommendation_event(self, state: SessionState) -> MemoryEventRecord | None:
         event = self.latest_event(state, "recommendation")
         if event is not None:
@@ -449,13 +480,38 @@ class SessionMemory:
         resolved: dict[str, str] = {}
         source_event_id: str | None = None
 
-        recommendation_event = self.latest_recommendation_event(state)
-        rank_map = self._rank_map_from_memory_event(recommendation_event)
-        for ref in reference_texts:
-            sku_id = self._resolve_rank_reference(ref, rank_map)
-            if sku_id:
-                resolved[ref] = sku_id
-                source_event_id = recommendation_event.event_id if recommendation_event else None
+        all_rec_events = self._iter_recommendation_events(state)
+        if not all_rec_events:
+            return ReferenceResolveResult(reference_texts=reference_texts, source="failed")
+
+        # Separate events into those whose product names match the user query
+        # and those that do not.  "刚才第二款面霜" will match an event whose
+        # products contain "面霜" and will be tried first.
+        matched: list[MemoryEventRecord] = []
+        unmatched: list[MemoryEventRecord] = []
+        for event in all_rec_events:
+            if self._event_products_match_query(event, user_query):
+                matched.append(event)
+            else:
+                unmatched.append(event)
+
+        # Try rank references against matching events first, then all others.
+        for events_batch in [matched, unmatched]:
+            if not events_batch:
+                continue
+            for rec_event in events_batch:
+                rank_map = self._rank_map_from_memory_event(rec_event)
+                for ref in reference_texts:
+                    if ref in resolved:
+                        continue
+                    sku_id = self._resolve_rank_reference(ref, rank_map)
+                    if sku_id:
+                        resolved[ref] = sku_id
+                        source_event_id = rec_event.event_id
+                if resolved:
+                    break
+            if resolved:
+                break
 
         if resolved:
             return ReferenceResolveResult(
@@ -467,8 +523,20 @@ class SessionMemory:
                 confidence=0.98,
             )
 
-        pronoun_refs = [ref for ref in reference_texts if ref in {"这个", "这款", "这一款", "它", "那个", "那款", "刚才那个", "刚才那款"}]
+        pronoun_refs = [ref for ref in reference_texts if ref in self._PRONOUN_REFS]
         if pronoun_refs:
+            sku_id = state.event_memory.active_detail_sku_id
+            if sku_id:
+                for ref in pronoun_refs:
+                    resolved[ref] = sku_id
+                return ReferenceResolveResult(
+                    resolved=resolved,
+                    product_ids=[sku_id],
+                    source_event_id=None,
+                    source="memory_events",
+                    reference_texts=pronoun_refs,
+                    confidence=0.86,
+                )
             for event in reversed(state.memory_events):
                 if event.related_product_ids:
                     sku_id = event.related_product_ids[0]
@@ -526,9 +594,13 @@ class SessionMemory:
 
     def build_reference_map(self, state: SessionState) -> dict[str, str]:
         references: dict[str, str] = {}
-        latest_memory_recommendation = self.latest_recommendation_event(state)
-        if latest_memory_recommendation is not None:
-            references.update(self._rank_map_from_memory_event(latest_memory_recommendation))
+
+        # Accumulate rank aliases from multiple recent recommendation events.
+        # Newer events take priority via setdefault; older events fill gaps.
+        for rec_event in self._iter_recommendation_events(state, max_events=5):
+            rank_map = self._rank_map_from_memory_event(rec_event)
+            for alias, sku_id in rank_map.items():
+                references.setdefault(alias, sku_id)
 
         active_recommendation = self._active_recommendation_event(state)
         if active_recommendation is not None:

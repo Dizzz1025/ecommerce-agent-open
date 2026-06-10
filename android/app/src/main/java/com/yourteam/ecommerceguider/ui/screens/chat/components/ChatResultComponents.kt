@@ -47,6 +47,7 @@ import com.yourteam.ecommerceguider.data.model.AssistantThinkingUiModel
 import com.yourteam.ecommerceguider.data.model.ChatMessageUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioBundleUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.model.asRecommendationTitleOrNull
@@ -743,6 +744,115 @@ private fun SpecOptionButton(
                 color = if (selected) AppColors.OnPrimary else ChatColors.TextPrimary,
                 maxLines = 1,
             )
+        }
+    }
+}
+
+@Composable
+fun ScenarioBundleSection(
+    bundle: ScenarioBundleUiModel,
+    onProductClick: (String) -> Unit,
+    onAddToCart: (ProductUiModel, String) -> Unit,
+    activeSpecSelection: SpecSelectionUiModel? = null,
+    onSpecOptionClick: (SpecSelectionUiModel, SpecSelectionOptionUiModel) -> Unit = { _, _ -> },
+) {
+    val compositionItems = bundle.compositionItems
+    val productCount = maxOf(bundle.items.size, compositionItems.size)
+    if (
+        bundle.title.isBlank() &&
+        bundle.summary.isBlank() &&
+        compositionItems.isEmpty() &&
+        bundle.items.isEmpty()
+    ) {
+        return
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.Md),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = PanelShape,
+            color = ChatColors.Surface,
+            border = BorderStroke(1.dp, ChatColors.Border),
+        ) {
+            Column(
+                modifier = Modifier.padding(AppSpacing.Lg),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+            ) {
+                Text(
+                    text = bundle.title.ifBlank { "场景化组合方案" },
+                    style = AppTypography.TitleSmall,
+                    color = ChatColors.TextPrimary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (productCount > 0) {
+                    Text(
+                        text = "共 $productCount 件搭配商品",
+                        style = AppTypography.CaptionStrong,
+                        color = ChatColors.WarmAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                bundle.summary.takeIf { it.isNotBlank() }?.let { summary ->
+                    Text(
+                        text = summary,
+                        style = AppTypography.Body,
+                        color = ChatColors.TextSecondary,
+                    )
+                }
+                if (compositionItems.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.Sm),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+                    ) {
+                        compositionItems.forEach { item ->
+                            val category = item.categoryName.ifBlank { "方案单品" }
+                            TagChip(
+                                text = "${item.roleName}：$category",
+                                tone = TagChipTone.Warm,
+                                containerColor = ChatColors.TagBackground,
+                                contentColor = ChatColors.TagText,
+                                borderColor = ChatColors.Border,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        bundle.items.forEachIndexed { index, item ->
+            val itemKey = "${bundle.stableKey}-${item.product.skuId}"
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(AppSpacing.Xs),
+            ) {
+                ProductCard(
+                    product = item.product,
+                    onClick = onProductClick,
+                    onAddToCart = { selectedProduct -> onAddToCart(selectedProduct, itemKey) },
+                    rank = index + 1,
+                    totalCount = bundle.items.size,
+                    isPrimary = false,
+                    roleLabel = null,
+                    showRecommendationReason = false,
+                    useChatColors = true,
+                )
+                activeSpecSelection
+                    ?.takeIf { selection ->
+                        selection.source == "product_card" &&
+                            selection.anchorRecommendationId == itemKey
+                    }
+                    ?.let { selection ->
+                        InlineSpecSelectionPanel(
+                            selection = selection,
+                            onOptionClick = { option -> onSpecOptionClick(selection, option) },
+                        )
+                    }
+            }
         }
     }
 }

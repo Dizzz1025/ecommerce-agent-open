@@ -15,6 +15,9 @@ import com.yourteam.ecommerceguider.data.model.ProductReviewUiModel
 import com.yourteam.ecommerceguider.data.model.ProductSkuUiModel
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioBundleItemUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioPlanItemUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioBundleUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.model.SpotlightUiModel
@@ -539,13 +542,19 @@ class ShoppingRepository(
             }
 
             "product_card" -> {
+                val product = optJSONObject("product")?.toProduct()?.withPlanFieldsFrom(this)
+                val isScenarioBundleProduct = optString("recommendation_type") == "scenario_bundle" ||
+                    optNullableString("plan_role") != null ||
+                    optNullableString("scheme_role") != null ||
+                    product?.isScenarioBundleProduct == true
                 ChatStreamEvent(
                     event = "product_card",
-                    product = optJSONObject("product")?.toProduct(),
-                    recommendationSection = toRecommendationSection(
-                        text = null,
-                        product = optJSONObject("product")?.toProduct(),
-                    ),
+                    product = product,
+                    recommendationSection = if (isScenarioBundleProduct) {
+                        null
+                    } else {
+                        toRecommendationSection(text = null, product = product)
+                    },
                 )
             }
 
@@ -593,6 +602,23 @@ class ShoppingRepository(
                 ChatStreamEvent(
                     event = eventName,
                     products = optJSONArray("products").toProducts(),
+                )
+            }
+
+            "plan_overview_start", "plan_overview", "plan_overview_done" -> {
+                val bundle = toScenarioBundle()
+                ChatStreamEvent(
+                    event = eventName,
+                    scenarioBundle = bundle,
+                )
+            }
+
+            "scenario_bundle" -> {
+                val bundle = toScenarioBundle()
+                ChatStreamEvent(
+                    event = "scenario_bundle",
+                    products = bundle?.items.orEmpty().map { it.product },
+                    scenarioBundle = bundle,
                 )
             }
 
@@ -717,6 +743,10 @@ class ShoppingRepository(
         val specSelection = frontendData
             .optJSONObject("spec_selection")
             ?.toSpecSelection()
+        val scenarioBundle = frontendData
+            .optJSONObject("scenario_bundle")
+            ?.toScenarioBundle()
+        val scenarioBundleProducts = scenarioBundle?.items.orEmpty().map { it.product }
 
         return ChatStreamEvent(
             event = "turn_result",
@@ -725,6 +755,7 @@ class ShoppingRepository(
                 ?.optString("text")
                 ?.takeIf { it.isNotBlank() },
             products = when {
+                scenarioBundleProducts.isNotEmpty() -> scenarioBundleProducts
                 recommendedProducts.isNotEmpty() -> recommendedProducts
                 alternativeProducts.isNotEmpty() -> alternativeProducts
                 else -> emptyList()
@@ -732,9 +763,129 @@ class ShoppingRepository(
             cart = cart,
             navigation = navigation,
             product = productDetail,
+            scenarioBundle = scenarioBundle,
             specSelection = specSelection,
             errorMessage = frontendData.optJSONObject("error_message")?.optString("message"),
         )
+    }
+
+    private fun JSONObject.toScenarioBundle(): ScenarioBundleUiModel? {
+        val container = optJSONObject("bundle") ?: this
+        val items = container.optJSONArray("items").toScenarioBundleItems()
+        val planItems = container.optJSONArray("plan_items").toScenarioPlanItems().ifEmpty {
+            items.map { item ->
+                ScenarioPlanItemUiModel(
+                    roleName = item.roleName,
+                    categoryName = item.categoryName,
+                    skuId = item.skuId,
+                    planRole = item.planRole,
+                )
+            }
+        }
+        val title = (container.optNullableString("plan_title")
+            ?: container.optNullableString("planTitle")
+            ?: container.optNullableString("title")
+            ?: "").trim()
+        val summary = (container.optNullableString("plan_summary")
+            ?: container.optNullableString("planSummary")
+            ?: container.optNullableString("summary")
+            ?: "").trim()
+        if (title.isBlank() && summary.isBlank() && items.isEmpty() && planItems.isEmpty()) {
+            return null
+        }
+        return ScenarioBundleUiModel(
+            turnId = optString("turn_id")
+                .ifBlank { optString("turnId") }
+                .ifBlank { container.optString("turn_id") }
+                .ifBlank { container.optString("turnId") }
+                .ifBlank { "turn_current" },
+            title = title,
+            summary = summary,
+            planItems = planItems,
+            items = items,
+        )
+    }
+
+    private fun JSONArray?.toScenarioPlanItems(): List<ScenarioPlanItemUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                val roleName = item.optNullableString("role_name")
+                    ?: item.optNullableString("roleName")
+                    ?: item.optNullableString("role")
+                    ?: continue
+                val categoryName = item.optNullableString("category_name")
+                    ?: item.optNullableString("categoryName")
+                    ?: item.optNullableString("category")
+                    ?: ""
+                add(
+                    ScenarioPlanItemUiModel(
+                        roleName = roleName,
+                        categoryName = categoryName,
+                        skuId = item.optNullableString("sku_id") ?: item.optNullableString("skuId"),
+                        planRole = item.optNullableString("plan_role")
+                            ?: item.optNullableString("planRole")
+                            ?: item.optNullableString("short_reason")
+                            ?: "",
+                    )
+                )
+            }
+        }
+    }
+
+    private fun JSONArray?.toScenarioBundleItems(): List<ScenarioBundleItemUiModel> {
+        if (this == null) {
+            return emptyList()
+        }
+        return buildList(length()) {
+            for (index in 0 until length()) {
+                val item = optJSONObject(index) ?: continue
+                val roleName = item.optNullableString("role_name")
+                    ?: item.optNullableString("roleName")
+                    ?: item.optNullableString("role")
+                val categoryName = item.optNullableString("category_name")
+                    ?: item.optNullableString("categoryName")
+                val product = item.optJSONObject("product")
+                    ?.toProduct()
+                    ?.withPlanFieldsFrom(item)
+                    ?: continue
+                val shortReason = item.optNullableString("short_reason")
+                    ?: item.optNullableString("shortReason")
+                    ?: item.optNullableString("plan_role")
+                    ?: item.optNullableString("planRole")
+                    ?: product.presentation?.bundleReason
+                    ?: product.displayPlanRole.takeIf { it.isNotBlank() }
+                    ?: product.recommendReason
+                    ?: product.reason
+                    ?: ""
+                val resolvedRole = roleName
+                    ?: product.displayPlanRoleName.takeIf { it.isNotBlank() }
+                    ?: product.presentation?.bundleRole
+                    ?: product.subCategory
+                    ?: product.category
+                add(
+                    ScenarioBundleItemUiModel(
+                        role = resolvedRole,
+                        shortReason = shortReason,
+                        product = product.withResolvedPlanRole(
+                            planRole = shortReason,
+                            roleName = resolvedRole,
+                            categoryName = categoryName,
+                        ),
+                        roleName = resolvedRole,
+                        categoryName = categoryName
+                            ?: product.displayPlanCategoryName,
+                        skuId = item.optNullableString("sku_id")
+                            ?: item.optNullableString("skuId")
+                            ?: product.skuId,
+                        planRole = shortReason,
+                    )
+                )
+            }
+        }
     }
 
     private fun JSONObject.toSpecSelection(): SpecSelectionUiModel? {
@@ -864,6 +1015,16 @@ class ShoppingRepository(
             reason = recommendReason ?: optNullableString("highlight_short"),
             recommendTitle = explicitRecommendTitle?.takeIf { it.isNotBlank() },
             recommendReason = recommendReason?.takeIf { it.isNotBlank() },
+            planRole = optNullableString("plan_role") ?: optNullableString("planRole"),
+            schemeRole = optNullableString("scheme_role") ?: optNullableString("schemeRole"),
+            planRoleName = optNullableString("plan_role_name")
+                ?: optNullableString("planRoleName")
+                ?: optNullableString("role_name")
+                ?: optNullableString("roleName"),
+            planCategoryName = optNullableString("plan_category_name")
+                ?: optNullableString("planCategoryName")
+                ?: optNullableString("category_name")
+                ?: optNullableString("categoryName"),
             highlightShort = optString("highlight_short"),
             highlightDetail = optString("highlight_detail"),
             productHighlight = optString("product_highlight"),
@@ -908,8 +1069,37 @@ class ShoppingRepository(
             usageAdvice = optNullableString("usage_advice"),
             bundleRole = optNullableString("bundle_role"),
             bundleReason = optNullableString("bundle_reason"),
+            planRole = optNullableString("plan_role") ?: optNullableString("planRole"),
+            schemeRole = optNullableString("scheme_role") ?: optNullableString("schemeRole"),
             usageScenario = optNullableString("usage_scenario"),
             contentSource = optString("content_source"),
+        )
+    }
+
+    private fun ProductUiModel.withPlanFieldsFrom(source: JSONObject): ProductUiModel {
+        return withResolvedPlanRole(
+            planRole = source.optNullableString("plan_role")
+                ?: source.optNullableString("planRole")
+                ?: source.optNullableString("scheme_role")
+                ?: source.optNullableString("schemeRole"),
+            roleName = source.optNullableString("role_name")
+                ?: source.optNullableString("roleName")
+                ?: source.optNullableString("role"),
+            categoryName = source.optNullableString("category_name")
+                ?: source.optNullableString("categoryName"),
+        )
+    }
+
+    private fun ProductUiModel.withResolvedPlanRole(
+        planRole: String?,
+        roleName: String?,
+        categoryName: String?,
+    ): ProductUiModel {
+        return copy(
+            planRole = this.planRole ?: planRole?.takeIf { it.isNotBlank() },
+            schemeRole = this.schemeRole ?: planRole?.takeIf { it.isNotBlank() },
+            planRoleName = this.planRoleName ?: roleName?.takeIf { it.isNotBlank() },
+            planCategoryName = this.planCategoryName ?: categoryName?.takeIf { it.isNotBlank() },
         )
     }
 

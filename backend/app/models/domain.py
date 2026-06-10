@@ -93,6 +93,10 @@ class ProductCard(BaseModel):
     image_url: str
     reason: str
     recommend_reason: str = ""
+    plan_role: str | None = None
+    scheme_role: str | None = None
+    plan_role_name: str | None = None
+    plan_category_name: str | None = None
     highlight_short: str = ""
     suitable_scenarios: list[str] = Field(default_factory=list)
     target_user_tags: list[str] = Field(default_factory=list)
@@ -116,8 +120,36 @@ class ProductPresentation(BaseModel):
     usage_advice: str | None = None
     bundle_role: str | None = None
     bundle_reason: str | None = None
+    plan_role: str | None = None
+    scheme_role: str | None = None
     usage_scenario: str | None = None
     content_source: str = "fallback"
+
+
+class ScenarioBundleItem(BaseModel):
+    role: str
+    short_reason: str
+    product: ProductCard
+    role_name: str | None = None
+    category_name: str | None = None
+    sku_id: str | None = None
+    plan_role: str | None = None
+
+
+class ScenarioBundlePlanItem(BaseModel):
+    role_name: str
+    category_name: str
+    sku_id: str | None = None
+    plan_role: str
+
+
+class ScenarioBundleData(BaseModel):
+    title: str
+    summary: str
+    items: list[ScenarioBundleItem] = Field(default_factory=list)
+    plan_title: str | None = None
+    plan_summary: str | None = None
+    plan_items: list[ScenarioBundlePlanItem] = Field(default_factory=list)
 
 
 class ComparisonDimensionItem(BaseModel):

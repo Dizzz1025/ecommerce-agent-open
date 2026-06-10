@@ -38,6 +38,8 @@ data class ProductPresentationUiModel(
     val usageAdvice: String? = null,
     val bundleRole: String? = null,
     val bundleReason: String? = null,
+    val planRole: String? = null,
+    val schemeRole: String? = null,
     val usageScenario: String? = null,
     val contentSource: String = "",
 )
@@ -61,6 +63,10 @@ data class ProductUiModel(
     val reason: String? = null,
     val recommendTitle: String? = null,
     val recommendReason: String? = null,
+    val planRole: String? = null,
+    val schemeRole: String? = null,
+    val planRoleName: String? = null,
+    val planCategoryName: String? = null,
     val highlightShort: String = "",
     val highlightDetail: String = "",
     val productHighlight: String = "",
@@ -100,6 +106,31 @@ data class ProductUiModel(
             spotlight.description.takeIf { it.isNotBlank() },
             reviewsSummary.takeIf { it.isNotBlank() },
         ).firstOrNull().orEmpty()
+
+    val displayPlanRole: String
+        get() = listOfNotNull(
+            planRole?.takeIf { it.isNotBlank() },
+            schemeRole?.takeIf { it.isNotBlank() },
+            presentation?.planRole?.takeIf { it.isNotBlank() },
+            presentation?.schemeRole?.takeIf { it.isNotBlank() },
+            presentation?.bundleReason?.takeIf { presentation?.type == "bundle" && it.isNotBlank() },
+            presentation?.reason?.takeIf { presentation?.type == "bundle" && it.isNotBlank() },
+        ).firstOrNull().orEmpty()
+
+    val displayPlanRoleName: String
+        get() = listOfNotNull(
+            planRoleName?.takeIf { it.isNotBlank() },
+            presentation?.bundleRole?.takeIf { it.isNotBlank() },
+        ).firstOrNull().orEmpty()
+
+    val displayPlanCategoryName: String
+        get() = planCategoryName
+            ?.takeIf { it.isNotBlank() }
+            ?: subCategory?.takeIf { it.isNotBlank() }
+            ?: category
+
+    val isScenarioBundleProduct: Boolean
+        get() = presentation?.type == "bundle" || displayPlanRole.isNotBlank()
 
     val displayTags: List<String>
         get() = (tags + suitableScenarios + targetUserTags)
@@ -282,6 +313,46 @@ data class RecommendationCopyUiModel(
     val reason: String = "",
 )
 
+data class ScenarioPlanItemUiModel(
+    val roleName: String,
+    val categoryName: String,
+    val skuId: String? = null,
+    val planRole: String = "",
+)
+
+data class ScenarioBundleItemUiModel(
+    val role: String,
+    val shortReason: String,
+    val product: ProductUiModel,
+    val roleName: String = role,
+    val categoryName: String = product.displayPlanCategoryName,
+    val skuId: String = product.skuId,
+    val planRole: String = shortReason,
+)
+
+data class ScenarioBundleUiModel(
+    val turnId: String = "turn_current",
+    val title: String = "",
+    val summary: String = "",
+    val planItems: List<ScenarioPlanItemUiModel> = emptyList(),
+    val items: List<ScenarioBundleItemUiModel> = emptyList(),
+) {
+    val stableKey: String
+        get() = "$turnId-scenario-bundle"
+
+    val compositionItems: List<ScenarioPlanItemUiModel>
+        get() = planItems.ifEmpty {
+            items.map { item ->
+                ScenarioPlanItemUiModel(
+                    roleName = item.roleName,
+                    categoryName = item.categoryName,
+                    skuId = item.skuId,
+                    planRole = item.planRole,
+                )
+            }
+        }
+}
+
 sealed interface VoiceInputState {
     data object Idle : VoiceInputState
     data object Recording : VoiceInputState
@@ -346,5 +417,6 @@ data class ChatStreamEvent(
     val navigation: BackendNavigationUiModel? = null,
     val product: ProductUiModel? = null,
     val recommendationSection: RecommendationSectionUiModel? = null,
+    val scenarioBundle: ScenarioBundleUiModel? = null,
     val specSelection: SpecSelectionUiModel? = null,
 )

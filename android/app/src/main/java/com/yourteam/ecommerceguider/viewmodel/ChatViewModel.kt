@@ -17,6 +17,9 @@ import com.yourteam.ecommerceguider.data.model.ChatMessageUiModel
 import com.yourteam.ecommerceguider.data.model.ChatStreamEvent
 import com.yourteam.ecommerceguider.data.model.ProductUiModel
 import com.yourteam.ecommerceguider.data.model.RecommendationSectionUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioBundleItemUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioBundleUiModel
+import com.yourteam.ecommerceguider.data.model.ScenarioPlanItemUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionOptionUiModel
 import com.yourteam.ecommerceguider.data.model.SpecSelectionUiModel
 import com.yourteam.ecommerceguider.data.model.TtsPlaybackState
@@ -67,6 +70,9 @@ class ChatViewModel(
 
     private val _recommendationSections = MutableStateFlow<List<RecommendationSectionUiModel>>(emptyList())
     val recommendationSections: StateFlow<List<RecommendationSectionUiModel>> = _recommendationSections.asStateFlow()
+
+    private val _scenarioBundles = MutableStateFlow<List<ScenarioBundleUiModel>>(emptyList())
+    val scenarioBundles: StateFlow<List<ScenarioBundleUiModel>> = _scenarioBundles.asStateFlow()
 
     private val _specSelections = MutableStateFlow<List<SpecSelectionUiModel>>(emptyList())
     val specSelections: StateFlow<List<SpecSelectionUiModel>> = _specSelections.asStateFlow()
@@ -485,7 +491,8 @@ class ChatViewModel(
         if (skuId.isBlank()) {
             return null
         }
-        val candidates = _products.value + _recommendationSections.value.mapNotNull { it.product }
+        val bundleProducts = _scenarioBundles.value.flatMap { bundle -> bundle.items.map { it.product } }
+        val candidates = _products.value + _recommendationSections.value.mapNotNull { it.product } + bundleProducts
         return candidates.firstOrNull { product ->
             product.skuId == skuId ||
                 product.productId == skuId ||
@@ -636,6 +643,9 @@ class ChatViewModel(
                 event.product?.let {
                     ensureAssistantMessage()
                     _products.value = mergeProductsBySku(_products.value, listOf(it))
+                    if (it.isScenarioBundleProduct) {
+                        upsertScenarioBundleProduct(it)
+                    }
                 }
                 collapseThinking()
             }
@@ -645,7 +655,19 @@ class ChatViewModel(
                 }
                 _products.value = mergeProductsBySku(_products.value, event.products)
                 mergeSectionProductSnapshots(event.products)
+                event.products
+                    .filter { it.isScenarioBundleProduct }
+                    .forEach(::upsertScenarioBundleProduct)
                 if (event.products.isNotEmpty()) {
+                    collapseThinking()
+                }
+            }
+            "plan_overview_start", "plan_overview", "plan_overview_done", "scenario_bundle" -> {
+                event.scenarioBundle?.let(::normalizeScenarioBundleTurnId)?.let { bundle ->
+                    adoptTurnId(bundle.turnId)
+                    ensureAssistantMessage()
+                    upsertScenarioBundle(bundle)
+                    _products.value = mergeProductsBySku(_products.value, bundle.items.map { it.product })
                     collapseThinking()
                 }
             }
@@ -664,6 +686,11 @@ class ChatViewModel(
             "turn_result" -> {
                 if (shouldApplyTurnResultText(event)) {
                     event.text?.let { replaceAnswerIfBlank(it) }
+                }
+                event.scenarioBundle?.let(::normalizeScenarioBundleTurnId)?.let { bundle ->
+                    adoptTurnId(bundle.turnId)
+                    ensureAssistantMessage()
+                    upsertScenarioBundle(bundle)
                 }
                 if (event.products.isNotEmpty()) {
                     _products.value = mergeProductsBySku(_products.value, event.products)
@@ -733,6 +760,16 @@ class ChatViewModel(
         }
     }
 
+    private fun normalizeScenarioBundleTurnId(bundle: ScenarioBundleUiModel): ScenarioBundleUiModel {
+        val current = currentTurnId
+        val shouldUseCurrent = bundle.turnId.isBlank() || bundle.turnId == "turn_current" || bundle.turnId == "snapshot"
+        return if (shouldUseCurrent && !current.isNullOrBlank()) {
+            bundle.copy(turnId = current)
+        } else {
+            bundle
+        }
+    }
+
     private fun normalizeSpecSelectionTurnId(selection: SpecSelectionUiModel): SpecSelectionUiModel {
         val current = currentTurnId
         val shouldUseCurrent = selection.turnId.isBlank() || selection.turnId == "turn_current" || selection.turnId == "snapshot"
@@ -792,7 +829,14 @@ class ChatViewModel(
                         .ifBlank { section.reason.orEmpty() },
                 )
             }
+        val bundleTexts = _scenarioBundles.value
+            .filter { bundle -> activeTurn == null || bundle.turnId == activeTurn }
+            .flatMap { bundle ->
+                listOf(bundle.title, bundle.summary) +
+                    bundle.items.take(3).flatMap { item -> listOf(item.role, item.shortReason) }
+            }
         return listOf(_answer.value)
+            .plus(bundleTexts)
             .plus(sections)
             .map { it.cleanForSpeech() }
             .filter { it.isNotBlank() }
@@ -875,10 +919,21 @@ class ChatViewModel(
         if (event.text.isNullOrBlank()) {
             return false
         }
+        if (event.scenarioBundle != null || hasScenarioBundleForCurrentTurn()) {
+            return false
+        }
         if (hasRecommendationSectionsForCurrentTurn() || event.products.isNotEmpty()) {
             return false
         }
         return true
+    }
+
+    private fun hasScenarioBundleForCurrentTurn(): Boolean {
+        val activeTurn = currentTurnId
+        if (activeTurn.isNullOrBlank()) {
+            return _scenarioBundles.value.isNotEmpty()
+        }
+        return _scenarioBundles.value.any { bundle -> bundle.turnId == activeTurn }
     }
 
     private fun hasRecommendationSectionsForCurrentTurn(): Boolean {
@@ -1017,6 +1072,13 @@ class ChatViewModel(
                 section.copy(turnId = turnId)
             } else {
                 section
+            }
+        }
+        _scenarioBundles.value = _scenarioBundles.value.map { bundle ->
+            if (bundle.turnId == previousTurnId) {
+                bundle.copy(turnId = turnId)
+            } else {
+                bundle
             }
         }
         _specSelections.value = _specSelections.value.map { selection ->
@@ -1429,6 +1491,151 @@ class ChatViewModel(
                 recommendationTags = section.recommendationTags.ifEmpty { product.recommendationTags },
             ).withResolvedRecommendationTitle()
         }
+    }
+
+    private fun upsertScenarioBundle(bundle: ScenarioBundleUiModel) {
+        if (
+            bundle.title.isBlank() &&
+            bundle.summary.isBlank() &&
+            bundle.planItems.isEmpty() &&
+            bundle.items.isEmpty()
+        ) {
+            return
+        }
+        val current = _scenarioBundles.value
+        val index = current.indexOfFirst { it.turnId == bundle.turnId }
+        _scenarioBundles.value = if (index >= 0) {
+            current.mapIndexed { itemIndex, existing ->
+                if (itemIndex == index) {
+                    val mergedPlanItems = if (bundle.planItems.isNotEmpty()) {
+                        mergeScenarioPlanItems(existing.planItems, bundle.planItems)
+                    } else {
+                        existing.planItems
+                    }
+                    existing.copy(
+                        title = bundle.title.ifBlank { existing.title },
+                        summary = bundle.summary.ifBlank { existing.summary },
+                        planItems = mergedPlanItems,
+                        items = mergeScenarioBundleItems(existing.items, bundle.items, mergedPlanItems),
+                    )
+                } else {
+                    existing
+                }
+            }
+        } else {
+            current + bundle
+        }
+    }
+
+    private fun upsertScenarioBundleProduct(product: ProductUiModel) {
+        if (!product.isScenarioBundleProduct) {
+            return
+        }
+        val turnId = currentTurnId ?: _activeTurnId.value ?: "turn_current"
+        val roleName = product.displayPlanRoleName
+            .ifBlank { product.subCategory ?: product.category }
+        val categoryName = product.displayPlanCategoryName
+        val planRole = product.displayPlanRole
+            .ifBlank { product.recommendReason ?: product.reason ?: "" }
+        val item = ScenarioBundleItemUiModel(
+            role = roleName,
+            shortReason = planRole,
+            product = product,
+            roleName = roleName,
+            categoryName = categoryName,
+            skuId = product.skuId,
+            planRole = planRole,
+        )
+        upsertScenarioBundle(
+            ScenarioBundleUiModel(
+                turnId = turnId,
+                planItems = listOf(
+                    ScenarioPlanItemUiModel(
+                        roleName = roleName,
+                        categoryName = categoryName,
+                        skuId = product.skuId,
+                        planRole = planRole,
+                    )
+                ),
+                items = listOf(item),
+            )
+        )
+    }
+
+    private fun mergeScenarioPlanItems(
+        existing: List<ScenarioPlanItemUiModel>,
+        incoming: List<ScenarioPlanItemUiModel>,
+    ): List<ScenarioPlanItemUiModel> {
+        if (existing.isEmpty()) {
+            return incoming
+        }
+        if (incoming.isEmpty()) {
+            return existing
+        }
+        val incomingBySku = incoming
+            .mapNotNull { item -> item.skuId?.takeIf { it.isNotBlank() }?.let { it to item } }
+            .toMap()
+        val incomingByRole = incoming.associateBy { it.roleName }
+        val merged = existing.map { item ->
+            item.skuId?.let { incomingBySku[it] }
+                ?: incomingByRole[item.roleName]
+                ?: item
+        }.toMutableList()
+        val seenSkus = merged.mapNotNull { it.skuId }.toMutableSet()
+        val seenRoles = merged.map { it.roleName }.toMutableSet()
+        incoming.forEach { item ->
+            val hasSeenSku = item.skuId?.let { it in seenSkus } == true
+            if (!hasSeenSku && item.roleName !in seenRoles) {
+                merged += item
+                item.skuId?.let(seenSkus::add)
+                seenRoles += item.roleName
+            }
+        }
+        return merged
+    }
+
+    private fun mergeScenarioBundleItems(
+        existing: List<ScenarioBundleItemUiModel>,
+        incoming: List<ScenarioBundleItemUiModel>,
+        planItems: List<ScenarioPlanItemUiModel>,
+    ): List<ScenarioBundleItemUiModel> {
+        if (incoming.isEmpty()) {
+            return orderScenarioBundleItems(existing, planItems)
+        }
+        if (existing.isEmpty()) {
+            return orderScenarioBundleItems(incoming, planItems)
+        }
+        val incomingBySku = incoming.associateBy { it.skuId }
+        val merged = existing.map { item -> incomingBySku[item.skuId] ?: item }.toMutableList()
+        val seen = merged.map { it.skuId }.toMutableSet()
+        incoming.forEach { item ->
+            if (item.skuId !in seen) {
+                merged += item
+                seen += item.skuId
+            }
+        }
+        return orderScenarioBundleItems(merged, planItems)
+    }
+
+    private fun orderScenarioBundleItems(
+        items: List<ScenarioBundleItemUiModel>,
+        planItems: List<ScenarioPlanItemUiModel>,
+    ): List<ScenarioBundleItemUiModel> {
+        if (items.isEmpty() || planItems.isEmpty()) {
+            return items
+        }
+        val orderBySku = planItems.mapIndexedNotNull { index, item ->
+            item.skuId?.takeIf { it.isNotBlank() }?.let { it to index }
+        }.toMap()
+        val orderByRole = planItems.mapIndexed { index, item -> item.roleName to index }.toMap()
+        return items
+            .mapIndexed { index, item -> index to item }
+            .sortedWith(
+                compareBy<Pair<Int, ScenarioBundleItemUiModel>> {
+                    orderBySku[it.second.skuId] ?: orderByRole[it.second.roleName] ?: Int.MAX_VALUE
+                }.thenBy { it.first }
+            )
+            .map { it.second }
     }
 
     private fun updateRecommendationSection(

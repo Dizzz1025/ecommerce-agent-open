@@ -131,25 +131,9 @@ class ResponseGenerationModule:
             return local_text
 
         if decision.flow == DialogueFlow.SCENE_BUNDLE:
-            local_text = self._scene_response(scene_plan, candidates)
-            if model_route and not model_route.need_llm:
-                return local_text
-            context = self.rag_pipeline.build_context(
-                message=parsed_query.raw_message,
-                products=products,
-                candidates=candidates,
-                state=state,
-                personalization_context=personalization_context,
-                multimodal_context=multimodal_context,
-            ) + f"\nScene plan: {scene_plan.model_dump() if scene_plan else {}}\nDraft response: {local_text}\n请用积极搭配方案语气，优先展示已有商品，不要用缺货信息开头。"
-            self.last_llm_called = True
-            generated = self.llm_client.generate_response(
-                intent=IntentType.SCENE_BUNDLE,
-                message=parsed_query.raw_message,
-                context=context,
-                product_names=[item.name for item in candidates[:5]],
-            )
-            return generated or local_text
+            self.last_response_strategy["推荐回复生成方式"] = "scenario_bundle_structured"
+            self.last_response_strategy["跳过Doubao原因"] = "场景组合由 scenario_bundle 结构驱动，回复正文只保留方案导览。"
+            return self._scene_response(scene_plan, candidates)
 
         if decision.flow in {
             DialogueFlow.RECOMMENDATION,
@@ -385,26 +369,7 @@ class ResponseGenerationModule:
     def _scene_response(scene_plan: ScenePlan | None, candidates: list[CandidateProduct]) -> str:
         if not scene_plan:
             return "我先按这个场景从商品库里找到了几款可搭配商品。"
-        lines = [f"我把「{scene_plan.scenario}」拆成几个可购买方向，先为你配这几件真实库存商品："]
-        used = set()
-        for sub_query in scene_plan.sub_queries:
-            match = next(
-                (
-                    item for item in candidates
-                    if item.sku_id not in used
-                    and (not sub_query.sub_category or item.sub_category == sub_query.sub_category)
-                    and (not sub_query.category or item.category == sub_query.category)
-                ),
-                None,
-            )
-            if match:
-                used.add(match.sku_id)
-                lines.append(f"- {sub_query.label}：{match.name}，¥{match.price:g}，这款可以帮助你解决{sub_query.reason}这个需求。")
-            else:
-                lines.append(f"- {sub_query.label}：这个方向可以先保留，后面补充预算或品牌后再继续筛。")
-        if scene_plan.unsupported_needs:
-            lines.append("另外 " + "、".join(scene_plan.unsupported_needs) + " 这类商品当前库里覆盖有限，可以先用上面几件完成核心搭配。")
-        return "\n".join(lines)
+        return f"我把「{scene_plan.scenario}」整理成一套组合方案，下面按方案作用展示商品卡片。"
 
     @staticmethod
     def _build_response_strategy(

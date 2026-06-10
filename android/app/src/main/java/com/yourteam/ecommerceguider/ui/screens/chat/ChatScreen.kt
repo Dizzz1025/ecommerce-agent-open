@@ -57,6 +57,7 @@ import com.yourteam.ecommerceguider.ui.screens.chat.components.EmptyProductsCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.GuideTopBar
 import com.yourteam.ecommerceguider.ui.screens.chat.components.HistoryRequestsDialog
 import com.yourteam.ecommerceguider.ui.screens.chat.components.RecommendationSection
+import com.yourteam.ecommerceguider.ui.screens.chat.components.ScenarioBundleSection
 import com.yourteam.ecommerceguider.ui.screens.chat.components.SpecSelectionCard
 import com.yourteam.ecommerceguider.ui.screens.chat.components.WelcomeCard
 import com.yourteam.ecommerceguider.viewmodel.ChatViewModel
@@ -77,6 +78,7 @@ fun ChatScreen(
     val answer by viewModel.answer.collectAsState()
     val products by viewModel.products.collectAsState()
     val recommendationSections by viewModel.recommendationSections.collectAsState()
+    val scenarioBundles by viewModel.scenarioBundles.collectAsState()
     val specSelections by viewModel.specSelections.collectAsState()
     val activeProductCardSpecSelection by viewModel.activeProductCardSpecSelection.collectAsState()
     val activeTurnId by viewModel.activeTurnId.collectAsState()
@@ -97,13 +99,22 @@ fun ChatScreen(
     val sectionsByTurn = remember(recommendationSections) {
         recommendationSections.groupBy { section -> section.turnId }
     }
+    val scenarioBundleByTurn = remember(scenarioBundles) {
+        scenarioBundles.associateBy { bundle -> bundle.turnId }
+    }
+    val activeScenarioBundle = remember(scenarioBundles, activeTurnId) {
+        scenarioBundles.lastOrNull { bundle -> bundle.turnId == activeTurnId }
+    }
+    val activeScenarioBundleProducts = remember(activeScenarioBundle) {
+        activeScenarioBundle?.items.orEmpty().map { item -> item.product }
+    }
     val specSelectionsByTurn = remember(specSelections) {
         specSelections.groupBy { selection -> selection.turnId }
     }
-    val visibleProducts = if (activeRecommendationSections.isNotEmpty()) {
-        activeRecommendationSections.mapNotNull { it.product }
-    } else {
-        products
+    val visibleProducts = when {
+        activeRecommendationSections.isNotEmpty() -> activeRecommendationSections.mapNotNull { it.product }
+        activeScenarioBundleProducts.isNotEmpty() -> activeScenarioBundleProducts
+        else -> products
     }
     val hasActiveAssistant = messages.any { message ->
         !message.isUser && message.turnId == activeTurnId
@@ -112,6 +123,7 @@ fun ChatScreen(
         answer.isNotBlank() ||
         products.isNotEmpty() ||
         recommendationSections.isNotEmpty() ||
+        scenarioBundles.isNotEmpty() ||
         specSelections.isNotEmpty() ||
         !errorMessage.isNullOrBlank()
     val showWelcome = messages.isEmpty() && !hasResultMode
@@ -311,10 +323,22 @@ fun ChatScreen(
                                     )
                                 }
                             }
+                            val turnScenarioBundle = scenarioBundleByTurn[message.turnId]
                             val turnSections = sectionsByTurn[message.turnId].orEmpty()
-                            val turnHasValidRecommendation = turnSections.any { it.product != null } ||
+                            val turnHasValidRecommendation = turnScenarioBundle != null ||
+                                turnSections.any { it.product != null } ||
                                 (message.turnId == activeTurnId && products.isNotEmpty())
-                            if (turnSections.isNotEmpty()) {
+                            if (turnScenarioBundle != null) {
+                                item(key = turnScenarioBundle.stableKey) {
+                                    ScenarioBundleSection(
+                                        bundle = turnScenarioBundle,
+                                        onProductClick = onProductClick,
+                                        onAddToCart = viewModel::addProductCardToCart,
+                                        activeSpecSelection = activeProductCardSpecSelection,
+                                        onSpecOptionClick = viewModel::addSelectedSpecToCart,
+                                    )
+                                }
+                            } else if (turnSections.isNotEmpty()) {
                                 turnSections.forEach { section ->
                                     item(key = section.stableKey) {
                                         RecommendationSection(
@@ -367,7 +391,17 @@ fun ChatScreen(
                             onToggleThinking = onToggleThinking,
                         )
                     }
-                    if (activeRecommendationSections.isNotEmpty()) {
+                    if (activeScenarioBundle != null) {
+                        item(key = activeScenarioBundle.stableKey) {
+                            ScenarioBundleSection(
+                                bundle = activeScenarioBundle,
+                                onProductClick = onProductClick,
+                                onAddToCart = viewModel::addProductCardToCart,
+                                activeSpecSelection = activeProductCardSpecSelection,
+                                onSpecOptionClick = viewModel::addSelectedSpecToCart,
+                            )
+                        }
+                    } else if (activeRecommendationSections.isNotEmpty()) {
                         activeRecommendationSections.forEach { section ->
                             item(key = section.stableKey) {
                                 RecommendationSection(
